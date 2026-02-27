@@ -137,10 +137,13 @@ function renderUserList() {
     return;
   }
   list.innerHTML = userArr.map(u => `
-    <button class="user-chip" data-uid="${u.id}">
-      ${avatarHtml(u.name)}
-      <span>${escHtml(u.name)}</span>
-    </button>`).join('');
+    <div class="user-chip-row">
+      <button class="user-chip" data-uid="${u.id}">
+        ${avatarHtml(u.name)}
+        <span>${escHtml(u.name)}</span>
+      </button>
+      <button class="user-delete-btn" data-uid="${u.id}" title="Delete profile">🗑️</button>
+    </div>`).join('');
 
   list.querySelectorAll('.user-chip').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -148,6 +151,26 @@ function renderUserList() {
       if (u) { saveCurrentUser({ id: btn.dataset.uid, name: u.name }); hideUserOverlay(); }
     });
   });
+
+  list.querySelectorAll('.user-delete-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteUser(btn.dataset.uid);
+    });
+  });
+}
+
+async function deleteUser(id) {
+  const u = users[id];
+  if (!u) return;
+  if (!confirm(`Delete profile "${u.name}"? This cannot be undone.`)) return;
+  await remove(ref(db, `users/${id}`));
+  await remove(ref(db, `notifications/${id}`));
+  if (currentUser?.id === id) {
+    localStorage.removeItem('taskboard-user');
+    currentUser = null;
+    showUserOverlay();
+  }
 }
 
 async function joinAs(name) {
@@ -268,22 +291,28 @@ function renderBoard() {
   }
 }
 
+function isTaskOwner(task) {
+  if (!currentUser) return false;
+  return task.createdBy === currentUser.id || task.assignedTo === currentUser.id;
+}
+
 function buildCard(task) {
   const overdue  = isOverdue(task.due);
   const assignee = task.assignedTo ? users[task.assignedTo] : null;
+  const owned    = isTaskOwner(task);
 
   const card = document.createElement('div');
   card.className = 'task-card';
-  card.draggable = true;
+  card.draggable = owned;
   card.dataset.id = task.id;
 
   card.innerHTML = `
     <div class="task-card-header">
       <span class="task-title">${escHtml(task.title)}</span>
-      <div class="card-actions">
+      ${owned ? `<div class="card-actions">
         <button class="btn-icon edit"   title="Edit"   data-id="${task.id}">✏️</button>
         <button class="btn-icon delete" title="Delete" data-id="${task.id}">🗑️</button>
-      </div>
+      </div>` : ''}
     </div>
     ${task.desc ? `<div class="task-desc">${escHtml(task.desc)}</div>` : ''}
     <div class="task-card-footer">
@@ -294,16 +323,18 @@ function buildCard(task) {
       </div>
     </div>`;
 
-  card.querySelector('.btn-icon.edit').addEventListener('click', e => { e.stopPropagation(); openEdit(task.id); });
-  card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
-  card.addEventListener('click', () => openDetail(task.id));
+  if (owned) {
+    card.querySelector('.btn-icon.edit').addEventListener('click', e => { e.stopPropagation(); openEdit(task.id); });
+    card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
+    card.addEventListener('dragstart', e => {
+      draggedId = task.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
+  }
 
-  card.addEventListener('dragstart', e => {
-    draggedId = task.id;
-    card.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
+  card.addEventListener('click', () => openDetail(task.id));
 
   return card;
 }
@@ -447,7 +478,17 @@ function openDetail(id) {
     </div>
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
 
+  const owned = isTaskOwner(task);
+  if (!owned) {
+    document.getElementById('detailStatusSel').disabled = true;
+    document.getElementById('detailEditBtn').style.display = 'none';
+  } else {
+    document.getElementById('detailStatusSel').disabled = false;
+    document.getElementById('detailEditBtn').style.display = '';
+  }
+
   document.getElementById('detailStatusSel').addEventListener('change', async ev => {
+    if (!owned) return;
     const newStatus = ev.target.value;
     const old       = tasks[id]?.status;
     await update(ref(db, `tasks/${id}`), { status: newStatus });

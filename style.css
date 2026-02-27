@@ -84,6 +84,23 @@ body {
 }
 .user-chip:hover { background: #eef2ff; box-shadow: var(--shadow-sm); }
 .no-users { color: var(--muted); font-size: .85rem; padding: 12px 0; }
+.user-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.user-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .85rem;
+  padding: 5px 7px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.user-delete-btn:hover { background: #fee2e2; color: var(--high); }
 
 .user-divider {
   color: var(--muted);
@@ -713,7 +730,7 @@ h1 {
   overflow: hidden;
   position: sticky;
   top: 78px;
-  max-height: calc(100vh - 98px);
+  height: calc(100vh - 106px);
   display: flex;
   flex-direction: column;
 }
@@ -795,7 +812,7 @@ h1 {
 }
 
 /* ─── Responsive ─── */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .notif-sidebar { display: none; }
 }
 @media (max-width: 768px) {
