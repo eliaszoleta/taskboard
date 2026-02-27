@@ -54,6 +54,11 @@ const formatDate = dateStr => {
   return `${m}-${d}-${y}`;
 };
 
+// Format a Unix ms timestamp → e.g. "Feb 27, 2026"
+const fmtTimestamp = ts => ts
+  ? new Date(Number(ts)).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  : null;
+
 const isOverdue = dateStr => {
   if (!dateStr) return false;
   const today = new Date(); today.setHours(0,0,0,0);
@@ -356,6 +361,7 @@ function buildCard(task) {
       <span class="priority-badge priority-${task.priority}">${task.priority}</span>
       <div class="card-meta">
         ${task.due ? `<span class="due-date ${overdue?'overdue':''}">📅 ${formatDate(task.due)}</span>` : ''}
+        ${task.createdAt ? `<span class="created-date">🕒 ${fmtTimestamp(task.createdAt)}</span>` : ''}
         ${assignee ? `<span class="assignee-chip">${avatarHtml(assignee.name)}<span>${escHtml(assignee.name)}</span></span>` : ''}
       </div>
     </div>`;
@@ -506,8 +512,12 @@ function openDetail(id) {
         <span class="priority-badge priority-${task.priority}">${task.priority}</span>
       </div>
       ${task.due ? `<div class="detail-row">
-        <span class="detail-label">Due</span>
+        <span class="detail-label">Due date</span>
         <span class="due-date ${overdue?'overdue':''}">${formatDate(task.due)}${overdue?' · overdue':''}</span>
+      </div>` : ''}
+      ${task.createdAt ? `<div class="detail-row">
+        <span class="detail-label">Created</span>
+        <span class="detail-created">${fmtTimestamp(task.createdAt)}</span>
       </div>` : ''}
       ${assignee ? `<div class="detail-row">
         <span class="detail-label">Assigned to</span>

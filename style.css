@@ -502,6 +502,19 @@ h1 {
 }
 .due-date.overdue { color: var(--high); font-weight: 600; }
 
+/* ─── Created Date chip (card footer) ─── */
+.created-date {
+  font-size: .72rem;
+  color: var(--muted);
+  opacity: .8;
+}
+
+/* ─── Created Date in detail panel ─── */
+.detail-created {
+  font-size: .875rem;
+  color: var(--text);
+}
+
 /* ─── Assignee Chip ─── */
 .assignee-chip {
   display: inline-flex;
