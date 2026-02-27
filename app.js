@@ -445,7 +445,8 @@ async function deleteTask(id) {
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 function openDetail(id) {
-  const task = tasks[id]; if (!task) return;
+  const task = tasks[id];
+  if (!task) { alert('This task no longer exists.'); return; }
   detailTaskId = id;
 
   const assignee = task.assignedTo ? users[task.assignedTo] : null;
@@ -627,7 +628,7 @@ function renderNotifSidebar() {
   body.querySelectorAll('.sidebar-notif-item[data-task]').forEach(item => {
     item.addEventListener('click', () => {
       const tid = item.dataset.task;
-      if (tid && tasks[tid]) openDetail(tid);
+      if (tid) openDetail(tid);
     });
   });
 }
@@ -657,10 +658,11 @@ function setupNotifListener() {
     }).join('');
 
     list.querySelectorAll('.notif-item').forEach(item => {
-      item.addEventListener('click', async () => {
-        await update(ref(db, `notifications/${currentUser.id}/${item.dataset.id}`), { read: true });
+      item.addEventListener('click', () => {
+        // Mark as read in background — don't block opening the task
+        update(ref(db, `notifications/${currentUser.id}/${item.dataset.id}`), { read: true });
         const tid = item.dataset.task;
-        if (tid && tasks[tid]) { closeNotifPanel(); openDetail(tid); }
+        if (tid) { closeNotifPanel(); openDetail(tid); }
       });
     });
   });
