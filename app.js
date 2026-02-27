@@ -6,13 +6,13 @@ import { getDatabase, ref, push, set, update, remove,
 // Replace these placeholder values with your own Firebase project config.
 // See README or setup instructions for how to get these values.
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey:            "AIzaSyCT2yccAHsvB6_NvLL1if7V1FxzYK6tRE0",
+  authDomain:        "taskboard-d91be.firebaseapp.com",
+  databaseURL:       "https://taskboard-d91be-default-rtdb.firebaseio.com",
+  projectId:         "taskboard-d91be",
+  storageBucket:     "taskboard-d91be.firebasestorage.app",
+  messagingSenderId: "34815479362",
+  appId:             "1:34815479362:web:25069a6f086ecfcb17e7db",
 };
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
