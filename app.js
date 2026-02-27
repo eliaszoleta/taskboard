@@ -302,6 +302,8 @@ document.querySelectorAll('.task-list').forEach(list => {
     if (!task || task.status === newStatus) return;
     const oldStatus = task.status;
     await update(ref(db, `tasks/${draggedId}`), { status: newStatus });
+    tasks[draggedId] = { ...task, status: newStatus };
+    renderBoard();
     if (newStatus === 'done' && oldStatus !== 'done') {
       await notifyAll(`${currentUser.name} completed "${task.title}"`, draggedId);
     }
@@ -357,6 +359,9 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   if (editingTaskId) {
     const old = tasks[editingTaskId];
     await update(ref(db, `tasks/${editingTaskId}`), fields);
+    tasks[editingTaskId] = { ...old, ...fields };
+    closeModal();
+    renderBoard();
     if (newAssignee && newAssignee !== old.assignedTo) {
       await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, editingTaskId);
     }
@@ -365,17 +370,22 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
     }
   } else {
     const newRef = push(ref(db, 'tasks'));
-    await set(newRef, { ...fields, createdBy: currentUser.id, createdAt: Date.now() });
+    const taskData = { ...fields, createdBy: currentUser.id, createdAt: Date.now() };
+    await set(newRef, taskData);
+    tasks[newRef.key] = taskData;
+    closeModal();
+    renderBoard();
     if (newAssignee) await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, newRef.key);
     if (newStatus === 'done') await notifyAll(`${currentUser.name} completed "${title}"`, newRef.key);
   }
-  closeModal();
 });
 
 async function deleteTask(id) {
   if (!confirm('Delete this task?')) return;
   await remove(ref(db, `tasks/${id}`));
   await remove(ref(db, `comments/${id}`));
+  delete tasks[id];
+  renderBoard();
 }
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
@@ -421,6 +431,8 @@ function openDetail(id) {
     const newStatus = ev.target.value;
     const old       = tasks[id]?.status;
     await update(ref(db, `tasks/${id}`), { status: newStatus });
+    tasks[id] = { ...tasks[id], status: newStatus };
+    renderBoard();
     if (newStatus === 'done' && old !== 'done') {
       await notifyAll(`${currentUser.name} completed "${task.title}"`, id);
     }
