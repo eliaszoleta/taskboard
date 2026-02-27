@@ -347,17 +347,20 @@ document.querySelectorAll('.task-list').forEach(list => {
   list.addEventListener('drop', async e => {
     e.preventDefault();
     list.classList.remove('drag-over');
-    if (!draggedId) return;
+    const id = draggedId;   // capture before any await — dragend can fire during await and null it
+    draggedId = null;
+    if (!id) return;
     const newStatus = list.id.replace('list-', '');
     if (newStatus === 'overdue') return;   // overdue column is read-only
-    const task = tasks[draggedId];
+    const task = tasks[id];
     if (!task || task.status === newStatus) return;
     const oldStatus = task.status;
-    await update(ref(db, `tasks/${draggedId}`), { status: newStatus });
-    tasks[draggedId] = { ...task, status: newStatus };
+    // Optimistic update: reflect move immediately so the board feels instant
+    tasks[id] = { ...task, status: newStatus };
     renderBoard();
+    await update(ref(db, `tasks/${id}`), { status: newStatus });
     if (newStatus === 'done' && oldStatus !== 'done') {
-      await notifyParticipants(task, draggedId, `${currentUser.name} completed "${task.title}"`);
+      await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
     }
   });
 });
