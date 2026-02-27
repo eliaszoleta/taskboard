@@ -38,6 +38,7 @@ let detailTaskId       = null;
 let draggedId          = null;
 let commentsUnsub      = null;
 let currentFilter      = 'all';
+let currentUserFilter  = 'all';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const escHtml = str =>
@@ -173,6 +174,7 @@ onValue(ref(db, 'users'), snap => {
   users = snap.val() || {};
   renderUserList();
   populateAssigneeDropdown();
+  populateUserFilter();
 });
 
 function populateAssigneeDropdown() {
@@ -184,6 +186,16 @@ function populateAssigneeDropdown() {
   sel.value = prev;
 }
 
+function populateUserFilter() {
+  const sel  = document.getElementById('userFilter');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">👤 All users</option>' +
+    Object.entries(users).map(([id, u]) =>
+      `<option value="${id}">${escHtml(u.name)}</option>`).join('');
+  if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
+}
+
 // ─── TASKS LISTENER ───────────────────────────────────────────────────────────
 onValue(ref(db, 'tasks'), snap => {
   tasks = snap.val() || {};
@@ -192,15 +204,24 @@ onValue(ref(db, 'tasks'), snap => {
 
 // ─── BOARD ────────────────────────────────────────────────────────────────────
 function renderBoard() {
-  // Update filter UI
-  const sel   = document.getElementById('dateFilter');
+  // Sync filter selects
+  const dateSel = document.getElementById('dateFilter');
+  const userSel = document.getElementById('userFilter');
+  if (dateSel) { dateSel.value = currentFilter;     dateSel.classList.toggle('active', currentFilter !== 'all'); }
+  if (userSel) { userSel.value = currentUserFilter; userSel.classList.toggle('active', currentUserFilter !== 'all'); }
+
+  // Filter bar
   const bar   = document.getElementById('filterBar');
   const label = document.getElementById('filterBarLabel');
-  if (sel) sel.value = currentFilter;
-  sel?.classList.toggle('active', currentFilter !== 'all');
-  if (currentFilter !== 'all') {
+  const parts = [];
+  if (currentUserFilter !== 'all') {
+    const u = users[currentUserFilter];
+    parts.push(u ? `${u.name}'s tasks` : 'Unknown user');
+  }
+  if (currentFilter !== 'all') parts.push(FILTER_LABELS[currentFilter] || currentFilter);
+  if (parts.length) {
     bar.classList.add('visible');
-    label.textContent = `Showing: ${FILTER_LABELS[currentFilter] || currentFilter}`;
+    label.textContent = `Showing: ${parts.join(' · ')}`;
   } else {
     bar.classList.remove('visible');
   }
@@ -212,12 +233,13 @@ function renderBoard() {
       .filter(([, t]) => t.status === status)
       .map(([id, t]) => ({ id, ...t }))
       .filter(t => taskMatchesFilter(t))
+      .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
       .sort((a, b) => a.createdAt - b.createdAt);
 
     count.textContent = cols.length;
     list.innerHTML = '';
     if (!cols.length) {
-      const msg = currentFilter !== 'all' ? 'No tasks in this range' : 'No tasks yet';
+      const msg = (parts.length) ? 'No tasks in this range' : 'No tasks yet';
       list.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${msg}</div>`;
     } else {
       cols.forEach(t => list.appendChild(buildCard(t)));
@@ -531,12 +553,17 @@ document.addEventListener('click', e => {
 });
 
 // ─── GLOBAL UI EVENTS ─────────────────────────────────────────────────────────
+document.getElementById('userFilter').addEventListener('change', e => {
+  currentUserFilter = e.target.value;
+  renderBoard();
+});
 document.getElementById('dateFilter').addEventListener('change', e => {
   currentFilter = e.target.value;
   renderBoard();
 });
 document.getElementById('filterBarClear').addEventListener('click', () => {
-  currentFilter = 'all';
+  currentFilter     = 'all';
+  currentUserFilter = 'all';
   renderBoard();
 });
 
