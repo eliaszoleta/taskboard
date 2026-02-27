@@ -593,37 +593,26 @@ function renderNotifSidebar() {
   const body = document.getElementById('notifSidebarBody');
   if (!body) return;
 
-  const userArr = Object.entries(users)
-    .map(([id, u]) => ({ id, ...u }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  if (!userArr.length) {
-    body.innerHTML = '<div class="sidebar-empty">No users yet</div>';
+  if (!currentUser) {
+    body.innerHTML = '<div class="sidebar-empty">Sign in to see your activity</div>';
     return;
   }
 
-  body.innerHTML = userArr.map(u => {
-    const userNotifs = Object.entries(allNotifications[u.id] || {})
-      .map(([id, n]) => ({ id, ...n }))
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 5);
-    const unread = userNotifs.filter(n => !n.read).length;
+  const myNotifs = Object.entries(allNotifications[currentUser.id] || {})
+    .map(([id, n]) => ({ id, ...n }))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 20);
 
-    return `<div class="sidebar-user-section">
-      <div class="sidebar-user-header">
-        ${avatarHtml(u.name)}
-        <span class="sidebar-user-name">${escHtml(u.name)}</span>
-        ${unread ? `<span class="sidebar-unread-badge">${unread}</span>` : ''}
-      </div>
-      ${userNotifs.length
-        ? userNotifs.map(n => {
-            const time = new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            return `<div class="sidebar-notif-item ${n.read ? 'read' : 'unread'}" data-task="${n.taskId}">
-              <div class="sidebar-notif-msg">${escHtml(n.message)}</div>
-              <div class="sidebar-notif-time">${time}</div>
-            </div>`;
-          }).join('')
-        : '<div class="sidebar-no-notifs">No activity yet</div>'}
+  if (!myNotifs.length) {
+    body.innerHTML = '<div class="sidebar-empty">No activity yet</div>';
+    return;
+  }
+
+  body.innerHTML = myNotifs.map(n => {
+    const time = new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `<div class="sidebar-notif-item ${n.read ? 'read' : 'unread'}" data-task="${n.taskId}">
+      <div class="sidebar-notif-msg">${escHtml(n.message)}</div>
+      <div class="sidebar-notif-time">${time}</div>
     </div>`;
   }).join('');
 
