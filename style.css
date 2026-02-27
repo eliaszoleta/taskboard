@@ -337,6 +337,8 @@ h1 {
 .column-header.todo      { border-bottom-color: var(--col-todo); }
 .column-header.inprogress { border-bottom-color: var(--col-inprog); }
 .column-header.done      { border-bottom-color: var(--col-done); }
+.column-header.overdue   { border-bottom-color: var(--high); }
+#col-overdue .task-count { background: #fee2e2; color: var(--high); }
 .column-title {
   font-size: .78rem;
   font-weight: 700;

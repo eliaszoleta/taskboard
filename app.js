@@ -235,6 +235,7 @@ function renderBoard() {
     const cols  = Object.entries(tasks)
       .filter(([, t]) => t.status === status)
       .map(([id, t]) => ({ id, ...t }))
+      .filter(t => status === 'done' || !isOverdue(t.due))   // overdue non-done → own column
       .filter(t => taskMatchesFilter(t))
       .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
       .sort((a, b) => a.createdAt - b.createdAt);
@@ -248,6 +249,23 @@ function renderBoard() {
       cols.forEach(t => list.appendChild(buildCard(t)));
     }
   });
+
+  // Overdue column — always shows all overdue non-done tasks (ignores date filter)
+  const overdueList  = document.getElementById('list-overdue');
+  const overdueCount = document.getElementById('count-overdue');
+  const overdueTasks = Object.entries(tasks)
+    .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
+    .map(([id, t]) => ({ id, ...t }))
+    .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
+    .sort((a, b) => a.createdAt - b.createdAt);
+
+  overdueCount.textContent = overdueTasks.length;
+  overdueList.innerHTML = '';
+  if (!overdueTasks.length) {
+    overdueList.innerHTML = `<div class="empty-state"><div class="icon">✅</div>No overdue tasks</div>`;
+  } else {
+    overdueTasks.forEach(t => overdueList.appendChild(buildCard(t)));
+  }
 }
 
 function buildCard(task) {
@@ -299,6 +317,7 @@ document.querySelectorAll('.task-list').forEach(list => {
     list.classList.remove('drag-over');
     if (!draggedId) return;
     const newStatus = list.id.replace('list-', '');
+    if (newStatus === 'overdue') return;   // overdue column is read-only
     const task = tasks[draggedId];
     if (!task || task.status === newStatus) return;
     const oldStatus = task.status;
