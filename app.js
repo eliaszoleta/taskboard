@@ -37,6 +37,7 @@ let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
 let commentsUnsub      = null;
+let currentFilter      = 'all';
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const escHtml = str =>
@@ -54,6 +55,41 @@ const isOverdue = dateStr => {
   if (!dateStr) return false;
   const today = new Date(); today.setHours(0,0,0,0);
   return new Date(dateStr + 'T00:00:00') < today;
+};
+
+// Returns the Mon–Sun boundaries for a week offset (0 = this week, -1 = last, 1 = next)
+function weekRange(offset = 0) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dow   = today.getDay();                          // 0=Sun
+  const toMon = (dow === 0 ? -6 : 1 - dow) + offset * 7;
+  const start = new Date(today); start.setDate(today.getDate() + toMon);
+  const end   = new Date(start);  end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
+  return { start, end };
+}
+
+function taskMatchesFilter(task) {
+  if (currentFilter === 'all') return true;
+  if (!task.due) return false;          // undated tasks only shown in "All"
+  const d = new Date(task.due + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (currentFilter === 'today')      { const e = new Date(today); e.setHours(23,59,59,999); return d >= today && d <= e; }
+  if (currentFilter === 'this-week')  { const { start, end } = weekRange(0);  return d >= start && d <= end; }
+  if (currentFilter === 'next-week')  { const { start, end } = weekRange(1);  return d >= start && d <= end; }
+  if (currentFilter === 'last-week')  { const { start, end } = weekRange(-1); return d >= start && d <= end; }
+  if (currentFilter === 'this-month') {
+    return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+  }
+  if (currentFilter === 'overdue')    { return d < today; }
+  return true;
+}
+
+const FILTER_LABELS = {
+  'today':      'Today',
+  'this-week':  'This week',
+  'next-week':  'Next week',
+  'last-week':  'Last week',
+  'this-month': 'This month',
+  'overdue':    '⚠️ Overdue',
 };
 
 const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
@@ -156,18 +192,33 @@ onValue(ref(db, 'tasks'), snap => {
 
 // ─── BOARD ────────────────────────────────────────────────────────────────────
 function renderBoard() {
+  // Update filter UI
+  const sel   = document.getElementById('dateFilter');
+  const bar   = document.getElementById('filterBar');
+  const label = document.getElementById('filterBarLabel');
+  if (sel) sel.value = currentFilter;
+  sel?.classList.toggle('active', currentFilter !== 'all');
+  if (currentFilter !== 'all') {
+    bar.classList.add('visible');
+    label.textContent = `Showing: ${FILTER_LABELS[currentFilter] || currentFilter}`;
+  } else {
+    bar.classList.remove('visible');
+  }
+
   ['todo', 'inprogress', 'done'].forEach(status => {
     const list  = document.getElementById('list-'  + status);
     const count = document.getElementById('count-' + status);
     const cols  = Object.entries(tasks)
       .filter(([, t]) => t.status === status)
       .map(([id, t]) => ({ id, ...t }))
+      .filter(t => taskMatchesFilter(t))
       .sort((a, b) => a.createdAt - b.createdAt);
 
     count.textContent = cols.length;
     list.innerHTML = '';
     if (!cols.length) {
-      list.innerHTML = '<div class="empty-state"><div class="icon">📋</div>No tasks yet</div>';
+      const msg = currentFilter !== 'all' ? 'No tasks in this range' : 'No tasks yet';
+      list.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${msg}</div>`;
     } else {
       cols.forEach(t => list.appendChild(buildCard(t)));
     }
@@ -480,6 +531,15 @@ document.addEventListener('click', e => {
 });
 
 // ─── GLOBAL UI EVENTS ─────────────────────────────────────────────────────────
+document.getElementById('dateFilter').addEventListener('change', e => {
+  currentFilter = e.target.value;
+  renderBoard();
+});
+document.getElementById('filterBarClear').addEventListener('click', () => {
+  currentFilter = 'all';
+  renderBoard();
+});
+
 document.getElementById('addTaskBtn').addEventListener('click', () => openNew());
 document.getElementById('closeModal').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
