@@ -527,10 +527,10 @@ async function notify(toUserId, message, taskId) {
 }
 
 async function notifyParticipants(task, taskId, message) {
-  const toNotify = new Set();
-  if (task.createdBy  && task.createdBy  !== currentUser?.id) toNotify.add(task.createdBy);
-  if (task.assignedTo && task.assignedTo !== currentUser?.id) toNotify.add(task.assignedTo);
-  await Promise.all([...toNotify].map(id => notify(id, message, taskId)));
+  // Only notify the person who created/assigned the task — not the assignee who completed it
+  if (task.createdBy && task.createdBy !== currentUser?.id) {
+    await notify(task.createdBy, message, taskId);
+  }
 }
 
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────

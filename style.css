@@ -307,8 +307,8 @@ h1 {
 }
 .btn-text:hover { background: #eef2ff; }
 
-/* ─── Board ─── */
-.board {
+/* ─── Board Wrapper (sidebar + kanban) ─── */
+.board-wrapper {
   display: flex;
   gap: 20px;
   padding: 28px 24px;
@@ -317,9 +317,21 @@ h1 {
   align-items: flex-start;
 }
 
+/* ─── Board (kanban columns only) ─── */
+.board {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
 /* ─── Column ─── */
 .column {
   flex: 1;
+  min-width: 200px;
   background: var(--white);
   border-radius: 14px;
   padding: 16px;
@@ -783,12 +795,13 @@ h1 {
 }
 
 /* ─── Responsive ─── */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .notif-sidebar { display: none; }
 }
 @media (max-width: 768px) {
-  .board { flex-direction: column; padding: 16px; }
-  .column { min-height: auto; }
+  .board-wrapper { flex-direction: column; padding: 16px; }
+  .board { overflow-x: visible; padding-bottom: 0; }
+  .column { min-height: auto; min-width: 0; }
   .form-row { flex-direction: column; gap: 0; }
   .header-right { gap: 8px; }
   .user-name-display { display: none; }

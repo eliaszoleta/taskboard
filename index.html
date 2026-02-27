@@ -75,8 +75,8 @@
     <button class="filter-bar-clear" id="filterBarClear">Clear filter</button>
   </div>
 
-  <!-- ── Board ── -->
-  <main class="board">
+  <!-- ── Board Wrapper ── -->
+  <div class="board-wrapper">
 
     <!-- Activity Sidebar -->
     <aside class="notif-sidebar">
@@ -86,7 +86,10 @@
       </div>
     </aside>
 
-    <div class="column" id="col-todo">
+    <!-- ── Board ── -->
+    <main class="board">
+
+      <div class="column" id="col-todo">
       <div class="column-header todo">
         <span class="column-title">To Do</span>
         <span class="task-count" id="count-todo">0</span>
@@ -118,7 +121,9 @@
       <div class="task-list" id="list-overdue"></div>
     </div>
 
-  </main>
+    </main><!-- /.board -->
+
+  </div><!-- /.board-wrapper -->
 
   <!-- ── Task Create / Edit Modal ── -->
   <div class="modal-overlay" id="modalOverlay">
