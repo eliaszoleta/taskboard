@@ -8,13 +8,54 @@
 </head>
 <body>
 
+  <!-- ── User Selection Overlay ── -->
+  <div class="user-overlay" id="userOverlay">
+    <div class="user-card">
+      <div class="user-card-logo">TaskBoard</div>
+      <p class="user-card-sub">Who are you?</p>
+      <div class="user-list" id="userList"></div>
+      <div class="user-divider">or</div>
+      <div class="user-new-row">
+        <input type="text" id="newUserName" placeholder="Enter your name to join..." maxlength="30">
+        <button class="btn-primary" id="joinBtn">Join</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Header ── -->
   <header>
     <div class="header-content">
       <h1>TaskBoard</h1>
-      <button class="btn-primary" id="addTaskBtn">+ New Task</button>
+      <div class="header-right">
+
+        <!-- Notifications -->
+        <div class="notif-wrapper">
+          <button class="notif-btn" id="notifBtn" title="Notifications">
+            <span class="notif-icon">🔔</span>
+            <span class="notif-badge" id="notifBadge"></span>
+          </button>
+          <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel-header">
+              <span>Notifications</span>
+              <button class="btn-text" id="markAllRead">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
+
+        <!-- Current user -->
+        <div class="current-user">
+          <span class="user-avatar" id="userAvatar"></span>
+          <span class="user-name-display" id="userNameDisplay"></span>
+          <button class="btn-text" id="changeUserBtn">Change</button>
+        </div>
+
+        <button class="btn-primary" id="addTaskBtn">+ New Task</button>
+      </div>
     </div>
   </header>
 
+  <!-- ── Board ── -->
   <main class="board">
 
     <div class="column" id="col-todo">
@@ -43,7 +84,7 @@
 
   </main>
 
-  <!-- Task Modal -->
+  <!-- ── Task Create / Edit Modal ── -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <div class="modal-header">
@@ -73,13 +114,21 @@
             <input type="date" id="taskDue">
           </div>
         </div>
-        <div class="form-group">
-          <label for="taskStatus">Status</label>
-          <select id="taskStatus">
-            <option value="todo">To Do</option>
-            <option value="inprogress">In Progress</option>
-            <option value="done">Done</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskStatus">Status</label>
+            <select id="taskStatus">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskAssignee">Assign To</label>
+            <select id="taskAssignee">
+              <option value="">Unassigned</option>
+            </select>
+          </div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
@@ -89,6 +138,28 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- ── Task Detail + Comments Modal ── -->
+  <div class="modal-overlay" id="detailOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <div class="detail-header-actions">
+          <button class="btn-secondary btn-sm" id="detailEditBtn">✏️ Edit</button>
+          <button class="btn-close" id="closeDetail">&times;</button>
+        </div>
+      </div>
+      <div id="detailBody"></div>
+      <div class="comments-section">
+        <h3 class="comments-heading">Comments</h3>
+        <div class="comments-list" id="commentsList"></div>
+        <div class="comment-input-row">
+          <input type="text" id="commentInput" placeholder="Write a comment...">
+          <button class="btn-primary" id="postCommentBtn">Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>
