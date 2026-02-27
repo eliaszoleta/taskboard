@@ -561,7 +561,8 @@ async function postComment() {
     //   assignee comments  → notify creator
     //   creator comments   → notify assignee
     const recipient = currentUser.id === task.assignedTo ? task.createdBy : task.assignedTo;
-    if (recipient) await notify(recipient, `${currentUser.name} commented on "${task.title}"`, detailTaskId);
+    const preview   = text.length > 80 ? text.slice(0, 80) + '…' : text;
+    if (recipient) await notify(recipient, `${currentUser.name} commented on "${task.title}": "${preview}"`, detailTaskId);
   }
 }
 
@@ -583,6 +584,7 @@ async function notifyParticipants(task, taskId, message) {
 
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
 let allNotifications = {};
+let sidebarLimit = 10;
 
 onValue(ref(db, 'notifications'), snap => {
   allNotifications = snap.val() || {};
@@ -598,23 +600,25 @@ function renderNotifSidebar() {
     return;
   }
 
-  const myNotifs = Object.entries(allNotifications[currentUser.id] || {})
+  const allMyNotifs = Object.entries(allNotifications[currentUser.id] || {})
     .map(([id, n]) => ({ id, ...n }))
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 20);
+    .sort((a, b) => b.createdAt - a.createdAt);
 
-  if (!myNotifs.length) {
+  if (!allMyNotifs.length) {
     body.innerHTML = '<div class="sidebar-empty">No activity yet</div>';
     return;
   }
 
-  body.innerHTML = myNotifs.map(n => {
+  const visible = allMyNotifs.slice(0, sidebarLimit);
+  const hasMore = allMyNotifs.length > sidebarLimit;
+
+  body.innerHTML = visible.map(n => {
     const time = new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     return `<div class="sidebar-notif-item ${n.read ? 'read' : 'unread'}" data-task="${n.taskId}">
       <div class="sidebar-notif-msg">${escHtml(n.message)}</div>
       <div class="sidebar-notif-time">${time}</div>
     </div>`;
-  }).join('');
+  }).join('') + (hasMore ? `<button class="sidebar-show-more" id="sidebarShowMore">Show more</button>` : '');
 
   body.querySelectorAll('.sidebar-notif-item[data-task]').forEach(item => {
     item.addEventListener('click', () => {
@@ -622,6 +626,14 @@ function renderNotifSidebar() {
       if (tid) openDetail(tid);
     });
   });
+
+  const showMoreBtn = body.querySelector('#sidebarShowMore');
+  if (showMoreBtn) {
+    showMoreBtn.addEventListener('click', () => {
+      sidebarLimit += 10;
+      renderNotifSidebar();
+    });
+  }
 }
 
 function setupNotifListener() {

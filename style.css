@@ -822,6 +822,21 @@ h1 {
   color: var(--muted);
   font-style: italic;
 }
+.sidebar-show-more {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 6px 12px 10px;
+  padding: 6px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: .78rem;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s;
+}
+.sidebar-show-more:hover { background: #eef2ff; }
 .sidebar-empty {
   padding: 24px 16px;
   text-align: center;
