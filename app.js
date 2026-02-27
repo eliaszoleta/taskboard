@@ -745,6 +745,18 @@ document.getElementById('dateFilter').addEventListener('change', e => {
   if (currentFilter !== 'custom') { customDateStart = null; customDateEnd = null; }
   renderBoard();
 });
+// Format YYYY-MM-DD → dd-mm-yyyy for display in the date field
+function fmtDateDash(val) {
+  if (!val) return 'dd-mm-yyyy';
+  const [y, m, d] = val.split('-');
+  return `${d}-${m}-${y}`;
+}
+document.getElementById('customFrom').addEventListener('change', e => {
+  document.getElementById('customFromText').textContent = fmtDateDash(e.target.value);
+});
+document.getElementById('customTo').addEventListener('change', e => {
+  document.getElementById('customToText').textContent = fmtDateDash(e.target.value);
+});
 document.getElementById('customDateApply').addEventListener('click', () => {
   customDateStart = document.getElementById('customFrom').value || null;
   customDateEnd   = document.getElementById('customTo').value   || null;
@@ -755,6 +767,10 @@ document.getElementById('filterBarClear').addEventListener('click', () => {
   currentUserFilter = 'all';
   customDateStart   = null;
   customDateEnd     = null;
+  document.getElementById('customFrom').value     = '';
+  document.getElementById('customTo').value       = '';
+  document.getElementById('customFromText').textContent = 'dd-mm-yyyy';
+  document.getElementById('customToText').textContent   = 'dd-mm-yyyy';
   document.getElementById('customDateRow').style.display = 'none';
   renderBoard();
 });

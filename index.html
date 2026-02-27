@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskBoard</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -69,8 +69,18 @@
 
           <!-- Drops down below the select when "Pick dates…" is chosen -->
           <div class="custom-date-row" id="customDateRow" style="display:none">
-            <label>From <input type="date" id="customFrom"></label>
-            <label>To <input type="date" id="customTo"></label>
+            <label>From
+              <div class="date-field">
+                <span class="date-field-text" id="customFromText">dd-mm-yyyy</span>
+                <input type="date" id="customFrom" aria-label="From date">
+              </div>
+            </label>
+            <label>To
+              <div class="date-field">
+                <span class="date-field-text" id="customToText">dd-mm-yyyy</span>
+                <input type="date" id="customTo" aria-label="To date">
+              </div>
+            </label>
             <button class="btn-text" id="customDateApply">Apply</button>
           </div>
         </div>
@@ -212,6 +222,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
