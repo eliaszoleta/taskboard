@@ -51,7 +51,7 @@ const escHtml = str =>
 const formatDate = dateStr => {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split('-');
-  return `${m}/${d}/${y}`;
+  return `${m}-${d}-${y}`;
 };
 
 const isOverdue = dateStr => {
@@ -278,7 +278,7 @@ function renderBoard() {
   }
   if (currentFilter === 'custom') {
     const fmt = s => s ? new Date(s + 'T00:00:00').toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }) : '…';
-    parts.push(`${fmt(customDateStart)} → ${fmt(customDateEnd)}`);
+    parts.push(`${fmt(customDateStart)} - ${fmt(customDateEnd)}`);
   } else if (currentFilter !== 'all') {
     parts.push(FILTER_LABELS[currentFilter] || currentFilter);
   }

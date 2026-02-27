@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskBoard</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -55,28 +55,30 @@
           <option value="all">👤 All users</option>
         </select>
 
-        <select class="date-filter" id="dateFilter" title="Filter by date created">
-          <option value="all">📅 All time</option>
-          <option value="today">Today</option>
-          <option value="this-week">This week</option>
-          <option value="next-week">Next week</option>
-          <option value="last-week">Last week</option>
-          <option value="this-month">This month</option>
-          <option value="overdue">⚠️ Overdue</option>
-          <option value="custom">📆 Pick dates…</option>
-        </select>
+        <div class="date-filter-wrap">
+          <select class="date-filter" id="dateFilter" title="Filter by date created">
+            <option value="all">📅 All time</option>
+            <option value="today">Today</option>
+            <option value="this-week">This week</option>
+            <option value="next-week">Next week</option>
+            <option value="last-week">Last week</option>
+            <option value="this-month">This month</option>
+            <option value="overdue">⚠️ Overdue</option>
+            <option value="custom">📆 Pick dates…</option>
+          </select>
+
+          <!-- Drops down below the select when "Pick dates…" is chosen -->
+          <div class="custom-date-row" id="customDateRow" style="display:none">
+            <label>From <input type="date" id="customFrom"></label>
+            <label>To <input type="date" id="customTo"></label>
+            <button class="btn-text" id="customDateApply">Apply</button>
+          </div>
+        </div>
 
         <button class="btn-primary" id="addTaskBtn">+ New Task</button>
       </div>
     </div>
   </header>
-
-  <!-- ── Custom Date Row ── -->
-  <div class="custom-date-row" id="customDateRow" style="display:none">
-    <label>From <input type="date" id="customFrom"></label>
-    <label>To <input type="date" id="customTo"></label>
-    <button class="btn-text" id="customDateApply">Apply</button>
-  </div>
 
   <!-- ── Filter Bar ── -->
   <div class="filter-bar" id="filterBar">
@@ -210,6 +212,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=4"></script>
 </body>
 </html>
