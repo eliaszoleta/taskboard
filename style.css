@@ -44,11 +44,28 @@ body {
   border-radius: 20px;
   padding: 36px;
   width: 100%;
+  position: relative;
   max-width: 480px;
   box-shadow: var(--shadow-lg);
   text-align: center;
   animation: modalIn .2s ease;
 }
+.user-overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background .15s, color .15s;
+}
+.user-overlay-close:hover { background: #f1f5f9; color: var(--text); }
+
 .user-card-logo {
   font-size: 1.8rem;
   font-weight: 800;

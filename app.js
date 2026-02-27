@@ -117,6 +117,8 @@ function saveCurrentUser(user) {
 
 function showUserOverlay() {
   document.getElementById('userOverlay').classList.add('open');
+  // Show cancel button only when a user is already logged in (changing profile)
+  document.getElementById('userOverlayClose').style.display = currentUser ? '' : 'none';
   renderUserList();
 }
 
@@ -193,6 +195,7 @@ document.getElementById('newUserName').addEventListener('keydown', e => {
   if (e.key === 'Enter') joinAs(document.getElementById('newUserName').value);
 });
 document.getElementById('changeUserBtn').addEventListener('click', showUserOverlay);
+document.getElementById('userOverlayClose').addEventListener('click', hideUserOverlay);
 
 // ─── USERS LISTENER ───────────────────────────────────────────────────────────
 onValue(ref(db, 'users'), snap => {
