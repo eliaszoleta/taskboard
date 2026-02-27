@@ -124,6 +124,8 @@ function hideUserOverlay() {
   document.getElementById('userOverlay').classList.remove('open');
   document.getElementById('userNameDisplay').textContent = currentUser.name;
   document.getElementById('userAvatar').innerHTML = avatarHtml(currentUser.name);
+  currentUserFilter = currentUser.id;
+  renderBoard();
   setupNotifListener();
 }
 
@@ -580,6 +582,7 @@ loadCurrentUser();
 if (currentUser) {
   document.getElementById('userNameDisplay').textContent = currentUser.name;
   document.getElementById('userAvatar').innerHTML = avatarHtml(currentUser.name);
+  currentUserFilter = currentUser.id;
   setupNotifListener();
 } else {
   showUserOverlay();
