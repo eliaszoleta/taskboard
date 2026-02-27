@@ -75,32 +75,25 @@ function taskMatchesFilter(task) {
 
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // "overdue" is strictly a due-date concept — skip tasks with no due date
+  // "overdue" is strictly a due-date concept
   if (currentFilter === 'overdue') {
     if (!task.due) return false;
     return new Date(task.due + 'T00:00:00') < today;
   }
 
-  // Helper: resolve the "date" of a task — due date if set, else creation date
-  function taskDate(t) {
-    if (t.due) return new Date(t.due + 'T00:00:00');
-    const ts = t.createdAt || Date.now();          // fallback for legacy tasks
-    const d  = new Date(ts); d.setHours(0,0,0,0);
-    return d;
-  }
+  // Every other filter is based purely on CREATION DATE
+  // so "today" means "created today", "this week" means "created this week", etc.
+  const ts = task.createdAt || Date.now();
+  const d  = new Date(ts); d.setHours(0,0,0,0);
 
   // Custom date range
   if (currentFilter === 'custom') {
-    const d    = taskDate(task);
     const from = customDateStart ? new Date(customDateStart + 'T00:00:00') : null;
     const to   = customDateEnd   ? new Date(customDateEnd   + 'T23:59:59') : null;
     if (from && d < from) return false;
     if (to   && d > to)   return false;
     return true;
   }
-
-  // All other filters: use due date when set, fall back to creation date for undated tasks
-  const d = taskDate(task);
 
   if (currentFilter === 'today')      { const e = new Date(today); e.setHours(23,59,59,999); return d >= today && d <= e; }
   if (currentFilter === 'this-week')  { const { start, end } = weekRange(0);  return d >= start && d <= end; }
