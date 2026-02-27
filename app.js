@@ -81,10 +81,17 @@ function taskMatchesFilter(task) {
     return new Date(task.due + 'T00:00:00') < today;
   }
 
+  // Helper: resolve the "date" of a task — due date if set, else creation date
+  function taskDate(t) {
+    if (t.due) return new Date(t.due + 'T00:00:00');
+    const ts = t.createdAt || Date.now();          // fallback for legacy tasks
+    const d  = new Date(ts); d.setHours(0,0,0,0);
+    return d;
+  }
+
   // Custom date range
   if (currentFilter === 'custom') {
-    const d = task.due ? new Date(task.due + 'T00:00:00')
-                       : new Date(new Date(task.createdAt).setHours(0,0,0,0));
+    const d    = taskDate(task);
     const from = customDateStart ? new Date(customDateStart + 'T00:00:00') : null;
     const to   = customDateEnd   ? new Date(customDateEnd   + 'T23:59:59') : null;
     if (from && d < from) return false;
@@ -93,8 +100,7 @@ function taskMatchesFilter(task) {
   }
 
   // All other filters: use due date when set, fall back to creation date for undated tasks
-  const d = task.due ? new Date(task.due + 'T00:00:00')
-                     : new Date(new Date(task.createdAt).setHours(0,0,0,0));
+  const d = taskDate(task);
 
   if (currentFilter === 'today')      { const e = new Date(today); e.setHours(23,59,59,999); return d >= today && d <= e; }
   if (currentFilter === 'this-week')  { const { start, end } = weekRange(0);  return d >= start && d <= end; }
@@ -271,9 +277,8 @@ function renderBoard() {
     parts.push(u ? `${u.name}'s tasks` : 'Unknown user');
   }
   if (currentFilter === 'custom') {
-    const from = customDateStart ? formatDate(customDateStart) : '…';
-    const to   = customDateEnd   ? formatDate(customDateEnd)   : '…';
-    parts.push(`${from} → ${to}`);
+    const fmt = s => s ? new Date(s + 'T00:00:00').toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }) : '…';
+    parts.push(`${fmt(customDateStart)} → ${fmt(customDateEnd)}`);
   } else if (currentFilter !== 'all') {
     parts.push(FILTER_LABELS[currentFilter] || currentFilter);
   }

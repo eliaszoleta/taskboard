@@ -729,16 +729,30 @@ h1 {
   align-items: center;
   gap: 6px;
   font-weight: 500;
+  position: relative;
 }
 .custom-date-row input[type="date"] {
   border: 1px solid var(--border);
   border-radius: 7px;
-  padding: 4px 8px;
-  font-size: .85rem;
+  padding: 7px 12px;
+  font-size: .875rem;
   font-family: inherit;
   background: var(--white);
   color: var(--text);
   cursor: pointer;
+  min-width: 155px;
+  width: 155px;
+  display: block;
+  line-height: 1.4;
+  /* keep browser's native calendar icon visible */
+}
+.custom-date-row input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+}
+.custom-date-row input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background: #e0e7ff;
 }
 .custom-date-row input[type="date"]:focus {
   outline: none;
