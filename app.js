@@ -557,11 +557,10 @@ async function postComment() {
 
   const task = tasks[detailTaskId];
   if (task) {
-    const recipient = task.assignedTo && task.assignedTo !== currentUser.id
-      ? task.assignedTo
-      : task.createdBy && task.createdBy !== currentUser.id
-        ? task.createdBy
-        : null;
+    // Notify the OTHER party — never the commenter themselves:
+    //   assignee comments  → notify creator
+    //   creator comments   → notify assignee
+    const recipient = currentUser.id === task.assignedTo ? task.createdBy : task.assignedTo;
     if (recipient) await notify(recipient, `${currentUser.name} commented on "${task.title}"`, detailTaskId);
   }
 }
