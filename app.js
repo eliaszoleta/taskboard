@@ -303,7 +303,7 @@ function buildCard(task) {
 
   const card = document.createElement('div');
   card.className = 'task-card';
-  card.draggable = owned;
+  card.draggable = true;
   card.dataset.id = task.id;
 
   card.innerHTML = `
@@ -326,13 +326,14 @@ function buildCard(task) {
   if (owned) {
     card.querySelector('.btn-icon.edit').addEventListener('click', e => { e.stopPropagation(); openEdit(task.id); });
     card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
-    card.addEventListener('dragstart', e => {
-      draggedId = task.id;
-      card.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
   }
+
+  card.addEventListener('dragstart', e => {
+    draggedId = task.id;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
 
   card.addEventListener('click', () => openDetail(task.id));
 
