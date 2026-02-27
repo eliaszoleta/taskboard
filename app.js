@@ -39,6 +39,8 @@ let draggedId          = null;
 let commentsUnsub      = null;
 let currentFilter      = 'all';
 let currentUserFilter  = 'all';
+let customDateStart    = null;   // 'YYYY-MM-DD' or null
+let customDateEnd      = null;   // 'YYYY-MM-DD' or null
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const escHtml = str =>
@@ -70,9 +72,30 @@ function weekRange(offset = 0) {
 
 function taskMatchesFilter(task) {
   if (currentFilter === 'all') return true;
-  if (!task.due) return false;          // undated tasks only shown in "All"
-  const d = new Date(task.due + 'T00:00:00');
+
   const today = new Date(); today.setHours(0,0,0,0);
+
+  // "overdue" is strictly a due-date concept — skip tasks with no due date
+  if (currentFilter === 'overdue') {
+    if (!task.due) return false;
+    return new Date(task.due + 'T00:00:00') < today;
+  }
+
+  // Custom date range
+  if (currentFilter === 'custom') {
+    const d = task.due ? new Date(task.due + 'T00:00:00')
+                       : new Date(new Date(task.createdAt).setHours(0,0,0,0));
+    const from = customDateStart ? new Date(customDateStart + 'T00:00:00') : null;
+    const to   = customDateEnd   ? new Date(customDateEnd   + 'T23:59:59') : null;
+    if (from && d < from) return false;
+    if (to   && d > to)   return false;
+    return true;
+  }
+
+  // All other filters: use due date when set, fall back to creation date for undated tasks
+  const d = task.due ? new Date(task.due + 'T00:00:00')
+                     : new Date(new Date(task.createdAt).setHours(0,0,0,0));
+
   if (currentFilter === 'today')      { const e = new Date(today); e.setHours(23,59,59,999); return d >= today && d <= e; }
   if (currentFilter === 'this-week')  { const { start, end } = weekRange(0);  return d >= start && d <= end; }
   if (currentFilter === 'next-week')  { const { start, end } = weekRange(1);  return d >= start && d <= end; }
@@ -80,7 +103,6 @@ function taskMatchesFilter(task) {
   if (currentFilter === 'this-month') {
     return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
   }
-  if (currentFilter === 'overdue')    { return d < today; }
   return true;
 }
 
@@ -91,6 +113,7 @@ const FILTER_LABELS = {
   'last-week':  'Last week',
   'this-month': 'This month',
   'overdue':    '⚠️ Overdue',
+  'custom':     'Custom range',
 };
 
 const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
@@ -247,7 +270,13 @@ function renderBoard() {
     const u = users[currentUserFilter];
     parts.push(u ? `${u.name}'s tasks` : 'Unknown user');
   }
-  if (currentFilter !== 'all') parts.push(FILTER_LABELS[currentFilter] || currentFilter);
+  if (currentFilter === 'custom') {
+    const from = customDateStart ? formatDate(customDateStart) : '…';
+    const to   = customDateEnd   ? formatDate(customDateEnd)   : '…';
+    parts.push(`${from} → ${to}`);
+  } else if (currentFilter !== 'all') {
+    parts.push(FILTER_LABELS[currentFilter] || currentFilter);
+  }
   if (parts.length) {
     bar.classList.add('visible');
     label.textContent = `Showing: ${parts.join(' · ')}`;
@@ -696,11 +725,22 @@ document.getElementById('userFilter').addEventListener('change', e => {
 });
 document.getElementById('dateFilter').addEventListener('change', e => {
   currentFilter = e.target.value;
+  const row = document.getElementById('customDateRow');
+  row.style.display = currentFilter === 'custom' ? 'flex' : 'none';
+  if (currentFilter !== 'custom') { customDateStart = null; customDateEnd = null; }
+  renderBoard();
+});
+document.getElementById('customDateApply').addEventListener('click', () => {
+  customDateStart = document.getElementById('customFrom').value || null;
+  customDateEnd   = document.getElementById('customTo').value   || null;
   renderBoard();
 });
 document.getElementById('filterBarClear').addEventListener('click', () => {
   currentFilter     = 'all';
   currentUserFilter = 'all';
+  customDateStart   = null;
+  customDateEnd     = null;
+  document.getElementById('customDateRow').style.display = 'none';
   renderBoard();
 });
 
