@@ -312,7 +312,7 @@ h1 {
   display: flex;
   gap: 20px;
   padding: 28px 24px;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   align-items: flex-start;
 }
@@ -689,7 +689,101 @@ h1 {
   padding: 0;
 }
 
+/* ─── Activity Sidebar ─── */
+.notif-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  background: var(--white);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  position: sticky;
+  top: 78px;
+  max-height: calc(100vh - 98px);
+  display: flex;
+  flex-direction: column;
+}
+.notif-sidebar-header {
+  padding: 13px 16px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+}
+.notif-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+}
+.sidebar-user-section {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0 6px;
+}
+.sidebar-user-section:last-child { border-bottom: none; }
+.sidebar-user-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 6px;
+}
+.sidebar-user-name {
+  font-size: .82rem;
+  font-weight: 600;
+  flex: 1;
+  color: var(--text);
+}
+.sidebar-unread-badge {
+  background: var(--high);
+  color: #fff;
+  border-radius: 999px;
+  font-size: .62rem;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.sidebar-notif-item {
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 4px;
+  transition: background .15s;
+}
+.sidebar-notif-item:hover { background: var(--bg); }
+.sidebar-notif-item.unread { background: #eef2ff; }
+.sidebar-notif-item.unread:hover { background: #e0e7ff; }
+.sidebar-notif-msg {
+  font-size: .74rem;
+  line-height: 1.4;
+  color: var(--text);
+  margin-bottom: 1px;
+}
+.sidebar-notif-time {
+  font-size: .66rem;
+  color: var(--muted);
+}
+.sidebar-no-notifs {
+  padding: 4px 12px 6px;
+  font-size: .75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.sidebar-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .83rem;
+}
+
 /* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .notif-sidebar { display: none; }
+}
 @media (max-width: 768px) {
   .board { flex-direction: column; padding: 16px; }
   .column { min-height: auto; }

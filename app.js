@@ -177,6 +177,7 @@ onValue(ref(db, 'users'), snap => {
   renderUserList();
   populateAssigneeDropdown();
   populateUserFilter();
+  renderNotifSidebar();
 });
 
 function populateAssigneeDropdown() {
@@ -305,7 +306,7 @@ document.querySelectorAll('.task-list').forEach(list => {
     tasks[draggedId] = { ...task, status: newStatus };
     renderBoard();
     if (newStatus === 'done' && oldStatus !== 'done') {
-      await notifyAll(`${currentUser.name} completed "${task.title}"`, draggedId);
+      await notifyParticipants(task, draggedId, `${currentUser.name} completed "${task.title}"`);
     }
   });
 });
@@ -366,7 +367,7 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
       await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, editingTaskId);
     }
     if (newStatus === 'done' && old.status !== 'done') {
-      await notifyAll(`${currentUser.name} completed "${title}"`, editingTaskId);
+      await notifyParticipants({...old, ...fields}, editingTaskId, `${currentUser.name} completed "${title}"`);
     }
   } else {
     const newRef = push(ref(db, 'tasks'));
@@ -376,7 +377,7 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
     closeModal();
     renderBoard();
     if (newAssignee) await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, newRef.key);
-    if (newStatus === 'done') await notifyAll(`${currentUser.name} completed "${title}"`, newRef.key);
+    if (newStatus === 'done') await notifyParticipants(taskData, newRef.key, `${currentUser.name} completed "${title}"`);
   }
 });
 
@@ -434,7 +435,7 @@ function openDetail(id) {
     tasks[id] = { ...tasks[id], status: newStatus };
     renderBoard();
     if (newStatus === 'done' && old !== 'done') {
-      await notifyAll(`${currentUser.name} completed "${task.title}"`, id);
+      await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
     }
   });
 
@@ -488,12 +489,12 @@ async function postComment() {
 
   const task = tasks[detailTaskId];
   if (task) {
-    const toNotify = new Set();
-    if (task.createdBy  && task.createdBy  !== currentUser.id) toNotify.add(task.createdBy);
-    if (task.assignedTo && task.assignedTo !== currentUser.id) toNotify.add(task.assignedTo);
-    for (const uid of toNotify) {
-      await notify(uid, `${currentUser.name} commented on "${task.title}"`, detailTaskId);
-    }
+    const recipient = task.assignedTo && task.assignedTo !== currentUser.id
+      ? task.assignedTo
+      : task.createdBy && task.createdBy !== currentUser.id
+        ? task.createdBy
+        : null;
+    if (recipient) await notify(recipient, `${currentUser.name} commented on "${task.title}"`, detailTaskId);
   }
 }
 
@@ -506,12 +507,65 @@ async function notify(toUserId, message, taskId) {
   await push(ref(db, `notifications/${toUserId}`), { message, taskId: taskId || '', read: false, createdAt: Date.now() });
 }
 
-async function notifyAll(message, taskId) {
-  await Promise.all(
-    Object.keys(users)
-      .filter(id => id !== currentUser?.id)
-      .map(id => notify(id, message, taskId))
-  );
+async function notifyParticipants(task, taskId, message) {
+  const toNotify = new Set();
+  if (task.createdBy  && task.createdBy  !== currentUser?.id) toNotify.add(task.createdBy);
+  if (task.assignedTo && task.assignedTo !== currentUser?.id) toNotify.add(task.assignedTo);
+  await Promise.all([...toNotify].map(id => notify(id, message, taskId)));
+}
+
+// ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
+let allNotifications = {};
+
+onValue(ref(db, 'notifications'), snap => {
+  allNotifications = snap.val() || {};
+  renderNotifSidebar();
+});
+
+function renderNotifSidebar() {
+  const body = document.getElementById('notifSidebarBody');
+  if (!body) return;
+
+  const userArr = Object.entries(users)
+    .map(([id, u]) => ({ id, ...u }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (!userArr.length) {
+    body.innerHTML = '<div class="sidebar-empty">No users yet</div>';
+    return;
+  }
+
+  body.innerHTML = userArr.map(u => {
+    const userNotifs = Object.entries(allNotifications[u.id] || {})
+      .map(([id, n]) => ({ id, ...n }))
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 5);
+    const unread = userNotifs.filter(n => !n.read).length;
+
+    return `<div class="sidebar-user-section">
+      <div class="sidebar-user-header">
+        ${avatarHtml(u.name)}
+        <span class="sidebar-user-name">${escHtml(u.name)}</span>
+        ${unread ? `<span class="sidebar-unread-badge">${unread}</span>` : ''}
+      </div>
+      ${userNotifs.length
+        ? userNotifs.map(n => {
+            const time = new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return `<div class="sidebar-notif-item ${n.read ? 'read' : 'unread'}" data-task="${n.taskId}">
+              <div class="sidebar-notif-msg">${escHtml(n.message)}</div>
+              <div class="sidebar-notif-time">${time}</div>
+            </div>`;
+          }).join('')
+        : '<div class="sidebar-no-notifs">No activity yet</div>'}
+    </div>`;
+  }).join('');
+
+  body.querySelectorAll('.sidebar-notif-item[data-task]').forEach(item => {
+    item.addEventListener('click', () => {
+      const tid = item.dataset.task;
+      if (tid && tasks[tid]) openDetail(tid);
+    });
+  });
 }
 
 function setupNotifListener() {
