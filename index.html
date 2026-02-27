@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskBoard</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -29,63 +32,67 @@
       <h1>TaskBoard</h1>
       <div class="header-right">
 
-        <!-- Notifications -->
-        <div class="notif-wrapper">
-          <button class="notif-btn" id="notifBtn" title="Notifications">
-            <span class="notif-icon">🔔</span>
-            <span class="notif-badge" id="notifBadge"></span>
-          </button>
-          <div class="notif-panel" id="notifPanel">
-            <div class="notif-panel-header">
-              <span>Notifications</span>
-              <button class="btn-text" id="markAllRead">Mark all read</button>
+        <!-- Top-row controls: bell, user, add button -->
+        <div class="header-actions">
+          <div class="notif-wrapper">
+            <button class="notif-btn" id="notifBtn" title="Notifications">
+              <span class="notif-icon">🔔</span>
+              <span class="notif-badge" id="notifBadge"></span>
+            </button>
+            <div class="notif-panel" id="notifPanel">
+              <div class="notif-panel-header">
+                <span>Notifications</span>
+                <button class="btn-text" id="markAllRead">Mark all read</button>
+              </div>
+              <div class="notif-list" id="notifList"></div>
             </div>
-            <div class="notif-list" id="notifList"></div>
           </div>
+
+          <div class="current-user">
+            <span class="user-avatar" id="userAvatar"></span>
+            <span class="user-name-display" id="userNameDisplay"></span>
+            <button class="btn-text" id="changeUserBtn">Change</button>
+          </div>
+
+          <button class="btn-primary" id="addTaskBtn">+ New Task</button>
         </div>
 
-        <!-- Current user -->
-        <div class="current-user">
-          <span class="user-avatar" id="userAvatar"></span>
-          <span class="user-name-display" id="userNameDisplay"></span>
-          <button class="btn-text" id="changeUserBtn">Change</button>
-        </div>
-
-        <select class="date-filter" id="userFilter" title="Filter by user">
-          <option value="all">👤 All users</option>
-        </select>
-
-        <div class="date-filter-wrap">
-          <select class="date-filter" id="dateFilter" title="Filter by date created">
-            <option value="all">📅 All time</option>
-            <option value="today">Today</option>
-            <option value="this-week">This week</option>
-            <option value="next-week">Next week</option>
-            <option value="last-week">Last week</option>
-            <option value="this-month">This month</option>
-            <option value="overdue">⚠️ Overdue</option>
-            <option value="custom">📆 Pick dates…</option>
+        <!-- Filter controls (wrap to second row on mobile) -->
+        <div class="header-filters">
+          <select class="date-filter" id="userFilter" title="Filter by user">
+            <option value="all">👤 All users</option>
           </select>
 
-          <!-- Drops down below the select when "Pick dates…" is chosen -->
-          <div class="custom-date-row" id="customDateRow" style="display:none">
-            <label>From
-              <div class="date-field">
-                <span class="date-field-text" id="customFromText">dd-mm-yyyy</span>
-                <input type="date" id="customFrom" aria-label="From date">
-              </div>
-            </label>
-            <label>To
-              <div class="date-field">
-                <span class="date-field-text" id="customToText">dd-mm-yyyy</span>
-                <input type="date" id="customTo" aria-label="To date">
-              </div>
-            </label>
-            <button class="btn-text" id="customDateApply">Apply</button>
+          <div class="date-filter-wrap">
+            <select class="date-filter" id="dateFilter" title="Filter by date created">
+              <option value="all">📅 All time</option>
+              <option value="today">Today</option>
+              <option value="this-week">This week</option>
+              <option value="next-week">Next week</option>
+              <option value="last-week">Last week</option>
+              <option value="this-month">This month</option>
+              <option value="overdue">⚠️ Overdue</option>
+              <option value="custom">📆 Pick dates…</option>
+            </select>
+
+            <div class="custom-date-row" id="customDateRow" style="display:none">
+              <label>From
+                <div class="date-field">
+                  <span class="date-field-text" id="customFromText">dd-mm-yyyy</span>
+                  <input type="date" id="customFrom" aria-label="From date">
+                </div>
+              </label>
+              <label>To
+                <div class="date-field">
+                  <span class="date-field-text" id="customToText">dd-mm-yyyy</span>
+                  <input type="date" id="customTo" aria-label="To date">
+                </div>
+              </label>
+              <button class="btn-text" id="customDateApply">Apply</button>
+            </div>
           </div>
         </div>
 
-        <button class="btn-primary" id="addTaskBtn">+ New Task</button>
       </div>
     </div>
   </header>
@@ -111,40 +118,40 @@
     <main class="board">
 
       <div class="column" id="col-todo">
-      <div class="column-header todo">
-        <span class="column-title">To Do</span>
-        <span class="task-count" id="count-todo">0</span>
+        <div class="column-header todo">
+          <span class="column-title">To Do</span>
+          <span class="task-count" id="count-todo">0</span>
+        </div>
+        <div class="task-list" id="list-todo"></div>
       </div>
-      <div class="task-list" id="list-todo"></div>
-    </div>
 
-    <div class="column" id="col-inprogress">
-      <div class="column-header inprogress">
-        <span class="column-title">In Progress</span>
-        <span class="task-count" id="count-inprogress">0</span>
+      <div class="column" id="col-inprogress">
+        <div class="column-header inprogress">
+          <span class="column-title">In Progress</span>
+          <span class="task-count" id="count-inprogress">0</span>
+        </div>
+        <div class="task-list" id="list-inprogress"></div>
       </div>
-      <div class="task-list" id="list-inprogress"></div>
-    </div>
 
-    <div class="column" id="col-done">
-      <div class="column-header done">
-        <span class="column-title">Done</span>
-        <span class="task-count" id="count-done">0</span>
+      <div class="column" id="col-done">
+        <div class="column-header done">
+          <span class="column-title">Done</span>
+          <span class="task-count" id="count-done">0</span>
+        </div>
+        <div class="task-list" id="list-done"></div>
       </div>
-      <div class="task-list" id="list-done"></div>
-    </div>
 
-    <div class="column" id="col-overdue">
-      <div class="column-header overdue">
-        <span class="column-title">Overdue</span>
-        <span class="task-count" id="count-overdue">0</span>
+      <div class="column" id="col-overdue">
+        <div class="column-header overdue">
+          <span class="column-title">Overdue</span>
+          <span class="task-count" id="count-overdue">0</span>
+        </div>
+        <div class="task-list" id="list-overdue"></div>
       </div>
-      <div class="task-list" id="list-overdue"></div>
-    </div>
 
-    </main><!-- /.board -->
+    </main>
 
-  </div><!-- /.board-wrapper -->
+  </div>
 
   <!-- ── Task Create / Edit Modal ── -->
   <div class="modal-overlay" id="modalOverlay">
@@ -222,6 +229,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=6"></script>
+  <script type="module" src="app.js?v=7"></script>
 </body>
 </html>
