@@ -83,7 +83,7 @@ function taskMatchesFilter(task) {
 
   // Every other filter is based purely on CREATION DATE
   // so "today" means "created today", "this week" means "created this week", etc.
-  const ts = task.createdAt || Date.now();
+  const ts = Number(task.createdAt) || Date.now();   // Number() handles string-stored timestamps
   const d  = new Date(ts); d.setHours(0,0,0,0);
 
   // Custom date range
@@ -255,6 +255,13 @@ onValue(ref(db, 'tasks'), snap => {
 
 // ─── BOARD ────────────────────────────────────────────────────────────────────
 function renderBoard() {
+  // DEBUG: log task createdAt values so we can verify the data
+  console.log('[Filter debug] currentFilter:', currentFilter);
+  console.log('[Filter debug] tasks:', Object.entries(tasks).map(([id, t]) => ({
+    id, title: t.title, createdAt: t.createdAt,
+    createdAtDate: t.createdAt ? new Date(t.createdAt).toLocaleString() : 'MISSING',
+    due: t.due
+  })));
   // Sync filter selects
   const dateSel = document.getElementById('dateFilter');
   const userSel = document.getElementById('userFilter');
