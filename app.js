@@ -26,24 +26,37 @@ if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
 const firebaseApp = initializeApp(firebaseConfig);
 const db          = getDatabase(firebaseApp);
 
+// ─── SVG ICON LIBRARY ─────────────────────────────────────────────────────────
+const ICONS = {
+  edit:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+  comment: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  calendar:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  clock:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  lock:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  clip:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`,
+};
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let currentUser        = null;   // { id, name }
-let users              = {};     // { userId: { name, passwordHash?, photoURL?, createdAt } }
+let users              = {};     // { userId: { name, passwordHash?, photoURL?, email?, createdAt } }
 let tasks              = {};     // { taskId: { ...fields } }
 let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
 let commentsUnsub      = null;
-let notifBadgeUnsub    = null;   // unsubscribe for the per-user notification listener
+let notifBadgeUnsub    = null;
 let currentFilter      = 'all';
 let currentUserFilter  = 'all';
 let customDateStart    = null;
 let customDateEnd      = null;
-let commentCounts      = {};     // taskId → number of comments
+let commentCounts      = {};
 let allNotifications   = {};
 let sidebarLimit       = 10;
-let pendingLoginUid    = null;   // uid awaiting password entry
-let pendingProfilePhoto = null;  // base64 data URL pending save in profile modal
+let pendingLoginUid    = null;
+let pendingProfilePhoto = null;
+let pendingResourceFile = null;  // { dataUrl, name } for file attachments
+let activeResourceTab  = 'link'; // 'link' | 'file'
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const escHtml = str =>
@@ -104,7 +117,7 @@ function taskMatchesFilter(task) {
 
 const FILTER_LABELS = {
   'today':'Today','this-week':'This week','next-week':'Next week',
-  'last-week':'Last week','this-month':'This month','overdue':'⚠️ Overdue','custom':'Custom range',
+  'last-week':'Last week','this-month':'This month','overdue':'Overdue','custom':'Custom range',
 };
 
 const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
@@ -116,7 +129,6 @@ const avatarColor = name => {
 const initials = name =>
   (name||'?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-// Renders an avatar — shows profile photo if the user has one, otherwise initials
 const avatarHtml = (name, lg = false) => {
   const cls  = `avatar${lg ? ' avatar-lg' : ''}`;
   const user = Object.values(users).find(u => u.name === name);
@@ -126,13 +138,11 @@ const avatarHtml = (name, lg = false) => {
   return `<span class="${cls}" style="background:${avatarColor(name)}">${initials(name)}</span>`;
 };
 
-// SHA-256 via Web Crypto API
 async function hashPassword(password) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// Resize an image file to ≤ maxPx square, returns a JPEG data URL
 function resizeImage(file, maxPx = 200) {
   return new Promise(resolve => {
     const reader = new FileReader();
@@ -148,6 +158,15 @@ function resizeImage(file, maxPx = 200) {
       };
       img.src = e.target.result;
     };
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
@@ -175,16 +194,18 @@ function hideUserOverlay() {
   updateHeaderUser();
   currentUserFilter = currentUser.id;
   renderBoard();
-  setupNotifListener();   // tears down old listener, registers new one
-  renderNotifSidebar();   // immediately refresh sidebar for new user
+  setupNotifListener();
+  renderNotifSidebar();
 }
 
 // ── Step navigation ──
 function showStep1() {
-  document.getElementById('userStep1').style.display = '';
-  document.getElementById('userStep2').style.display = 'none';
+  ['userStep1','userStep2','userStep3','userStep4'].forEach(id => {
+    document.getElementById(id).style.display = id === 'userStep1' ? '' : 'none';
+  });
   pendingLoginUid = null;
   document.getElementById('newUserName').value     = '';
+  document.getElementById('newUserEmail').value    = '';
   document.getElementById('newUserPassword').value = '';
   document.getElementById('loginError').textContent = '';
 }
@@ -193,13 +214,80 @@ function showStep2(uid) {
   const u = users[uid];
   if (!u) return;
   pendingLoginUid = uid;
-  document.getElementById('userStep1').style.display = 'none';
+  ['userStep1','userStep3','userStep4'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('userStep2').style.display = '';
-  document.getElementById('pwdPromptName').textContent    = u.name;
-  document.getElementById('pwdPromptAvatar').innerHTML    = avatarHtml(u.name);
-  document.getElementById('loginPassword').value          = '';
-  document.getElementById('loginError').textContent       = '';
+  document.getElementById('pwdPromptName').textContent = u.name;
+  document.getElementById('pwdPromptAvatar').innerHTML = avatarHtml(u.name);
+  document.getElementById('loginPassword').value       = '';
+  document.getElementById('loginError').textContent    = '';
   document.getElementById('loginPassword').focus();
+}
+
+function showStep3() {
+  const u = users[pendingLoginUid];
+  ['userStep1','userStep2','userStep4'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('userStep3').style.display = '';
+  document.getElementById('forgotEmail').value       = '';
+  document.getElementById('forgotError').textContent = '';
+
+  const sub  = document.getElementById('forgotSub');
+  const form = document.getElementById('forgotEmailForm');
+  if (!u?.email) {
+    sub.textContent  = 'No recovery email is linked to this account. Add one in Profile Settings after signing in.';
+    form.style.display = 'none';
+  } else {
+    const [local, domain] = u.email.split('@');
+    const masked = local.slice(0, 2) + '***@' + domain;
+    sub.textContent  = `Enter the email linked to your account (hint: ${masked})`;
+    form.style.display = '';
+    document.getElementById('forgotEmail').focus();
+  }
+}
+
+function showStep4() {
+  ['userStep1','userStep2','userStep3'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('userStep4').style.display = '';
+  document.getElementById('resetPassword').value        = '';
+  document.getElementById('resetConfirmPassword').value = '';
+  document.getElementById('resetError').textContent     = '';
+  document.getElementById('resetPassword').focus();
+}
+
+async function handleForgotVerify() {
+  const uid = pendingLoginUid;
+  const u   = users[uid];
+  if (!uid || !u?.email) return;
+
+  const inputEmail = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  if (!inputEmail) {
+    document.getElementById('forgotError').textContent = 'Please enter your email address.';
+    return;
+  }
+  if (inputEmail !== u.email.toLowerCase()) {
+    document.getElementById('forgotError').textContent = 'Email does not match our records. Try again.';
+    return;
+  }
+  showStep4();
+}
+
+async function handleResetPassword() {
+  const uid = pendingLoginUid;
+  if (!uid) return;
+
+  const newPwd     = document.getElementById('resetPassword').value;
+  const confirmPwd = document.getElementById('resetConfirmPassword').value;
+  const errEl      = document.getElementById('resetError');
+
+  if (!newPwd)                  { errEl.textContent = 'Please enter a new password.'; return; }
+  if (newPwd !== confirmPwd)    { errEl.textContent = 'Passwords do not match.'; return; }
+  if (newPwd.length < 4)        { errEl.textContent = 'Password must be at least 4 characters.'; return; }
+
+  const hash = await hashPassword(newPwd);
+  await update(ref(db, `users/${uid}`), { passwordHash: hash });
+  users[uid] = { ...users[uid], passwordHash: hash };
+
+  saveCurrentUser({ id: uid, name: users[uid].name });
+  hideUserOverlay();
 }
 
 // ── Render user list ──
@@ -207,7 +295,7 @@ function renderUserList() {
   const list    = document.getElementById('userList');
   const userArr = Object.entries(users)
     .map(([id, u]) => ({ id, ...u }))
-    .sort((a, b) => a.name.localeCompare(b.name));   // alphabetical
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (!userArr.length) {
     list.innerHTML = '<p class="no-users">No users yet — be the first to join!</p>';
@@ -218,7 +306,9 @@ function renderUserList() {
     <button class="user-chip" data-uid="${u.id}">
       ${avatarHtml(u.name)}
       <span class="chip-name">${escHtml(u.name)}</span>
-      ${u.passwordHash ? '🔒' : `<span class="no-pwd-tag">no password</span>`}
+      ${u.passwordHash
+        ? `<span class="chip-lock" title="Password protected">${ICONS.lock}</span>`
+        : `<span class="no-pwd-tag">no password</span>`}
     </button>`).join('');
 
   list.querySelectorAll('.user-chip').forEach(btn => {
@@ -226,7 +316,6 @@ function renderUserList() {
   });
 }
 
-// Clicking a user chip: if they have a password → step 2, else log in directly
 async function handleUserChipClick(uid) {
   const u = users[uid];
   if (!u) return;
@@ -238,7 +327,6 @@ async function handleUserChipClick(uid) {
   }
 }
 
-// Password login (step 2)
 async function attemptLogin() {
   const uid = pendingLoginUid;
   const u   = users[uid];
@@ -255,8 +343,7 @@ async function attemptLogin() {
   hideUserOverlay();
 }
 
-// Create a new account
-async function joinAs(name, password) {
+async function joinAs(name, email, password) {
   const trimmed = name.trim();
   if (!trimmed) return;
   const existing = Object.entries(users).find(([, u]) => u.name.toLowerCase() === trimmed.toLowerCase());
@@ -274,9 +361,11 @@ async function joinAs(name, password) {
     document.getElementById('newUserPassword').focus();
     return;
   }
-  const hash   = await hashPassword(password);
-  const newRef = push(ref(db, 'users'));
-  await set(newRef, { name: trimmed, passwordHash: hash, createdAt: Date.now() });
+  const hash    = await hashPassword(password);
+  const newData = { name: trimmed, passwordHash: hash, createdAt: Date.now() };
+  if (email.trim()) newData.email = email.trim().toLowerCase();
+  const newRef  = push(ref(db, 'users'));
+  await set(newRef, newData);
   saveCurrentUser({ id: newRef.key, name: trimmed });
   hideUserOverlay();
 }
@@ -285,12 +374,31 @@ async function joinAs(name, password) {
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 document.getElementById('backToList').addEventListener('click', showStep1);
+document.getElementById('forgotPwdBtn').addEventListener('click', showStep3);
+document.getElementById('backToStep2').addEventListener('click', () => showStep2(pendingLoginUid));
+document.getElementById('forgotVerifyBtn').addEventListener('click', handleForgotVerify);
+document.getElementById('forgotEmail').addEventListener('keydown', e => { if (e.key === 'Enter') handleForgotVerify(); });
+document.getElementById('resetPasswordBtn').addEventListener('click', handleResetPassword);
+document.getElementById('resetPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('resetConfirmPassword').focus(); });
+document.getElementById('resetConfirmPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleResetPassword(); });
+
 document.getElementById('joinBtn').addEventListener('click', () =>
-  joinAs(document.getElementById('newUserName').value, document.getElementById('newUserPassword').value));
+  joinAs(
+    document.getElementById('newUserName').value,
+    document.getElementById('newUserEmail').value,
+    document.getElementById('newUserPassword').value,
+  ));
 document.getElementById('newUserPassword').addEventListener('keydown', e => {
-  if (e.key === 'Enter') joinAs(document.getElementById('newUserName').value, document.getElementById('newUserPassword').value);
+  if (e.key === 'Enter') joinAs(
+    document.getElementById('newUserName').value,
+    document.getElementById('newUserEmail').value,
+    document.getElementById('newUserPassword').value,
+  );
 });
 document.getElementById('newUserName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('newUserEmail').focus();
+});
+document.getElementById('newUserEmail').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('newUserPassword').focus();
 });
 document.getElementById('changeUserBtn').addEventListener('click', showUserOverlay);
@@ -303,7 +411,7 @@ onValue(ref(db, 'users'), snap => {
   populateAssigneeDropdown();
   populateUserFilter();
   renderNotifSidebar();
-  updateHeaderUser();   // re-render header avatar in case photo changed
+  updateHeaderUser();
 });
 
 function updateHeaderUser() {
@@ -332,7 +440,7 @@ function populateUserFilter() {
   const sel  = document.getElementById('userFilter');
   if (!sel) return;
   const prev = sel.value;
-  sel.innerHTML = '<option value="all">👤 All users</option>' +
+  sel.innerHTML = '<option value="all">All users</option>' +
     Object.entries(users)
       .sort(([,a],[,b]) => a.name.localeCompare(b.name))
       .map(([id, u]) => `<option value="${id}">${escHtml(u.name)}</option>`).join('');
@@ -346,7 +454,7 @@ onValue(ref(db, 'tasks'), snap => {
   checkAndNotifyOverdue();
 });
 
-// ─── GLOBAL COMMENTS LISTENER (for card count badges) ────────────────────────
+// ─── GLOBAL COMMENTS LISTENER ────────────────────────────────────────────────
 onValue(ref(db, 'comments'), snap => {
   const data = snap.val() || {};
   commentCounts = {};
@@ -360,11 +468,11 @@ onValue(ref(db, 'comments'), snap => {
 async function checkAndNotifyOverdue() {
   const now = Date.now();
   for (const [id, task] of Object.entries(tasks)) {
-    if (task.status === 'done')        continue;   // already completed
-    if (task.overdueNotifiedAt)        continue;   // already notified
-    if (!isOverdue(task.due))          continue;   // not yet overdue
+    if (task.status === 'done')     continue;
+    if (task.overdueNotifiedAt)     continue;
+    if (!isOverdue(task.due))       continue;
 
-    const msg      = `⚠️ Task "${task.title}" is now overdue!`;
+    const msg      = `Task "${task.title}" is now overdue!`;
     const toNotify = new Set([task.createdBy, task.assignedTo].filter(Boolean));
     for (const uid of toNotify) {
       await push(ref(db, `notifications/${uid}`), { message: msg, taskId: id, read: false, createdAt: now });
@@ -406,30 +514,34 @@ function renderBoard() {
       .filter(t => status === 'done' || !isOverdue(t.due))
       .filter(t => taskMatchesFilter(t))
       .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
-      .sort((a, b) => a.createdAt - b.createdAt);
+      .sort((a, b) => b.createdAt - a.createdAt);  // newest first
 
     count.textContent = cols.length;
     list.innerHTML = '';
     if (!cols.length) {
-      list.innerHTML = `<div class="empty-state"><div class="icon">📋</div>${parts.length ? 'No tasks in this range' : 'No tasks yet'}</div>`;
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </div>${parts.length ? 'No tasks in this range' : 'No tasks yet'}</div>`;
     } else {
       cols.forEach(t => list.appendChild(buildCard(t)));
     }
   });
 
-  // Overdue column — always shows all overdue non-done tasks
+  // Overdue column — always shows all overdue non-done tasks, newest first
   const overdueList  = document.getElementById('list-overdue');
   const overdueCount = document.getElementById('count-overdue');
   const overdueTasks = Object.entries(tasks)
     .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
     .map(([id, t]) => ({ id, ...t }))
     .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
-    .sort((a, b) => a.createdAt - b.createdAt);
+    .sort((a, b) => b.createdAt - a.createdAt);  // newest first
 
   overdueCount.textContent = overdueTasks.length;
   overdueList.innerHTML = '';
   if (!overdueTasks.length) {
-    overdueList.innerHTML = `<div class="empty-state"><div class="icon">✅</div>No overdue tasks</div>`;
+    overdueList.innerHTML = `<div class="empty-state"><div class="empty-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>No overdue tasks</div>`;
   } else {
     overdueTasks.forEach(t => overdueList.appendChild(buildCard(t)));
   }
@@ -445,42 +557,50 @@ function buildCard(task) {
   const assignee = task.assignedTo ? users[task.assignedTo] : null;
   const owned    = isTaskOwner(task);
   const cCount   = commentCounts[task.id] || 0;
+  const hasRes   = !!task.resourceUrl;
 
   const card = document.createElement('div');
   card.className = 'task-card';
-  card.draggable = true;
   card.dataset.id = task.id;
+
+  // Only owned tasks are draggable
+  if (owned) {
+    card.draggable = true;
+    card.style.cursor = 'grab';
+  }
 
   card.innerHTML = `
     <div class="task-card-header">
       <span class="task-title">${escHtml(task.title)}</span>
       ${owned ? `<div class="card-actions">
-        <button class="btn-icon edit"   title="Edit"   data-id="${task.id}">✏️</button>
-        <button class="btn-icon delete" title="Delete" data-id="${task.id}">🗑️</button>
+        <button class="btn-icon edit"   title="Edit"   data-id="${task.id}">${ICONS.edit}</button>
+        <button class="btn-icon delete" title="Delete" data-id="${task.id}">${ICONS.trash}</button>
       </div>` : ''}
     </div>
     ${task.desc ? `<div class="task-desc">${escHtml(task.desc)}</div>` : ''}
     <div class="task-card-footer">
       <span class="priority-badge priority-${task.priority}">${task.priority}</span>
       <div class="card-meta">
-        ${task.due ? `<span class="due-date ${overdue?'overdue':''}">📅 ${formatDate(task.due)}</span>` : ''}
-        ${task.createdAt ? `<span class="created-date">🕒 ${fmtTimestamp(task.createdAt)}</span>` : ''}
+        ${task.due ? `<span class="due-date ${overdue?'overdue':''}">${ICONS.calendar} ${formatDate(task.due)}</span>` : ''}
+        ${task.createdAt ? `<span class="created-date">${ICONS.clock} ${fmtTimestamp(task.createdAt)}</span>` : ''}
         ${assignee ? `<span class="assignee-chip">${avatarHtml(assignee.name)}<span>${escHtml(assignee.name)}</span></span>` : ''}
-        <span class="comment-count" title="${cCount} comment${cCount === 1 ? '' : 's'}">💬 ${cCount}</span>
+        <span class="comment-count" title="${cCount} comment${cCount === 1 ? '' : 's'}">${ICONS.comment} ${cCount}</span>
+        ${hasRes ? `<span class="resource-indicator" title="Has attachment">${ICONS.clip}</span>` : ''}
       </div>
     </div>`;
 
   if (owned) {
     card.querySelector('.btn-icon.edit').addEventListener('click', e => { e.stopPropagation(); openEdit(task.id); });
     card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
+
+    card.addEventListener('dragstart', e => {
+      draggedId = task.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
   }
 
-  card.addEventListener('dragstart', e => {
-    draggedId = task.id;
-    card.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedId = null; });
   card.addEventListener('click', () => openDetail(task.id));
 
   return card;
@@ -500,6 +620,8 @@ document.querySelectorAll('.task-list').forEach(list => {
     if (newStatus === 'overdue') return;
     const task = tasks[id];
     if (!task || task.status === newStatus) return;
+    // Only owners can move tasks
+    if (!isTaskOwner(task)) return;
     const oldStatus = task.status;
     tasks[id] = { ...task, status: newStatus };
     renderBoard();
@@ -510,12 +632,78 @@ document.querySelectorAll('.task-list').forEach(list => {
   });
 });
 
+// ─── RESOURCE ATTACHMENT TABS ─────────────────────────────────────────────────
+document.querySelectorAll('.resource-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.resource-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeResourceTab = btn.dataset.tab;
+    document.getElementById('resourceLinkSection').style.display = activeResourceTab === 'link' ? '' : 'none';
+    document.getElementById('resourceFileSection').style.display = activeResourceTab === 'file' ? '' : 'none';
+    if (activeResourceTab === 'link') {
+      pendingResourceFile = null;
+      document.getElementById('resourceFileName').textContent = 'No file chosen';
+    }
+  });
+});
+
+document.getElementById('resourceFileBtn').addEventListener('click', () => {
+  document.getElementById('resourceFile').click();
+});
+
+document.getElementById('resourceFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const MAX = 500 * 1024;  // 500 KB
+  if (file.size > MAX) {
+    alert(`File is too large (${(file.size/1024).toFixed(0)} KB). Maximum is 500 KB.`);
+    e.target.value = '';
+    pendingResourceFile = null;
+    document.getElementById('resourceFileName').textContent = 'No file chosen';
+    return;
+  }
+  const dataUrl = await readFileAsDataURL(file);
+  pendingResourceFile = { dataUrl, name: file.name };
+  document.getElementById('resourceFileName').textContent = file.name;
+});
+
+function resetResourceFields() {
+  activeResourceTab = 'link';
+  pendingResourceFile = null;
+  document.querySelectorAll('.resource-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === 'link');
+  });
+  document.getElementById('resourceLinkSection').style.display = '';
+  document.getElementById('resourceFileSection').style.display = 'none';
+  document.getElementById('resourceUrl').value = '';
+  document.getElementById('resourceFile').value = '';
+  document.getElementById('resourceFileName').textContent = 'No file chosen';
+}
+
+function populateResourceFields(task) {
+  resetResourceFields();
+  if (!task.resourceUrl) return;
+  if (task.resourceType === 'file') {
+    activeResourceTab = 'file';
+    document.querySelectorAll('.resource-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === 'file');
+    });
+    document.getElementById('resourceLinkSection').style.display = 'none';
+    document.getElementById('resourceFileSection').style.display = '';
+    document.getElementById('resourceFileName').textContent = task.resourceName || 'Attached file';
+    pendingResourceFile = { dataUrl: task.resourceUrl, name: task.resourceName || 'file' };
+  } else {
+    document.getElementById('resourceUrl').value = task.resourceUrl;
+  }
+}
+
 // ─── TASK CREATE / EDIT MODAL ─────────────────────────────────────────────────
 function openNew(defaultStatus = 'todo') {
   editingTaskId = null;
   document.getElementById('modalTitle').textContent = 'New Task';
   document.getElementById('taskForm').reset();
   document.getElementById('taskStatus').value = defaultStatus;
+  resetResourceFields();
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('taskTitle').focus();
 }
@@ -523,13 +711,14 @@ function openNew(defaultStatus = 'todo') {
 function openEdit(id) {
   const task = tasks[id]; if (!task) return;
   editingTaskId = id;
-  document.getElementById('modalTitle').textContent     = 'Edit Task';
-  document.getElementById('taskTitle').value            = task.title;
-  document.getElementById('taskDesc').value             = task.desc || '';
-  document.getElementById('taskPriority').value         = task.priority;
-  document.getElementById('taskDue').value              = task.due || '';
-  document.getElementById('taskStatus').value           = task.status;
-  document.getElementById('taskAssignee').value         = task.assignedTo || '';
+  document.getElementById('modalTitle').textContent = 'Edit Task';
+  document.getElementById('taskTitle').value        = task.title;
+  document.getElementById('taskDesc').value         = task.desc || '';
+  document.getElementById('taskPriority').value     = task.priority;
+  document.getElementById('taskDue').value          = task.due || '';
+  document.getElementById('taskStatus').value       = task.status;
+  document.getElementById('taskAssignee').value     = task.assignedTo || '';
+  populateResourceFields(task);
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('taskTitle').focus();
 }
@@ -545,15 +734,31 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
+  // Resolve resource attachment
+  let resourceType = null;
+  let resourceUrl  = null;
+  let resourceName = null;
+  if (activeResourceTab === 'link') {
+    const url = document.getElementById('resourceUrl').value.trim();
+    if (url) { resourceType = 'link'; resourceUrl = url; resourceName = url; }
+  } else if (activeResourceTab === 'file' && pendingResourceFile) {
+    resourceType = 'file';
+    resourceUrl  = pendingResourceFile.dataUrl;
+    resourceName = pendingResourceFile.name;
+  }
+
   const newAssignee = document.getElementById('taskAssignee').value || null;
   const newStatus   = document.getElementById('taskStatus').value;
   const fields = {
     title,
-    desc:       document.getElementById('taskDesc').value.trim(),
-    priority:   document.getElementById('taskPriority').value,
-    due:        document.getElementById('taskDue').value || null,
-    status:     newStatus,
-    assignedTo: newAssignee,
+    desc:         document.getElementById('taskDesc').value.trim(),
+    priority:     document.getElementById('taskPriority').value,
+    due:          document.getElementById('taskDue').value || null,
+    status:       newStatus,
+    assignedTo:   newAssignee,
+    resourceType: resourceType,
+    resourceUrl:  resourceUrl,
+    resourceName: resourceName,
   };
 
   if (editingTaskId) {
@@ -594,10 +799,30 @@ function openDetail(id) {
   if (!task) { alert('This task no longer exists.'); return; }
   detailTaskId = id;
 
-  const assignee   = task.assignedTo ? users[task.assignedTo] : null;
-  const creator    = task.createdBy  ? users[task.createdBy]  : null;
-  const overdue    = isOverdue(task.due);
-  const owned      = isTaskOwner(task);
+  const assignee = task.assignedTo ? users[task.assignedTo] : null;
+  const creator  = task.createdBy  ? users[task.createdBy]  : null;
+  const overdue  = isOverdue(task.due);
+  const owned    = isTaskOwner(task);
+
+  // Build resource HTML
+  let resourceHtml = '';
+  if (task.resourceUrl) {
+    if (task.resourceType === 'file') {
+      resourceHtml = `<div class="detail-row">
+        <span class="detail-label">Attachment</span>
+        <a class="resource-link" href="${escHtml(task.resourceUrl)}" download="${escHtml(task.resourceName || 'file')}" target="_blank">
+          ${ICONS.clip} ${escHtml(task.resourceName || 'Download file')}
+        </a>
+      </div>`;
+    } else {
+      resourceHtml = `<div class="detail-row">
+        <span class="detail-label">Resource</span>
+        <a class="resource-link" href="${escHtml(task.resourceUrl)}" target="_blank" rel="noopener noreferrer">
+          ${ICONS.clip} ${escHtml(task.resourceName || task.resourceUrl)}
+        </a>
+      </div>`;
+    }
+  }
 
   document.getElementById('detailTitle').textContent = task.title;
   document.getElementById('detailBody').innerHTML = `
@@ -617,7 +842,7 @@ function openDetail(id) {
       </div>
       ${task.due ? `<div class="detail-row">
         <span class="detail-label">Due date</span>
-        <span class="due-date ${overdue?'overdue':''}">${formatDate(task.due)}${overdue?' · overdue':''}</span>
+        <span class="detail-due ${overdue?'overdue':''}">${formatDate(task.due)}${overdue?' · overdue':''}</span>
       </div>` : ''}
       ${task.createdAt ? `<div class="detail-row">
         <span class="detail-label">Created</span>
@@ -631,6 +856,7 @@ function openDetail(id) {
         <span class="detail-label">Created by</span>
         <span class="assignee-chip">${avatarHtml(creator.name, true)}<span>${escHtml(creator.name)}</span></span>
       </div>` : ''}
+      ${resourceHtml}
     </div>
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
 
@@ -639,7 +865,6 @@ function openDetail(id) {
     const saveBtn    = document.getElementById('saveStatusBtn');
     const origStatus = task.status;
 
-    // Only show Save when the status actually changed — no auto-save
     sel.addEventListener('change', () => {
       saveBtn.style.display = sel.value !== origStatus ? '' : 'none';
     });
@@ -734,7 +959,6 @@ async function notifyParticipants(task, taskId, message) {
 }
 
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
-// Global listener — fires in real-time for ALL users' notifications
 onValue(ref(db, 'notifications'), snap => {
   allNotifications = snap.val() || {};
   renderNotifSidebar();
@@ -778,12 +1002,9 @@ function renderNotifSidebar() {
 }
 
 // ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
-// Manages a per-user listener that drives the bell badge + dropdown
 function setupNotifListener() {
-  // Always tear down the previous listener first to avoid stale data
   if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
 
-  // Reset badge & list immediately so the old user's data doesn't linger
   const badge = document.getElementById('notifBadge');
   badge.textContent = '';
   badge.classList.remove('visible');
@@ -791,7 +1012,6 @@ function setupNotifListener() {
 
   if (!currentUser) return;
 
-  // Register fresh listener for the new current user
   notifBadgeUnsub = onValue(ref(db, `notifications/${currentUser.id}`), snap => {
     const data   = snap.val() || {};
     const notifs = Object.entries(data).map(([id, n]) => ({ id, ...n })).sort((a,b) => b.createdAt - a.createdAt);
@@ -847,11 +1067,10 @@ function openProfile() {
   if (!u) return;
 
   document.getElementById('profileNameDisplay').textContent =
-    u.name + (u.passwordHash ? ' 🔒' : ' (no password)');
+    u.name + (u.passwordHash ? '' : ' (no password)');
   document.getElementById('profileMemberSince').textContent =
     u.createdAt ? `Member since ${fmtTimestamp(u.createdAt)}` : '';
 
-  // Render current avatar / photo at larger size
   const preview = document.getElementById('profilePhotoPreview');
   if (u.photoURL) {
     preview.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${u.photoURL}" alt="${escHtml(initials(u.name))}" style="width:72px;height:72px">`;
@@ -859,6 +1078,7 @@ function openProfile() {
     preview.innerHTML = `<span class="avatar" style="background:${avatarColor(u.name)};width:72px;height:72px;font-size:1.6rem">${initials(u.name)}</span>`;
   }
 
+  document.getElementById('profileEmail').value           = u.email || '';
   document.getElementById('profileNewPassword').value     = '';
   document.getElementById('profileConfirmPassword').value = '';
   document.getElementById('profileError').textContent     = '';
@@ -875,7 +1095,6 @@ function closeProfile() {
 document.getElementById('closeProfile').addEventListener('click', closeProfile);
 document.getElementById('profileOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeProfile(); });
 
-// Photo upload
 document.getElementById('profilePhotoEditBtn').addEventListener('click', () => {
   document.getElementById('profilePhotoInput').click();
 });
@@ -893,6 +1112,7 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   const err        = document.getElementById('profileError');
   const newPwd     = document.getElementById('profileNewPassword').value;
   const confirmPwd = document.getElementById('profileConfirmPassword').value;
+  const email      = document.getElementById('profileEmail').value.trim().toLowerCase();
 
   if (newPwd || confirmPwd) {
     if (newPwd !== confirmPwd) { err.textContent = 'Passwords do not match.'; return; }
@@ -901,12 +1121,11 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   err.textContent = '';
 
   const updates = {};
-  if (newPwd)            updates.passwordHash = await hashPassword(newPwd);
-  if (pendingProfilePhoto) updates.photoURL   = pendingProfilePhoto;
+  if (newPwd)             updates.passwordHash = await hashPassword(newPwd);
+  if (pendingProfilePhoto) updates.photoURL    = pendingProfilePhoto;
+  updates.email = email || null;
 
-  if (Object.keys(updates).length) {
-    await update(ref(db, `users/${currentUser.id}`), updates);
-  }
+  await update(ref(db, `users/${currentUser.id}`), updates);
 
   pendingProfilePhoto = null;
   closeProfile();

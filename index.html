@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -23,8 +23,9 @@
         <div class="user-list" id="userList"></div>
         <div class="user-divider">or create a new account</div>
         <div class="user-join-form">
-          <input type="text"     id="newUserName"     placeholder="Your name…"           maxlength="30">
-          <input type="password" id="newUserPassword" placeholder="Choose a password…"   maxlength="100">
+          <input type="text"     id="newUserName"     placeholder="Your name…"                    maxlength="30">
+          <input type="email"    id="newUserEmail"    placeholder="Email for password recovery…"  maxlength="150">
+          <input type="password" id="newUserPassword" placeholder="Choose a password…"            maxlength="100">
           <button class="btn-primary" id="joinBtn">Create Account</button>
         </div>
       </div>
@@ -39,10 +40,38 @@
           <button class="btn-primary" id="loginBtn">Sign In</button>
         </div>
         <p class="login-error" id="loginError"></p>
-        <div style="text-align:center;margin-top:10px">
+        <div class="step2-links">
           <button class="btn-text" id="backToList">← Back to list</button>
+          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
         </div>
       </div>
+
+      <!-- Step 3: Forgot password — email verification -->
+      <div id="userStep3" style="display:none">
+        <div class="user-card-logo">Forgot Password</div>
+        <p class="user-card-sub" id="forgotSub">Enter the email linked to your account</p>
+        <div class="user-join-form" id="forgotEmailForm">
+          <input type="email" id="forgotEmail" placeholder="Your email address…" maxlength="150">
+          <button class="btn-primary" id="forgotVerifyBtn">Verify Email</button>
+        </div>
+        <p class="login-error" id="forgotError"></p>
+        <div style="text-align:center;margin-top:10px">
+          <button class="btn-text" id="backToStep2">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step 4: New password after email verified -->
+      <div id="userStep4" style="display:none">
+        <div class="user-card-logo">Reset Password</div>
+        <p class="user-card-sub">Create a new password for your account</p>
+        <div class="user-join-form">
+          <input type="password" id="resetPassword"        placeholder="New password…"     maxlength="100">
+          <input type="password" id="resetConfirmPassword" placeholder="Confirm password…" maxlength="100">
+          <button class="btn-primary" id="resetPasswordBtn">Reset Password</button>
+        </div>
+        <p class="login-error" id="resetError"></p>
+      </div>
+
     </div>
   </div>
 
@@ -57,7 +86,9 @@
         <div class="profile-photo-row">
           <div class="profile-photo-wrap">
             <div class="profile-photo-preview" id="profilePhotoPreview"></div>
-            <button class="profile-photo-edit-btn" id="profilePhotoEditBtn" title="Upload photo">📷</button>
+            <button class="profile-photo-edit-btn" id="profilePhotoEditBtn" title="Upload photo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
             <input type="file" id="profilePhotoInput" accept="image/*" style="display:none">
           </div>
           <div class="profile-info">
@@ -65,7 +96,11 @@
             <div class="profile-since" id="profileMemberSince"></div>
           </div>
         </div>
-        <div class="form-group" style="margin-top:20px">
+        <div class="form-group" style="margin-top:16px">
+          <label>Recovery Email</label>
+          <input type="email" id="profileEmail" placeholder="your@email.com" maxlength="150">
+        </div>
+        <div class="form-group">
           <label>New Password</label>
           <input type="password" id="profileNewPassword" placeholder="Leave blank to keep current…" maxlength="100">
         </div>
@@ -75,7 +110,9 @@
         </div>
         <p class="profile-error" id="profileError"></p>
         <div class="modal-actions profile-actions">
-          <button class="btn-danger" id="deleteAccountBtn">🗑️ Delete Account</button>
+          <button class="btn-danger" id="deleteAccountBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
+          </button>
           <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
         </div>
       </div>
@@ -92,7 +129,7 @@
           <!-- Notifications -->
           <div class="notif-wrapper">
             <button class="notif-btn" id="notifBtn" title="Notifications">
-              <span class="notif-icon">🔔</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <span class="notif-badge" id="notifBadge"></span>
             </button>
             <div class="notif-panel" id="notifPanel">
@@ -116,19 +153,19 @@
 
         <div class="header-filters">
           <select class="date-filter" id="userFilter" title="Filter by user">
-            <option value="all">👤 All users</option>
+            <option value="all">All users</option>
           </select>
 
           <div class="date-filter-wrap">
             <select class="date-filter" id="dateFilter" title="Filter by date created">
-              <option value="all">📅 All time</option>
+              <option value="all">All time</option>
               <option value="today">Today</option>
               <option value="this-week">This week</option>
               <option value="next-week">Next week</option>
               <option value="last-week">Last week</option>
               <option value="this-month">This month</option>
-              <option value="overdue">⚠️ Overdue</option>
-              <option value="custom">📆 Pick dates…</option>
+              <option value="overdue">Overdue</option>
+              <option value="custom">Pick dates…</option>
             </select>
 
             <div class="custom-date-row" id="customDateRow" style="display:none">
@@ -253,6 +290,33 @@
             </select>
           </div>
         </div>
+
+        <!-- ── Resource Attachment ── -->
+        <div class="form-group">
+          <label>Resource Attachment</label>
+          <div class="resource-toggle">
+            <button type="button" class="resource-tab active" data-tab="link">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Link
+            </button>
+            <button type="button" class="resource-tab" data-tab="file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              File
+            </button>
+          </div>
+          <div id="resourceLinkSection" class="resource-section">
+            <input type="url" id="resourceUrl" placeholder="https://docs.google.com/…">
+          </div>
+          <div id="resourceFileSection" class="resource-section" style="display:none">
+            <div class="resource-file-row">
+              <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose File</button>
+              <span class="resource-file-name" id="resourceFileName">No file chosen</span>
+            </div>
+            <input type="file" id="resourceFile" style="display:none">
+            <p class="resource-hint">Max 500 KB — stored as a data URL</p>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
           <button type="submit" class="btn-primary">Save Task</button>
@@ -267,7 +331,9 @@
       <div class="modal-header">
         <h2 id="detailTitle"></h2>
         <div class="detail-header-actions">
-          <button class="btn-secondary btn-sm" id="detailEditBtn">✏️ Edit</button>
+          <button class="btn-secondary btn-sm" id="detailEditBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+          </button>
           <button class="btn-close" id="closeDetail">&times;</button>
         </div>
       </div>
@@ -283,6 +349,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=8"></script>
+  <script type="module" src="app.js?v=9"></script>
 </body>
 </html>
