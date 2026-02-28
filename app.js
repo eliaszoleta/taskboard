@@ -794,8 +794,16 @@ async function deleteTask(id) {
 }
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
-function openDetail(id) {
-  const task = tasks[id];
+async function openDetail(id) {
+  // Primary lookup: local cache. Fallback: fetch directly from Firebase.
+  // This handles the race condition where tasks haven't loaded yet for a fresh login.
+  let task = tasks[id];
+  if (!task) {
+    try {
+      const snap = await get(ref(db, `tasks/${id}`));
+      if (snap.exists()) { task = snap.val(); tasks[id] = task; }
+    } catch (_) { /* network error — fall through to alert */ }
+  }
   if (!task) { alert('This task no longer exists.'); return; }
   detailTaskId = id;
 
@@ -993,8 +1001,11 @@ function renderNotifSidebar() {
     </div>`;
   }).join('') + (hasMore ? `<button class="sidebar-show-more" id="sidebarShowMore">Show more</button>` : '');
 
-  body.querySelectorAll('.sidebar-notif-item[data-task]').forEach(item => {
-    item.addEventListener('click', () => { if (item.dataset.task) openDetail(item.dataset.task); });
+  body.querySelectorAll('.sidebar-notif-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const taskId = item.dataset.task;
+      if (taskId) openDetail(taskId);
+    });
   });
 
   const showMoreBtn = body.querySelector('#sidebarShowMore');
@@ -1035,8 +1046,12 @@ function setupNotifListener() {
 
     list.querySelectorAll('.notif-item').forEach(item => {
       item.addEventListener('click', () => {
-        update(ref(db, `notifications/${currentUser.id}/${item.dataset.id}`), { read: true });
-        if (item.dataset.task) { closeNotifPanel(); openDetail(item.dataset.task); }
+        // Capture values immediately before any async re-render can touch the DOM
+        const taskId  = item.dataset.task;
+        const notifId = item.dataset.id;
+        // Open first, then mark read — avoids Firebase optimistic re-render race
+        if (taskId) { closeNotifPanel(); openDetail(taskId); }
+        update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
       });
     });
   });
