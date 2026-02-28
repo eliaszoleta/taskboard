@@ -57,7 +57,6 @@ let pendingLoginUid    = null;
 let pendingProfilePhoto = null;
 let pendingResourceFiles = [];   // [{ dataUrl, name, size }]
 let pendingResourceLinks = [''];  // array of URL strings (at least one)
-let activeResourceTab    = 'link'; // 'link' | 'file'
 let pendingDeleteId      = null;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -647,7 +646,7 @@ document.querySelectorAll('.task-list').forEach(list => {
   });
 });
 
-// ─── RESOURCE ATTACHMENT TABS ─────────────────────────────────────────────────
+// ─── RESOURCE ATTACHMENTS ────────────────────────────────────────────────────
 function renderLinkRows() {
   const container = document.getElementById('resourceLinksContainer');
   container.innerHTML = pendingResourceLinks.map((url, i) => `
@@ -689,16 +688,6 @@ function renderFileList() {
   });
 }
 
-document.querySelectorAll('.resource-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.resource-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeResourceTab = btn.dataset.tab;
-    document.getElementById('resourceLinkSection').style.display = activeResourceTab === 'link' ? '' : 'none';
-    document.getElementById('resourceFileSection').style.display = activeResourceTab === 'file' ? '' : 'none';
-  });
-});
-
 document.getElementById('resourceLinkAdd').addEventListener('click', () => {
   pendingResourceLinks.push('');
   renderLinkRows();
@@ -732,14 +721,8 @@ document.getElementById('resourceFile').addEventListener('change', async e => {
 });
 
 function resetResourceFields() {
-  activeResourceTab = 'link';
   pendingResourceLinks = [''];
   pendingResourceFiles = [];
-  document.querySelectorAll('.resource-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === 'link');
-  });
-  document.getElementById('resourceLinkSection').style.display = '';
-  document.getElementById('resourceFileSection').style.display = 'none';
   document.getElementById('resourceFile').value = '';
   renderLinkRows();
   renderFileList();
@@ -749,18 +732,15 @@ function populateResourceFields(task) {
   resetResourceFields();
   const resources = getTaskResources(task);
   if (!resources.length) return;
-  if (resources[0].type === 'file') {
-    activeResourceTab = 'file';
-    document.querySelectorAll('.resource-tab').forEach(b => {
-      b.classList.toggle('active', b.dataset.tab === 'file');
-    });
-    document.getElementById('resourceLinkSection').style.display = 'none';
-    document.getElementById('resourceFileSection').style.display = '';
-    pendingResourceFiles = resources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 }));
-    renderFileList();
-  } else {
-    pendingResourceLinks = resources.map(r => r.url);
+  const linkResources = resources.filter(r => r.type !== 'file');
+  const fileResources = resources.filter(r => r.type === 'file');
+  if (linkResources.length) {
+    pendingResourceLinks = linkResources.map(r => r.url);
     renderLinkRows();
+  }
+  if (fileResources.length) {
+    pendingResourceFiles = fileResources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 }));
+    renderFileList();
   }
 }
 
@@ -801,14 +781,12 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
-  // Resolve resource attachment(s)
-  let resources = null;
-  if (activeResourceTab === 'link') {
-    const links = pendingResourceLinks.map(u => u.trim()).filter(u => u);
-    if (links.length) resources = links.map(url => ({ type: 'link', url, name: url }));
-  } else if (activeResourceTab === 'file' && pendingResourceFiles.length) {
-    resources = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
-  }
+  // Collect links and files from both sections — they can coexist in one task
+  const linkItems = pendingResourceLinks.map(u => u.trim()).filter(u => u)
+    .map(url => ({ type: 'link', url, name: url }));
+  const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
+  const allItems  = [...linkItems, ...fileItems];
+  const resources = allItems.length ? allItems : null;
 
   const newAssignee = document.getElementById('taskAssignee').value || null;
   const newStatus   = document.getElementById('taskStatus').value;

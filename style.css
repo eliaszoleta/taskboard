@@ -537,6 +537,8 @@ h1 {
   animation: modalIn .2s ease;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .modal-lg { max-width: 600px; }
 .modal-sm { max-width: 380px; }
@@ -570,6 +572,7 @@ h1 {
 .form-group textarea,
 .form-group select {
   width: 100%;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -579,7 +582,9 @@ h1 {
   background: var(--white);
   outline: none;
   transition: border-color .18s, box-shadow .18s;
+  box-sizing: border-box;
 }
+.form-group textarea { resize: vertical; }
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
@@ -1175,6 +1180,26 @@ h1 {
   color: var(--primary);
 }
 .resource-tab svg { flex-shrink: 0; }
+
+/* ── Resource section separator ── */
+.resource-section-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+  color: var(--muted);
+  font-size: .73rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.resource-section-sep::before,
+.resource-section-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
 /* ── Multi-link rows ── */
 .resource-link-row {
