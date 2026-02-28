@@ -795,16 +795,25 @@ async function deleteTask(id) {
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 async function openDetail(id) {
+  // Guard against obviously invalid IDs (empty string, literal "undefined"/"null")
+  if (!id || id === 'undefined' || id === 'null') {
+    showToast('This notification is not linked to a task.');
+    return false;
+  }
   // Primary lookup: local cache. Fallback: fetch directly from Firebase.
-  // This handles the race condition where tasks haven't loaded yet for a fresh login.
   let task = tasks[id];
   if (!task) {
     try {
       const snap = await get(ref(db, `tasks/${id}`));
       if (snap.exists()) { task = snap.val(); tasks[id] = task; }
-    } catch (_) { /* network error — fall through to alert */ }
+    } catch (err) {
+      console.error('openDetail: Firebase fetch error', err);
+    }
   }
-  if (!task) { alert('This task no longer exists.'); return; }
+  if (!task) {
+    showToast('Task not found — it may have been deleted.');
+    return false;
+  }
   detailTaskId = id;
 
   const assignee = task.assignedTo ? users[task.assignedTo] : null;
@@ -925,6 +934,7 @@ async function openDetail(id) {
 
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('commentInput').focus();
+  return true;
 }
 
 function closeDetail() {
@@ -995,16 +1005,25 @@ function renderNotifSidebar() {
 
   body.innerHTML = visible.map(n => {
     const time = new Date(n.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-    return `<div class="sidebar-notif-item ${n.read ? '' : 'unread'}" data-task="${n.taskId}">
+    return `<div class="sidebar-notif-item ${n.read ? '' : 'unread'}" data-task="${n.taskId || ''}" data-id="${n.id}">
       <div class="sidebar-notif-msg">${escHtml(n.message)}</div>
       <div class="sidebar-notif-time">${time}</div>
     </div>`;
   }).join('') + (hasMore ? `<button class="sidebar-show-more" id="sidebarShowMore">Show more</button>` : '');
 
   body.querySelectorAll('.sidebar-notif-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const taskId = item.dataset.task;
-      if (taskId) openDetail(taskId);
+    item.addEventListener('click', async () => {
+      const taskId  = item.dataset.task;
+      const notifId = item.dataset.id;
+      const found   = await openDetail(taskId);
+      // Auto-clean stale notifications that point to deleted tasks
+      if (found === false && notifId && currentUser) {
+        remove(ref(db, `notifications/${currentUser.id}/${notifId}`));
+      }
+      // Mark as read on successful open
+      if (found && notifId && currentUser) {
+        update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
+      }
     });
   });
 
@@ -1045,13 +1064,17 @@ function setupNotifListener() {
     }).join('');
 
     list.querySelectorAll('.notif-item').forEach(item => {
-      item.addEventListener('click', () => {
-        // Capture values immediately before any async re-render can touch the DOM
+      item.addEventListener('click', async () => {
         const taskId  = item.dataset.task;
         const notifId = item.dataset.id;
-        // Open first, then mark read — avoids Firebase optimistic re-render race
-        if (taskId) { closeNotifPanel(); openDetail(taskId); }
-        update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
+        closeNotifPanel();
+        const found = await openDetail(taskId);
+        if (found === false && notifId && currentUser) {
+          // Task no longer exists — remove the stale notification
+          remove(ref(db, `notifications/${currentUser.id}/${notifId}`));
+        } else if (notifId && currentUser) {
+          update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
+        }
       });
     });
   });
@@ -1205,6 +1228,22 @@ document.getElementById('modalOverlay').addEventListener('click', e => { if (e.t
 document.getElementById('closeDetail').addEventListener('click', closeDetail);
 document.getElementById('detailOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); } });
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  let el = document.getElementById('appToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'appToast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), 3000);
+}
 
 // ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
 loadCurrentUser();
