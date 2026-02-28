@@ -55,10 +55,25 @@ let allNotifications   = {};
 let sidebarLimit       = 10;
 let pendingLoginUid    = null;
 let pendingProfilePhoto = null;
-let pendingResourceFile = null;  // { dataUrl, name } for file attachments
-let activeResourceTab  = 'link'; // 'link' | 'file'
+let pendingResourceFiles = [];   // [{ dataUrl, name, size }]
+let pendingResourceLinks = [''];  // array of URL strings (at least one)
+let activeResourceTab    = 'link'; // 'link' | 'file'
+let pendingDeleteId      = null;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+/** Normalise both old single-resource and new multi-resource formats */
+function getTaskResources(task) {
+  if (task.resources && task.resources.length) return task.resources;
+  if (task.resourceUrl) return [{ type: task.resourceType || 'link', url: task.resourceUrl, name: task.resourceName || task.resourceUrl }];
+  return [];
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const escHtml = str =>
   String(str || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -557,7 +572,7 @@ function buildCard(task) {
   const assignee = task.assignedTo ? users[task.assignedTo] : null;
   const owned    = isTaskOwner(task);
   const cCount   = commentCounts[task.id] || 0;
-  const hasRes   = !!task.resourceUrl;
+  const hasRes   = !!(task.resourceUrl || (task.resources && task.resources.length));
 
   const card = document.createElement('div');
   card.className = 'task-card';
@@ -633,6 +648,47 @@ document.querySelectorAll('.task-list').forEach(list => {
 });
 
 // ─── RESOURCE ATTACHMENT TABS ─────────────────────────────────────────────────
+function renderLinkRows() {
+  const container = document.getElementById('resourceLinksContainer');
+  container.innerHTML = pendingResourceLinks.map((url, i) => `
+    <div class="resource-link-row">
+      <input type="url" class="resource-url-input" value="${escHtml(url)}" placeholder="https://…" data-idx="${i}">
+      <button type="button" class="resource-link-remove" data-idx="${i}" title="Remove"${pendingResourceLinks.length === 1 ? ' style="visibility:hidden"' : ''}>&times;</button>
+    </div>`).join('');
+  container.querySelectorAll('.resource-url-input').forEach(input => {
+    input.addEventListener('input', () => { pendingResourceLinks[+input.dataset.idx] = input.value; });
+  });
+  container.querySelectorAll('.resource-link-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingResourceLinks.splice(+btn.dataset.idx, 1);
+      renderLinkRows();
+    });
+  });
+}
+
+function renderFileList() {
+  const container = document.getElementById('resourceFileList');
+  if (!pendingResourceFiles.length) {
+    container.innerHTML = '<span class="no-files-label">No files chosen</span>';
+    return;
+  }
+  const totalSize = pendingResourceFiles.reduce((s, f) => s + (f.size || 0), 0);
+  container.innerHTML =
+    pendingResourceFiles.map((f, i) => `
+      <div class="resource-file-item">
+        <span class="resource-file-item-name" title="${escHtml(f.name)}">${escHtml(f.name)}</span>
+        ${f.size ? `<span class="resource-file-item-size">${formatSize(f.size)}</span>` : ''}
+        <button type="button" class="resource-link-remove" data-idx="${i}" title="Remove">&times;</button>
+      </div>`).join('') +
+    (totalSize ? `<div class="resource-file-total">${formatSize(totalSize)} / 10 MB used</div>` : '');
+  container.querySelectorAll('.resource-link-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingResourceFiles.splice(+btn.dataset.idx, 1);
+      renderFileList();
+    });
+  });
+}
+
 document.querySelectorAll('.resource-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.resource-tab').forEach(b => b.classList.remove('active'));
@@ -640,11 +696,15 @@ document.querySelectorAll('.resource-tab').forEach(btn => {
     activeResourceTab = btn.dataset.tab;
     document.getElementById('resourceLinkSection').style.display = activeResourceTab === 'link' ? '' : 'none';
     document.getElementById('resourceFileSection').style.display = activeResourceTab === 'file' ? '' : 'none';
-    if (activeResourceTab === 'link') {
-      pendingResourceFile = null;
-      document.getElementById('resourceFileName').textContent = 'No file chosen';
-    }
   });
+});
+
+document.getElementById('resourceLinkAdd').addEventListener('click', () => {
+  pendingResourceLinks.push('');
+  renderLinkRows();
+  // Focus the new input
+  const inputs = document.querySelectorAll('.resource-url-input');
+  inputs[inputs.length - 1]?.focus();
 });
 
 document.getElementById('resourceFileBtn').addEventListener('click', () => {
@@ -652,48 +712,55 @@ document.getElementById('resourceFileBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resourceFile').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const MAX = 500 * 1024;  // 500 KB
-  if (file.size > MAX) {
-    alert(`File is too large (${(file.size/1024).toFixed(0)} KB). Maximum is 500 KB.`);
-    e.target.value = '';
-    pendingResourceFile = null;
-    document.getElementById('resourceFileName').textContent = 'No file chosen';
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  if (!files.length) return;
+  const MAX_TOTAL = 10 * 1024 * 1024; // 10 MB
+  const newEntries = [];
+  for (const file of files) {
+    const dataUrl = await readFileAsDataURL(file);
+    newEntries.push({ dataUrl, name: file.name, size: file.size });
+  }
+  const combined = [...pendingResourceFiles, ...newEntries];
+  const totalSize = combined.reduce((s, f) => s + (f.size || 0), 0);
+  if (totalSize > MAX_TOTAL) {
+    showToast(`Combined size (${formatSize(totalSize)}) exceeds the 10 MB limit.`);
     return;
   }
-  const dataUrl = await readFileAsDataURL(file);
-  pendingResourceFile = { dataUrl, name: file.name };
-  document.getElementById('resourceFileName').textContent = file.name;
+  pendingResourceFiles = combined;
+  renderFileList();
 });
 
 function resetResourceFields() {
   activeResourceTab = 'link';
-  pendingResourceFile = null;
+  pendingResourceLinks = [''];
+  pendingResourceFiles = [];
   document.querySelectorAll('.resource-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === 'link');
   });
   document.getElementById('resourceLinkSection').style.display = '';
   document.getElementById('resourceFileSection').style.display = 'none';
-  document.getElementById('resourceUrl').value = '';
   document.getElementById('resourceFile').value = '';
-  document.getElementById('resourceFileName').textContent = 'No file chosen';
+  renderLinkRows();
+  renderFileList();
 }
 
 function populateResourceFields(task) {
   resetResourceFields();
-  if (!task.resourceUrl) return;
-  if (task.resourceType === 'file') {
+  const resources = getTaskResources(task);
+  if (!resources.length) return;
+  if (resources[0].type === 'file') {
     activeResourceTab = 'file';
     document.querySelectorAll('.resource-tab').forEach(b => {
       b.classList.toggle('active', b.dataset.tab === 'file');
     });
     document.getElementById('resourceLinkSection').style.display = 'none';
     document.getElementById('resourceFileSection').style.display = '';
-    document.getElementById('resourceFileName').textContent = task.resourceName || 'Attached file';
-    pendingResourceFile = { dataUrl: task.resourceUrl, name: task.resourceName || 'file' };
+    pendingResourceFiles = resources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 }));
+    renderFileList();
   } else {
-    document.getElementById('resourceUrl').value = task.resourceUrl;
+    pendingResourceLinks = resources.map(r => r.url);
+    renderLinkRows();
   }
 }
 
@@ -734,17 +801,13 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
-  // Resolve resource attachment
-  let resourceType = null;
-  let resourceUrl  = null;
-  let resourceName = null;
+  // Resolve resource attachment(s)
+  let resources = null;
   if (activeResourceTab === 'link') {
-    const url = document.getElementById('resourceUrl').value.trim();
-    if (url) { resourceType = 'link'; resourceUrl = url; resourceName = url; }
-  } else if (activeResourceTab === 'file' && pendingResourceFile) {
-    resourceType = 'file';
-    resourceUrl  = pendingResourceFile.dataUrl;
-    resourceName = pendingResourceFile.name;
+    const links = pendingResourceLinks.map(u => u.trim()).filter(u => u);
+    if (links.length) resources = links.map(url => ({ type: 'link', url, name: url }));
+  } else if (activeResourceTab === 'file' && pendingResourceFiles.length) {
+    resources = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
   }
 
   const newAssignee = document.getElementById('taskAssignee').value || null;
@@ -756,9 +819,11 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
     due:          document.getElementById('taskDue').value || null,
     status:       newStatus,
     assignedTo:   newAssignee,
-    resourceType: resourceType,
-    resourceUrl:  resourceUrl,
-    resourceName: resourceName,
+    resources:    resources,
+    // Clear legacy single-resource fields
+    resourceType: null,
+    resourceUrl:  null,
+    resourceName: null,
   };
 
   if (editingTaskId) {
@@ -785,8 +850,22 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   }
 });
 
-async function deleteTask(id) {
-  if (!confirm('Delete this task?')) return;
+function deleteTask(id) {
+  const task = tasks[id]; if (!task) return;
+  pendingDeleteId = id;
+  document.getElementById('deleteConfirmTitle').textContent = task.title;
+  document.getElementById('deleteConfirmOverlay').classList.add('open');
+}
+
+function closeDeleteConfirm() {
+  document.getElementById('deleteConfirmOverlay').classList.remove('open');
+  pendingDeleteId = null;
+}
+
+async function confirmDeleteTask() {
+  const id = pendingDeleteId;
+  closeDeleteConfirm();
+  if (!id) return;
   await remove(ref(db, `tasks/${id}`));
   await remove(ref(db, `comments/${id}`));
   delete tasks[id];
@@ -821,24 +900,20 @@ async function openDetail(id) {
   const overdue  = isOverdue(task.due);
   const owned    = isTaskOwner(task);
 
-  // Build resource HTML
+  // Build resource HTML (supports both old single-resource and new multi-resource formats)
+  const taskResources = getTaskResources(task);
   let resourceHtml = '';
-  if (task.resourceUrl) {
-    if (task.resourceType === 'file') {
-      resourceHtml = `<div class="detail-row">
-        <span class="detail-label">Attachment</span>
-        <a class="resource-link" href="${escHtml(task.resourceUrl)}" download="${escHtml(task.resourceName || 'file')}" target="_blank">
-          ${ICONS.clip} ${escHtml(task.resourceName || 'Download file')}
-        </a>
-      </div>`;
-    } else {
-      resourceHtml = `<div class="detail-row">
-        <span class="detail-label">Resource</span>
-        <a class="resource-link" href="${escHtml(task.resourceUrl)}" target="_blank" rel="noopener noreferrer">
-          ${ICONS.clip} ${escHtml(task.resourceName || task.resourceUrl)}
-        </a>
-      </div>`;
-    }
+  if (taskResources.length) {
+    const hasFiles = taskResources.some(r => r.type === 'file');
+    resourceHtml = `<div class="detail-row detail-row-resources">
+      <span class="detail-label">${hasFiles ? 'Attachments' : 'Links'}</span>
+      <div class="detail-resources-list">
+        ${taskResources.map(r => r.type === 'file'
+          ? `<a class="resource-link" href="${escHtml(r.url)}" download="${escHtml(r.name || 'file')}" target="_blank">${ICONS.clip} ${escHtml(r.name || 'Download file')}</a>`
+          : `<a class="resource-link" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">${ICONS.clip} ${escHtml(r.name || r.url)}</a>`
+        ).join('')}
+      </div>
+    </div>`;
   }
 
   document.getElementById('detailTitle').textContent = task.title;
@@ -1227,7 +1302,11 @@ document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 document.getElementById('closeDetail').addEventListener('click', closeDetail);
 document.getElementById('detailOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); } });
+document.getElementById('deleteConfirmClose').addEventListener('click', closeDeleteConfirm);
+document.getElementById('deleteConfirmCancel').addEventListener('click', closeDeleteConfirm);
+document.getElementById('deleteConfirmOk').addEventListener('click', confirmDeleteTask);
+document.getElementById('deleteConfirmOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteConfirm(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm(); } });
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 let toastTimer = null;

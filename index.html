@@ -305,15 +305,16 @@
             </button>
           </div>
           <div id="resourceLinkSection" class="resource-section">
-            <input type="url" id="resourceUrl" placeholder="https://docs.google.com/…">
+            <div id="resourceLinksContainer"></div>
+            <button type="button" class="resource-link-add" id="resourceLinkAdd">+ Add link</button>
           </div>
           <div id="resourceFileSection" class="resource-section" style="display:none">
             <div class="resource-file-row">
-              <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose File</button>
-              <span class="resource-file-name" id="resourceFileName">No file chosen</span>
+              <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose Files</button>
             </div>
-            <input type="file" id="resourceFile" style="display:none">
-            <p class="resource-hint">Max 500 KB — stored as a data URL</p>
+            <div class="resource-file-list" id="resourceFileList"><span class="no-files-label">No files chosen</span></div>
+            <input type="file" id="resourceFile" style="display:none" multiple>
+            <p class="resource-hint">Multiple files · 10 MB combined max · Stored as data URLs</p>
           </div>
         </div>
 
@@ -322,6 +323,21 @@
           <button type="submit" class="btn-primary">Save Task</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ── Delete Confirmation Modal ── -->
+  <div class="modal-overlay" id="deleteConfirmOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Task</h2>
+        <button class="btn-close" id="deleteConfirmClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body">Delete "<strong id="deleteConfirmTitle"></strong>"? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteConfirmCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteConfirmOk">Delete</button>
+      </div>
     </div>
   </div>
 
@@ -349,6 +365,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=10"></script>
+  <script type="module" src="app.js?v=11"></script>
 </body>
 </html>
