@@ -246,7 +246,7 @@
 
   <!-- ── Task Create / Edit Modal ── -->
   <div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h2 id="modalTitle">New Task</h2>
         <button class="btn-close" id="closeModal">&times;</button>
@@ -270,6 +270,16 @@
             </select>
           </div>
           <div class="form-group">
+            <label for="taskStatus">Status</label>
+            <select id="taskStatus">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label for="taskScheduled">Scheduled for</label>
             <input type="date" id="taskScheduled">
           </div>
@@ -278,21 +288,11 @@
             <input type="date" id="taskDue">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="taskStatus">Status</label>
-            <select id="taskStatus">
-              <option value="todo">To Do</option>
-              <option value="inprogress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="taskAssignee">Assign To</label>
-            <select id="taskAssignee">
-              <option value="">Unassigned</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="taskAssignee">Assign To</label>
+          <select id="taskAssignee">
+            <option value="">Unassigned</option>
+          </select>
         </div>
 
         <!-- ── Resource Attachment ── -->
@@ -399,6 +399,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=19"></script>
+  <script type="module" src="app.js?v=20"></script>
 </body>
 </html>

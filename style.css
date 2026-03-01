@@ -957,6 +957,14 @@ h1 {
   /* ── Form rows stack ── */
   .form-row { flex-direction: column; gap: 0; }
 
+  /* ── Prevent iOS auto-zoom on input focus (requires font-size >= 16px) ── */
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    font-size: 1rem;
+    min-height: 44px; /* minimum tap target */
+  }
+
   /* ── Notification panel ── */
   .notif-panel { width: calc(100vw - 28px); right: -8px; }
 
