@@ -1144,8 +1144,14 @@ function renderNotifSidebar() {
 }
 
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
-let audioCtx     = null;  // persistent context — unlocked during login gesture
-let pendingSound = false; // true when a notif arrived while the tab was hidden
+let audioCtx        = null;  // persistent context — unlocked during login gesture
+let pendingSound    = false; // true when a notif arrived while the tab was hidden
+let pendingNotifCount = 0;   // unread count accumulated while tab is hidden
+const BASE_TITLE    = 'TaskBoard';
+
+function setTabNotifTitle(count) {
+  document.title = count > 0 ? `(${count}) New notification! — ${BASE_TITLE}` : BASE_TITLE;
+}
 
 // Call once during a user-gesture (login click) to unlock audio for the session
 function unlockAudioContext() {
@@ -1191,14 +1197,16 @@ function playNotificationSound() {
     _playBeep();
   } else {
     pendingSound = true; // play it when the user returns to this tab
+    pendingNotifCount++;
+    setTabNotifTitle(pendingNotifCount);
   }
 }
 
-// Fire queued sound the moment the user switches back to this tab
+// Fire queued sound and clear tab title the moment the user returns
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && pendingSound) {
-    pendingSound = false;
-    _playBeep();
+  if (document.visibilityState === 'visible') {
+    if (pendingSound) { pendingSound = false; _playBeep(); }
+    if (pendingNotifCount > 0) { pendingNotifCount = 0; setTabNotifTitle(0); }
   }
 });
 
