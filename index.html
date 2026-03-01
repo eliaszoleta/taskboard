@@ -334,6 +334,43 @@
     </div>
   </div>
 
+  <!-- ── Delete Account Confirmation Modal ── -->
+  <div class="modal-overlay" id="deleteAccountOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Account</h2>
+        <button class="btn-close" id="deleteAccountOverlayClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body" id="deleteAccountMsg">Are you sure you want to delete your account? This cannot be undone.</p>
+      <div class="form-group" id="deleteAccountPwdGroup" style="display:none;padding:0 24px 4px">
+        <label for="deleteAccountPwdInput" style="font-size:.82rem;color:var(--text-muted)">Enter your password to confirm</label>
+        <input type="password" id="deleteAccountPwdInput" class="form-control" placeholder="Password" autocomplete="current-password">
+        <p class="field-error" id="deleteAccountPwdError" style="color:var(--danger);font-size:.8rem;margin:4px 0 0"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteAccountOverlayCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteAccountOverlayOk">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── File Preview Overlay ── -->
+  <div class="file-preview-overlay" id="filePreviewOverlay">
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.55"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span class="file-preview-name" id="filePreviewName"></span>
+        <div class="file-preview-actions">
+          <a class="btn-secondary btn-sm" id="filePreviewDownload" style="text-decoration:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download
+          </a>
+          <button class="btn-close" id="filePreviewClose">&times;</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="filePreviewBody"></div>
+    </div>
+  </div>
+
   <!-- ── Task Detail + Comments Modal ── -->
   <div class="modal-overlay" id="detailOverlay">
     <div class="modal modal-lg">
@@ -358,6 +395,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=12"></script>
+  <script type="module" src="app.js?v=13"></script>
 </body>
 </html>

@@ -35,6 +35,7 @@ const ICONS = {
   clock:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   lock:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
   clip:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`,
+  eye:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -850,6 +851,48 @@ async function confirmDeleteTask() {
   renderBoard();
 }
 
+// ─── FILE PREVIEW ─────────────────────────────────────────────────────────────
+function openFilePreview(resource) {
+  const overlay  = document.getElementById('filePreviewOverlay');
+  const nameEl   = document.getElementById('filePreviewName');
+  const bodyEl   = document.getElementById('filePreviewBody');
+  const dlBtn    = document.getElementById('filePreviewDownload');
+
+  nameEl.textContent = resource.name || 'File';
+  dlBtn.href         = resource.url;
+  dlBtn.download     = resource.name || 'download';
+
+  // Detect MIME from data URL prefix
+  const mime = resource.url.match(/^data:([^;]+);/)?.[1] || '';
+
+  if (mime.startsWith('image/')) {
+    bodyEl.innerHTML = `<img class="fp-image" src="${resource.url}" alt="${escHtml(resource.name || 'File')}">`;
+  } else if (mime === 'application/pdf') {
+    bodyEl.innerHTML = `<iframe class="fp-embed" src="${resource.url}" title="${escHtml(resource.name || 'File')}"></iframe>`;
+  } else if (mime.startsWith('video/')) {
+    bodyEl.innerHTML = `<video class="fp-video" src="${resource.url}" controls></video>`;
+  } else if (mime.startsWith('audio/')) {
+    bodyEl.innerHTML = `<audio class="fp-audio" src="${resource.url}" controls></audio>`;
+  } else if (mime.startsWith('text/') || mime === 'application/json') {
+    try {
+      const text = atob(resource.url.split(',')[1]);
+      bodyEl.innerHTML = `<pre class="fp-text">${escHtml(text)}</pre>`;
+    } catch {
+      bodyEl.innerHTML = `<div class="fp-unsupported">Cannot preview this file type.<br>Use the Download button above.</div>`;
+    }
+  } else {
+    bodyEl.innerHTML = `<div class="fp-unsupported">Preview not available for this file type.<br>Use the Download button above.</div>`;
+  }
+
+  overlay.classList.add('open');
+}
+
+function closeFilePreview() {
+  const overlay = document.getElementById('filePreviewOverlay');
+  overlay.classList.remove('open');
+  document.getElementById('filePreviewBody').innerHTML = '';
+}
+
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 async function openDetail(id) {
   // Guard against obviously invalid IDs (empty string, literal "undefined"/"null")
@@ -883,11 +926,13 @@ async function openDetail(id) {
   let resourceHtml = '';
   if (taskResources.length) {
     const hasFiles = taskResources.some(r => r.type === 'file');
+    const hasLinks = taskResources.some(r => r.type !== 'file');
+    const label    = hasFiles && hasLinks ? 'Resources' : hasFiles ? 'Attachments' : 'Links';
     resourceHtml = `<div class="detail-row detail-row-resources">
-      <span class="detail-label">${hasFiles ? 'Attachments' : 'Links'}</span>
+      <span class="detail-label">${label}</span>
       <div class="detail-resources-list">
-        ${taskResources.map(r => r.type === 'file'
-          ? `<a class="resource-link" href="${escHtml(r.url)}" download="${escHtml(r.name || 'file')}" target="_blank">${ICONS.clip} ${escHtml(r.name || 'Download file')}</a>`
+        ${taskResources.map((r, i) => r.type === 'file'
+          ? `<button class="resource-link resource-preview-btn" type="button" data-res-idx="${i}">${ICONS.eye} ${escHtml(r.name || 'File')}</button>`
           : `<a class="resource-link" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">${ICONS.clip} ${escHtml(r.name || r.url)}</a>`
         ).join('')}
       </div>
@@ -929,6 +974,14 @@ async function openDetail(id) {
       ${resourceHtml}
     </div>
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
+
+  // Wire file preview buttons (rendered into innerHTML above)
+  document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
+    const idx = parseInt(btn.dataset.resIdx, 10);
+    if (!isNaN(idx) && taskResources[idx]) {
+      btn.addEventListener('click', () => openFilePreview(taskResources[idx]));
+    }
+  });
 
   if (owned) {
     const sel        = document.getElementById('detailStatusSel');
@@ -1222,9 +1275,43 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   closeProfile();
 });
 
-document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+document.getElementById('deleteAccountBtn').addEventListener('click', () => {
   if (!currentUser) return;
-  if (!confirm(`Delete your account "${currentUser.name}"? This cannot be undone.`)) return;
+  const hasPwd = !!currentUser.passwordHash;
+  document.getElementById('deleteAccountMsg').textContent =
+    `Delete your account "${currentUser.name}"? This cannot be undone.`;
+  const pwdGroup = document.getElementById('deleteAccountPwdGroup');
+  pwdGroup.style.display = hasPwd ? '' : 'none';
+  document.getElementById('deleteAccountPwdInput').value = '';
+  document.getElementById('deleteAccountPwdError').textContent = '';
+  document.getElementById('deleteAccountOverlay').classList.add('open');
+});
+
+function closeDeleteAccountOverlay() {
+  document.getElementById('deleteAccountOverlay').classList.remove('open');
+  document.getElementById('deleteAccountPwdInput').value = '';
+  document.getElementById('deleteAccountPwdError').textContent = '';
+}
+
+document.getElementById('deleteAccountOverlayClose').addEventListener('click', closeDeleteAccountOverlay);
+document.getElementById('deleteAccountOverlayCancel').addEventListener('click', closeDeleteAccountOverlay);
+document.getElementById('deleteAccountOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteAccountOverlay(); });
+
+document.getElementById('deleteAccountOverlayOk').addEventListener('click', async () => {
+  if (!currentUser) return;
+  if (currentUser.passwordHash) {
+    const pwd = document.getElementById('deleteAccountPwdInput').value;
+    if (!pwd) {
+      document.getElementById('deleteAccountPwdError').textContent = 'Please enter your password.';
+      return;
+    }
+    const hash = await hashPassword(pwd);
+    if (hash !== currentUser.passwordHash) {
+      document.getElementById('deleteAccountPwdError').textContent = 'Incorrect password.';
+      return;
+    }
+  }
+  closeDeleteAccountOverlay();
   await remove(ref(db, `users/${currentUser.id}`));
   await remove(ref(db, `notifications/${currentUser.id}`));
   localStorage.removeItem('taskboard-user');
@@ -1284,7 +1371,9 @@ document.getElementById('deleteConfirmClose').addEventListener('click', closeDel
 document.getElementById('deleteConfirmCancel').addEventListener('click', closeDeleteConfirm);
 document.getElementById('deleteConfirmOk').addEventListener('click', confirmDeleteTask);
 document.getElementById('deleteConfirmOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteConfirm(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm(); } });
+document.getElementById('filePreviewClose').addEventListener('click', closeFilePreview);
+document.getElementById('filePreviewOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeFilePreview(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm(); closeDeleteAccountOverlay(); closeFilePreview(); } });
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 let toastTimer = null;
