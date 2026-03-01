@@ -396,6 +396,22 @@ h1 {
 }
 
 /* ─── Task List ─── */
+.col-priority-filter {
+  width: 100%;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.col-priority-filter:focus { border-color: var(--primary); }
+.col-priority-filter.active { border-color: var(--primary); background: #eef2ff; color: var(--primary); font-weight: 500; }
 .task-list {
   display: flex;
   flex-direction: column;

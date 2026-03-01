@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -213,6 +213,12 @@
           <span class="column-title">To Do</span>
           <span class="task-count" id="count-todo">0</span>
         </div>
+        <select class="col-priority-filter" id="pf-todo">
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
         <div class="task-list" id="list-todo"></div>
       </div>
 
@@ -221,6 +227,12 @@
           <span class="column-title">In Progress</span>
           <span class="task-count" id="count-inprogress">0</span>
         </div>
+        <select class="col-priority-filter" id="pf-inprogress">
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
         <div class="task-list" id="list-inprogress"></div>
       </div>
 
@@ -229,6 +241,12 @@
           <span class="column-title">Done</span>
           <span class="task-count" id="count-done">0</span>
         </div>
+        <select class="col-priority-filter" id="pf-done">
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
         <div class="task-list" id="list-done"></div>
       </div>
 
@@ -237,6 +255,12 @@
           <span class="column-title">Overdue</span>
           <span class="task-count" id="count-overdue">0</span>
         </div>
+        <select class="col-priority-filter" id="pf-overdue">
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
         <div class="task-list" id="list-overdue"></div>
       </div>
 

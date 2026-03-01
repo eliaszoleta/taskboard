@@ -51,6 +51,7 @@ let commentsUnsub      = null;
 let notifBadgeUnsub    = null;
 let currentFilter      = 'all';
 let currentUserFilter  = 'all';
+let colPriorityFilter  = { todo: 'all', inprogress: 'all', done: 'all', overdue: 'all' };
 let customDateStart    = null;
 let customDateEnd      = null;
 let commentCounts      = {};
@@ -528,6 +529,11 @@ function renderBoard() {
   bar.classList.toggle('visible', parts.length > 0);
   label.textContent = parts.length ? `Showing: ${parts.join(' · ')}` : '';
 
+  ['todo', 'inprogress', 'done', 'overdue'].forEach(col => {
+    const sel = document.getElementById('pf-' + col);
+    sel.classList.toggle('active', colPriorityFilter[col] !== 'all');
+  });
+
   ['todo', 'inprogress', 'done'].forEach(status => {
     const list  = document.getElementById('list-'  + status);
     const count = document.getElementById('count-' + status);
@@ -537,6 +543,7 @@ function renderBoard() {
       .filter(t => status === 'done' || !isOverdue(t.due))
       .filter(t => taskMatchesFilter(t))
       .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
+      .filter(t => colPriorityFilter[status] === 'all' || t.priority === colPriorityFilter[status])
       .sort(byNewest);
 
     count.textContent = cols.length;
@@ -557,6 +564,7 @@ function renderBoard() {
     .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
     .map(([id, t]) => ({ id, ...t }))
     .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
+    .filter(t => colPriorityFilter.overdue === 'all' || t.priority === colPriorityFilter.overdue)
     .sort(byNewest);
 
   overdueCount.textContent = overdueTasks.length;
@@ -1457,6 +1465,13 @@ document.getElementById('deleteAccountOverlayOk').addEventListener('click', asyn
 });
 
 // ─── GLOBAL UI EVENTS ─────────────────────────────────────────────────────────
+['todo', 'inprogress', 'done', 'overdue'].forEach(col => {
+  document.getElementById('pf-' + col).addEventListener('change', e => {
+    colPriorityFilter[col] = e.target.value;
+    renderBoard();
+  });
+});
+
 document.getElementById('userFilter').addEventListener('change', e => {
   currentUserFilter = e.target.value;
   renderBoard();
