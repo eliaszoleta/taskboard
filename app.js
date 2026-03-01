@@ -112,8 +112,10 @@ function taskMatchesFilter(task) {
     if (!task.due) return false;
     return new Date(task.due + 'T00:00:00') < today;
   }
-  const ts = Number(task.createdAt) || Date.now();
-  const d  = new Date(ts); d.setHours(0,0,0,0);
+  // Use explicit scheduledFor date if set; otherwise fall back to createdAt
+  const d = task.scheduledFor
+    ? new Date(task.scheduledFor + 'T00:00:00')
+    : (() => { const t = new Date(Number(task.createdAt) || Date.now()); t.setHours(0,0,0,0); return t; })();
   if (currentFilter === 'custom') {
     const from = customDateStart ? new Date(customDateStart + 'T00:00:00') : null;
     const to   = customDateEnd   ? new Date(customDateEnd   + 'T23:59:59') : null;
@@ -765,6 +767,7 @@ function openEdit(id) {
   document.getElementById('taskTitle').value        = task.title;
   document.getElementById('taskDesc').value         = task.desc || '';
   document.getElementById('taskPriority').value     = task.priority;
+  document.getElementById('taskScheduled').value    = task.scheduledFor || '';
   document.getElementById('taskDue').value          = task.due || '';
   document.getElementById('taskStatus').value       = task.status;
   document.getElementById('taskAssignee').value     = task.assignedTo || '';
@@ -799,16 +802,17 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const newStatus   = document.getElementById('taskStatus').value;
   const fields = {
     title,
-    desc:         document.getElementById('taskDesc').value.trim(),
-    priority:     document.getElementById('taskPriority').value,
-    due:          document.getElementById('taskDue').value || null,
-    status:       newStatus,
-    assignedTo:   newAssignee,
-    resources:    resources,
+    desc:          document.getElementById('taskDesc').value.trim(),
+    priority:      document.getElementById('taskPriority').value,
+    scheduledFor:  document.getElementById('taskScheduled').value || null,
+    due:           document.getElementById('taskDue').value || null,
+    status:        newStatus,
+    assignedTo:    newAssignee,
+    resources:     resources,
     // Clear legacy single-resource fields
-    resourceType: null,
-    resourceUrl:  null,
-    resourceName: null,
+    resourceType:  null,
+    resourceUrl:   null,
+    resourceName:  null,
   };
 
   if (editingTaskId) {
