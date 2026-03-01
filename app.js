@@ -531,7 +531,7 @@ function renderBoard() {
 
   ['todo', 'inprogress', 'done', 'overdue'].forEach(col => {
     const sel = document.getElementById('pf-' + col);
-    sel.classList.toggle('active', colPriorityFilter[col] !== 'all');
+    if (sel) sel.classList.toggle('active', colPriorityFilter[col] !== 'all');
   });
 
   ['todo', 'inprogress', 'done'].forEach(status => {
