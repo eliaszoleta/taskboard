@@ -212,6 +212,7 @@ function hideUserOverlay() {
   renderBoard();
   setupNotifListener();
   renderNotifSidebar();
+  requestNotifPermission();
 }
 
 // ── Step navigation ──
@@ -1143,10 +1144,28 @@ function renderNotifSidebar() {
 }
 
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
-function playNotificationSound() {
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function playNotificationSound(message) {
+  // Primary: system notification — audible even when tab is in the background
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification('Taskboard', {
+      body: message || 'You have a new notification',
+      silent: false,    // let OS play its notification sound
+    });
+    setTimeout(() => n.close(), 6000);
+    // Clicking the OS popup focuses the tab
+    n.onclick = () => { window.focus(); n.close(); };
+    return; // OS sound is sufficient; skip Web Audio to avoid double-sound
+  }
+
+  // Fallback: Web Audio (only audible when tab is active)
   try {
-    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
-    // Three ascending tones — attention-grabbing ding
+    const ctx   = new (window.AudioContext || window.webkitAudioContext)();
     const notes = [
       { freq: 880,  start: 0.00, dur: 0.25 },
       { freq: 1100, start: 0.18, dur: 0.25 },
@@ -1161,12 +1180,12 @@ function playNotificationSound() {
       osc.frequency.value = freq;
       const t = ctx.currentTime + start;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.9, t + 0.01);   // loud snap
+      gain.gain.linearRampToValueAtTime(0.9, t + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
       osc.start(t);
       osc.stop(t + dur);
     });
-  } catch (e) { /* AudioContext blocked — silently skip */ }
+  } catch (e) { /* silently skip */ }
 }
 
 // ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
@@ -1190,8 +1209,8 @@ function setupNotifListener() {
     if (knownNotifIds === null) {
       knownNotifIds = incomingIds; // first snapshot — just remember, no sound
     } else {
-      const hasNew = [...incomingIds].some(id => !knownNotifIds.has(id));
-      if (hasNew) playNotificationSound();
+      const newNotifs = notifs.filter(n => !knownNotifIds.has(n.id));
+      if (newNotifs.length) playNotificationSound(newNotifs[0].message);
       knownNotifIds = incomingIds;
     }
 
