@@ -1135,8 +1135,17 @@ function renderNotifSidebar() {
 
   body.querySelectorAll('.sidebar-notif-item').forEach(item => {
     item.addEventListener('click', async () => {
-      const taskId  = item.dataset.task;
+      let taskId    = item.dataset.task;
       const notifId = item.dataset.id;
+      // The first onValue fire may use stale offline-cache data that lacks taskId.
+      // If the DOM attribute is missing/invalid, fetch the notification fresh from
+      // the server so we always have the correct taskId before opening the task.
+      if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
+        try {
+          const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
+          if (s.exists()) taskId = s.val().taskId || '';
+        } catch { /* ignore — openDetail will handle the fallback */ }
+      }
       const found   = await openDetail(taskId);
       // Auto-clean stale notifications that point to deleted tasks
       if (found === false && notifId && currentUser) {
@@ -1264,9 +1273,18 @@ function setupNotifListener() {
 
     list.querySelectorAll('.notif-item').forEach(item => {
       item.addEventListener('click', async () => {
-        const taskId  = item.dataset.task;
+        let taskId    = item.dataset.task;
         const notifId = item.dataset.id;
         closeNotifPanel();
+        // The first onValue fire may use stale offline-cache data that lacks taskId.
+        // If the DOM attribute is missing/invalid, fetch the notification fresh from
+        // the server so we always have the correct taskId before opening the task.
+        if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
+          try {
+            const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
+            if (s.exists()) taskId = s.val().taskId || '';
+          } catch { /* ignore — openDetail will handle the fallback */ }
+        }
         const found = await openDetail(taskId);
         if (found === false && notifId && currentUser) {
           // Task no longer exists — remove the stale notification
