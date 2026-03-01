@@ -212,7 +212,7 @@ function hideUserOverlay() {
   renderBoard();
   setupNotifListener();
   renderNotifSidebar();
-  requestNotifPermission();
+  unlockAudioContext();
 }
 
 // ── Step navigation ──
@@ -1144,49 +1144,63 @@ function renderNotifSidebar() {
 }
 
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
-function requestNotifPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
+let audioCtx     = null;  // persistent context — unlocked during login gesture
+let pendingSound = false; // true when a notif arrived while the tab was hidden
+
+// Call once during a user-gesture (login click) to unlock audio for the session
+function unlockAudioContext() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Play a silent buffer to unlock the context immediately
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (e) { audioCtx = null; }
 }
 
-function playNotificationSound(message) {
-  // Primary: system notification — audible even when tab is in the background
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const n = new Notification('Taskboard', {
-      body: message || 'You have a new notification',
-      silent: false,    // let OS play its notification sound
-    });
-    setTimeout(() => n.close(), 6000);
-    // Clicking the OS popup focuses the tab
-    n.onclick = () => { window.focus(); n.close(); };
-    return; // OS sound is sufficient; skip Web Audio to avoid double-sound
-  }
-
-  // Fallback: Web Audio (only audible when tab is active)
-  try {
-    const ctx   = new (window.AudioContext || window.webkitAudioContext)();
+function _playBeep() {
+  if (!audioCtx) return;
+  audioCtx.resume().then(() => {
     const notes = [
       { freq: 880,  start: 0.00, dur: 0.25 },
       { freq: 1100, start: 0.18, dur: 0.25 },
       { freq: 1320, start: 0.36, dur: 0.40 },
     ];
     notes.forEach(({ freq, start, dur }) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(audioCtx.destination);
       osc.type = 'sine';
       osc.frequency.value = freq;
-      const t = ctx.currentTime + start;
+      const t = audioCtx.currentTime + start;
       gain.gain.setValueAtTime(0, t);
       gain.gain.linearRampToValueAtTime(0.9, t + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
       osc.start(t);
       osc.stop(t + dur);
     });
-  } catch (e) { /* silently skip */ }
+  }).catch(() => {});
 }
+
+function playNotificationSound() {
+  if (document.visibilityState === 'visible') {
+    _playBeep();
+  } else {
+    pendingSound = true; // play it when the user returns to this tab
+  }
+}
+
+// Fire queued sound the moment the user switches back to this tab
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pendingSound) {
+    pendingSound = false;
+    _playBeep();
+  }
+});
 
 // ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
 function setupNotifListener() {
@@ -1210,7 +1224,7 @@ function setupNotifListener() {
       knownNotifIds = incomingIds; // first snapshot — just remember, no sound
     } else {
       const newNotifs = notifs.filter(n => !knownNotifIds.has(n.id));
-      if (newNotifs.length) playNotificationSound(newNotifs[0].message);
+      if (newNotifs.length) playNotificationSound();
       knownNotifIds = incomingIds;
     }
 
