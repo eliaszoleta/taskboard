@@ -1098,6 +1098,40 @@ async function notifyParticipants(task, taskId, message) {
   }
 }
 
+// ─── NOTIFICATION TASK ID RESOLVER ────────────────────────────────────────────
+// Notifications created before taskId was stored have no taskId in the database.
+// This helper recovers the correct task ID by:
+//   1. Fetching the notification fresh from the server (fixes stale-cache hits).
+//   2. Falling back to a title-match against the tasks object when the server
+//      record genuinely has no taskId (old notification format).
+// It also back-fills the taskId in Firebase so future clicks work immediately.
+async function resolveNotifTaskId(notifId) {
+  if (!notifId || !currentUser) return '';
+  try {
+    const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
+    if (!s.exists()) return '';
+    const val = s.val();
+
+    // Case 1: server notification already has a valid taskId.
+    if (val.taskId) return val.taskId;
+
+    // Case 2: old notification — no taskId on the server.
+    // Extract the task title from the message (always wrapped in double-quotes).
+    await tasksLoaded;
+    const m = (val.message || '').match(/"([^"]+)"/);
+    if (!m) return '';
+    const title = m[1];
+    const matchId = Object.keys(tasks).find(id => tasks[id]?.title === title);
+    if (!matchId) return '';
+
+    // Back-fill so future clicks work without going through recovery.
+    update(ref(db, `notifications/${currentUser.id}/${notifId}`), { taskId: matchId });
+    return matchId;
+  } catch {
+    return '';
+  }
+}
+
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
 onValue(ref(db, 'notifications'), snap => {
   allNotifications = snap.val() || {};
@@ -1137,14 +1171,8 @@ function renderNotifSidebar() {
     item.addEventListener('click', async () => {
       let taskId    = item.dataset.task;
       const notifId = item.dataset.id;
-      // The first onValue fire may use stale offline-cache data that lacks taskId.
-      // If the DOM attribute is missing/invalid, fetch the notification fresh from
-      // the server so we always have the correct taskId before opening the task.
       if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
-        try {
-          const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
-          if (s.exists()) taskId = s.val().taskId || '';
-        } catch { /* ignore — openDetail will handle the fallback */ }
+        taskId = await resolveNotifTaskId(notifId);
       }
       const found   = await openDetail(taskId);
       // Auto-clean stale notifications that point to deleted tasks
@@ -1276,14 +1304,8 @@ function setupNotifListener() {
         let taskId    = item.dataset.task;
         const notifId = item.dataset.id;
         closeNotifPanel();
-        // The first onValue fire may use stale offline-cache data that lacks taskId.
-        // If the DOM attribute is missing/invalid, fetch the notification fresh from
-        // the server so we always have the correct taskId before opening the task.
         if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
-          try {
-            const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
-            if (s.exists()) taskId = s.val().taskId || '';
-          } catch { /* ignore — openDetail will handle the fallback */ }
+          taskId = await resolveNotifTaskId(notifId);
         }
         const found = await openDetail(taskId);
         if (found === false && notifId && currentUser) {
