@@ -42,6 +42,8 @@ const ICONS = {
 let currentUser        = null;   // { id, name }
 let users              = {};     // { userId: { name, passwordHash?, photoURL?, email?, createdAt } }
 let tasks              = {};     // { taskId: { ...fields } }
+let _resolveTasksLoaded;
+const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
 let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
@@ -469,6 +471,7 @@ function populateUserFilter() {
 // ─── TASKS LISTENER ───────────────────────────────────────────────────────────
 onValue(ref(db, 'tasks'), snap => {
   tasks = snap.val() || {};
+  _resolveTasksLoaded();
   renderBoard();
   checkAndNotifyOverdue();
 });
@@ -910,6 +913,9 @@ async function openDetail(id) {
     showToast('This notification is not linked to a task.');
     return false;
   }
+  // Wait for the tasks cache to be ready (guards against clicking a notification
+  // before the Firebase onValue has fired on page load).
+  await tasksLoaded;
   // Primary lookup: local cache. Fallback: fetch directly from Firebase.
   let task = tasks[id];
   if (!task) {
