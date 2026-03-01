@@ -54,6 +54,7 @@ let customDateEnd      = null;
 let commentCounts      = {};
 let allNotifications   = {};
 let sidebarLimit       = 10;
+let knownNotifIds      = null; // null = first load, skip sound
 let pendingLoginUid    = null;
 let pendingProfilePhoto = null;
 let pendingResourceFiles = [];   // [{ dataUrl, name, size }]
@@ -1141,6 +1142,33 @@ function renderNotifSidebar() {
   if (showMoreBtn) showMoreBtn.addEventListener('click', () => { sidebarLimit += 10; renderNotifSidebar(); });
 }
 
+// ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
+function playNotificationSound() {
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    // Three ascending tones — attention-grabbing ding
+    const notes = [
+      { freq: 880,  start: 0.00, dur: 0.25 },
+      { freq: 1100, start: 0.18, dur: 0.25 },
+      { freq: 1320, start: 0.36, dur: 0.40 },
+    ];
+    notes.forEach(({ freq, start, dur }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + start;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.9, t + 0.01);   // loud snap
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur);
+    });
+  } catch (e) { /* AudioContext blocked — silently skip */ }
+}
+
 // ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
 function setupNotifListener() {
   if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
@@ -1156,6 +1184,16 @@ function setupNotifListener() {
     const data   = snap.val() || {};
     const notifs = Object.entries(data).map(([id, n]) => ({ id, ...n })).sort((a,b) => b.createdAt - a.createdAt);
     const unread = notifs.filter(n => !n.read).length;
+
+    // Play sound for genuinely new notifications (skip initial page-load snapshot)
+    const incomingIds = new Set(Object.keys(data));
+    if (knownNotifIds === null) {
+      knownNotifIds = incomingIds; // first snapshot — just remember, no sound
+    } else {
+      const hasNew = [...incomingIds].some(id => !knownNotifIds.has(id));
+      if (hasNew) playNotificationSound();
+      knownNotifIds = incomingIds;
+    }
 
     badge.textContent = unread;
     badge.classList.toggle('visible', unread > 0);
@@ -1321,6 +1359,7 @@ document.getElementById('deleteAccountOverlayOk').addEventListener('click', asyn
   localStorage.removeItem('taskboard-user');
   currentUser = null;
   if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
+  knownNotifIds = null;
   closeProfile();
   showUserOverlay();
 });
