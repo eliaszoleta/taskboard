@@ -784,7 +784,11 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
 
   // Collect links and files from both sections — they can coexist in one task
   const linkItems = pendingResourceLinks.map(u => u.trim()).filter(u => u)
-    .map(url => ({ type: 'link', url, name: url }));
+    .map(url => {
+      // Ensure URL has a protocol so browsers don't treat it as a relative path
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      return { type: 'link', url: normalized, name: url };
+    });
   const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
   const allItems  = [...linkItems, ...fileItems];
   const resources = allItems.length ? allItems : null;
