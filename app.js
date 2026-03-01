@@ -141,6 +141,11 @@ const FILTER_LABELS = {
 };
 
 const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+const byPriority = (a, b) => {
+  const pd = (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1);
+  return pd !== 0 ? pd : b.createdAt - a.createdAt;
+};
 const avatarColor = name => {
   let h = 0;
   for (const c of (name||'')) h = (h * 31 + c.charCodeAt(0)) & 0x7fffffff;
@@ -536,7 +541,7 @@ function renderBoard() {
       .filter(t => status === 'done' || !isOverdue(t.due))
       .filter(t => taskMatchesFilter(t))
       .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
-      .sort((a, b) => b.createdAt - a.createdAt);  // newest first
+      .sort(byPriority);  // high → medium → low, then newest first within each tier
 
     count.textContent = cols.length;
     list.innerHTML = '';
@@ -556,7 +561,7 @@ function renderBoard() {
     .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
     .map(([id, t]) => ({ id, ...t }))
     .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
-    .sort((a, b) => b.createdAt - a.createdAt);  // newest first
+    .sort(byPriority);  // high → medium → low, then newest first within each tier
 
   overdueCount.textContent = overdueTasks.length;
   overdueList.innerHTML = '';
