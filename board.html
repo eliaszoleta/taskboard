@@ -7,114 +7,36 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="board.css?v=1">
 </head>
 <body>
 
-  <!-- ── User Selection Overlay ── -->
-  <div class="user-overlay" id="userOverlay">
-    <div class="user-card">
-      <button class="user-overlay-close" id="userOverlayClose" title="Cancel" style="display:none">✕</button>
+  <!-- ── Space Entry Overlay ── -->
+  <div class="space-overlay" id="spaceOverlay">
+    <div class="space-card">
+      <div class="space-card-logo">TaskBoard</div>
+      <p class="space-card-sub">Organize your tasks — free &amp; private.</p>
 
-      <!-- Step 1: Pick a user -->
-      <div id="userStep1">
-        <div class="user-card-logo">TaskBoard</div>
-        <p class="user-card-sub">Select your profile to continue</p>
-        <div class="user-list" id="userList"></div>
-        <div class="user-divider">or create a new account</div>
-        <div class="user-join-form">
-          <input type="text"     id="newUserName"     placeholder="Your name…"                    maxlength="30">
-          <input type="email"    id="newUserEmail"    placeholder="Email for password recovery…"  maxlength="150">
-          <input type="password" id="newUserPassword" placeholder="Choose a password…"            maxlength="100">
-          <button class="btn-primary" id="joinBtn">Create Account</button>
+      <!-- Create new space -->
+      <p class="space-section-label">Create Your Taskboard</p>
+      <div class="space-section-form" id="createSection">
+        <input type="text" id="createSpaceInput" placeholder="Name your space…" maxlength="40" autocomplete="off">
+        <div class="space-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Write this name down — you'll need it to open your board again on your next visit.
         </div>
+        <button class="btn-primary" id="createSpaceBtn">Create Taskboard</button>
+        <p class="space-err" id="createErr"></p>
       </div>
 
-      <!-- Step 2: Password prompt for existing user -->
-      <div id="userStep2" style="display:none">
-        <div id="pwdPromptAvatar" class="pwd-prompt-avatar"></div>
-        <div class="user-card-logo" id="pwdPromptName"></div>
-        <p class="user-card-sub">Enter your password to continue</p>
-        <div class="user-join-form">
-          <input type="password" id="loginPassword" placeholder="Password…" maxlength="100">
-          <button class="btn-primary" id="loginBtn">Sign In</button>
-        </div>
-        <p class="login-error" id="loginError"></p>
-        <div class="step2-links">
-          <button class="btn-text" id="backToList">← Back to list</button>
-          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
-        </div>
-      </div>
+      <div class="space-divider">or</div>
 
-      <!-- Step 3: Forgot password — email verification -->
-      <div id="userStep3" style="display:none">
-        <div class="user-card-logo">Forgot Password</div>
-        <p class="user-card-sub" id="forgotSub">Enter the email linked to your account</p>
-        <div class="user-join-form" id="forgotEmailForm">
-          <input type="email" id="forgotEmail" placeholder="Your email address…" maxlength="150">
-          <button class="btn-primary" id="forgotVerifyBtn">Verify Email</button>
-        </div>
-        <p class="login-error" id="forgotError"></p>
-        <div style="text-align:center;margin-top:10px">
-          <button class="btn-text" id="backToStep2">← Back</button>
-        </div>
-      </div>
-
-      <!-- Step 4: New password after email verified -->
-      <div id="userStep4" style="display:none">
-        <div class="user-card-logo">Reset Password</div>
-        <p class="user-card-sub">Create a new password for your account</p>
-        <div class="user-join-form">
-          <input type="password" id="resetPassword"        placeholder="New password…"     maxlength="100">
-          <input type="password" id="resetConfirmPassword" placeholder="Confirm password…" maxlength="100">
-          <button class="btn-primary" id="resetPasswordBtn">Reset Password</button>
-        </div>
-        <p class="login-error" id="resetError"></p>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── Profile Settings Modal ── -->
-  <div class="modal-overlay" id="profileOverlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Profile Settings</h2>
-        <button class="btn-close" id="closeProfile">&times;</button>
-      </div>
-      <div class="profile-body">
-        <div class="profile-photo-row">
-          <div class="profile-photo-wrap">
-            <div class="profile-photo-preview" id="profilePhotoPreview"></div>
-            <button class="profile-photo-edit-btn" id="profilePhotoEditBtn" title="Upload photo">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            </button>
-            <input type="file" id="profilePhotoInput" accept="image/*" style="display:none">
-          </div>
-          <div class="profile-info">
-            <div class="profile-name" id="profileNameDisplay"></div>
-            <div class="profile-since" id="profileMemberSince"></div>
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px">
-          <label>Recovery Email</label>
-          <input type="email" id="profileEmail" placeholder="your@email.com" maxlength="150">
-        </div>
-        <div class="form-group">
-          <label>New Password</label>
-          <input type="password" id="profileNewPassword" placeholder="Leave blank to keep current…" maxlength="100">
-        </div>
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <input type="password" id="profileConfirmPassword" placeholder="Repeat new password…" maxlength="100">
-        </div>
-        <p class="profile-error" id="profileError"></p>
-        <div class="modal-actions profile-actions">
-          <button class="btn-danger" id="deleteAccountBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
-          </button>
-          <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
-        </div>
+      <!-- Open existing space -->
+      <p class="space-section-label">Already have a taskboard?</p>
+      <div class="space-section-form" id="openSection">
+        <input type="text" id="openSpaceInput" placeholder="Enter your taskboard name…" maxlength="40" autocomplete="off">
+        <button class="btn-secondary" id="openSpaceBtn">Open Taskboard</button>
+        <p class="space-err" id="openErr"></p>
       </div>
     </div>
   </div>
@@ -141,31 +63,29 @@
             </div>
           </div>
 
-          <!-- Current user (click to open profile settings) -->
-          <div class="current-user" id="currentUserBtn" title="Profile settings">
-            <span id="userAvatar"></span>
-            <span class="user-name-display" id="userNameDisplay"></span>
+          <!-- Active space display -->
+          <div class="space-display" id="spaceDisplay">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--primary)"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="space-display-name" id="spaceNameDisplay"></span>
           </div>
-          <button class="btn-text" id="changeUserBtn">Switch</button>
+          <button class="btn-text" id="changeSpaceBtn" style="display:none">Switch</button>
 
           <button class="btn-primary" id="addTaskBtn">+ New Task</button>
         </div>
 
         <div class="header-filters">
-          <select class="date-filter" id="userFilter" title="Filter by user">
-            <option value="all">All users</option>
-          </select>
-
           <div class="date-filter-wrap">
-            <select class="date-filter" id="dateFilter" title="Filter by date created">
+            <select class="date-filter" id="dateFilter" title="Filter by date">
               <option value="all">All time</option>
               <option value="today">Today</option>
-              <option value="this-week">This week</option>
-              <option value="next-week">Next week</option>
-              <option value="last-week">Last week</option>
-              <option value="this-month">This month</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last-week">Last Week</option>
+              <option value="last-month">Last Month</option>
+              <option value="next-week">Next Week</option>
+              <option value="next-month">Next Month</option>
               <option value="overdue">Overdue</option>
-              <option value="custom">Pick dates…</option>
+              <option value="last-30-days">Last 30 days</option>
+              <option value="custom">Pick Dates…</option>
             </select>
 
             <div class="custom-date-row" id="customDateRow" style="display:none">
@@ -196,16 +116,8 @@
     <button class="filter-bar-clear" id="filterBarClear">Clear filter</button>
   </div>
 
-  <!-- ── Board Wrapper ── -->
+  <!-- ── Board ── -->
   <div class="board-wrapper">
-
-    <aside class="notif-sidebar">
-      <div class="notif-sidebar-header">My Activity</div>
-      <div class="notif-sidebar-body" id="notifSidebarBody">
-        <div class="sidebar-empty">Loading…</div>
-      </div>
-    </aside>
-
     <main class="board">
 
       <div class="column" id="col-todo">
@@ -234,6 +146,20 @@
           <option value="low">Low</option>
         </select>
         <div class="task-list" id="list-inprogress"></div>
+      </div>
+
+      <div class="column" id="col-pending">
+        <div class="column-header pending">
+          <span class="column-title">Pending</span>
+          <span class="task-count" id="count-pending">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-pending">
+          <option value="all">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-pending"></div>
       </div>
 
       <div class="column" id="col-done">
@@ -265,7 +191,6 @@
       </div>
 
     </main>
-
   </div>
 
   <!-- ── Task Create / Edit Modal ── -->
@@ -298,6 +223,7 @@
             <select id="taskStatus">
               <option value="todo">To Do</option>
               <option value="inprogress">In Progress</option>
+              <option value="pending">Pending</option>
               <option value="done">Done</option>
             </select>
           </div>
@@ -312,30 +238,22 @@
             <input type="date" id="taskDue">
           </div>
         </div>
-        <div class="form-group">
-          <label for="taskAssignee">Assign To</label>
-          <select id="taskAssignee">
-            <option value="">Unassigned</option>
-          </select>
-        </div>
 
-        <!-- ── Resource Attachment ── -->
+        <!-- Resource Attachments -->
         <div class="form-group">
           <label>Resource Attachments</label>
-          <div id="resourceLinkSection" class="resource-section">
+          <div id="resourceLinkSection">
             <div id="resourceLinksContainer"></div>
             <button type="button" class="resource-link-add" id="resourceLinkAdd">+ Add link</button>
           </div>
-          <div class="resource-section-sep">
-            <span>attach files</span>
-          </div>
-          <div id="resourceFileSection" class="resource-section">
+          <div class="resource-section-sep"><span>attach files</span></div>
+          <div id="resourceFileSection">
             <div class="resource-file-row">
               <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose Files</button>
             </div>
             <div class="resource-file-list" id="resourceFileList"><span class="no-files-label">No files chosen</span></div>
             <input type="file" id="resourceFile" style="display:none" multiple>
-            <p class="resource-hint">Multiple files · 10 MB combined max · Stored as data URLs</p>
+            <p class="resource-hint">Multiple files · 10 MB combined max</p>
           </div>
         </div>
 
@@ -362,26 +280,6 @@
     </div>
   </div>
 
-  <!-- ── Delete Account Confirmation Modal ── -->
-  <div class="modal-overlay" id="deleteAccountOverlay">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h2>Delete Account</h2>
-        <button class="btn-close" id="deleteAccountOverlayClose">&times;</button>
-      </div>
-      <p class="delete-confirm-body" id="deleteAccountMsg">Are you sure you want to delete your account? This cannot be undone.</p>
-      <div class="form-group" id="deleteAccountPwdGroup" style="display:none;padding:0 24px 4px">
-        <label for="deleteAccountPwdInput" style="font-size:.82rem;color:var(--text-muted)">Enter your password to confirm</label>
-        <input type="password" id="deleteAccountPwdInput" class="form-control" placeholder="Password" autocomplete="current-password">
-        <p class="field-error" id="deleteAccountPwdError" style="color:var(--danger);font-size:.8rem;margin:4px 0 0"></p>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" id="deleteAccountOverlayCancel">Cancel</button>
-        <button type="button" class="btn-danger"    id="deleteAccountOverlayOk">Delete Account</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ── File Preview Overlay ── -->
   <div class="file-preview-overlay" id="filePreviewOverlay">
     <div class="file-preview-panel">
@@ -399,7 +297,7 @@
     </div>
   </div>
 
-  <!-- ── Task Detail + Comments Modal ── -->
+  <!-- ── Task Detail + Notes Modal ── -->
   <div class="modal-overlay" id="detailOverlay">
     <div class="modal modal-lg">
       <div class="modal-header">
@@ -413,16 +311,19 @@
       </div>
       <div id="detailBody"></div>
       <div class="comments-section">
-        <h3 class="comments-heading">Comments</h3>
+        <h3 class="comments-heading">Notes</h3>
         <div class="comments-list" id="commentsList"></div>
         <div class="comment-input-row">
-          <input type="text" id="commentInput" placeholder="Write a comment…">
+          <input type="text" id="commentInput" placeholder="Add a note…">
           <button class="btn-primary" id="postCommentBtn">Post</button>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="app.js?v=21"></script>
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="board.js?v=1"></script>
 </body>
 </html>
