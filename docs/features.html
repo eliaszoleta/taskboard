@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskBoard Features — Everything You Can Do</title>
+  <meta name="description" content="Explore all TaskBoard features: kanban columns, task priorities, due dates, file attachments, filters, team assignment, real-time collaboration, and more.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://eliaszoleta.github.io/taskboard/docs/features.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f0f2f5;
+      --white: #ffffff;
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .header-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -.03em;
+      text-decoration: none;
+    }
+    nav.header-nav { display: flex; gap: 20px; align-items: center; }
+    nav.header-nav a {
+      font-size: .85rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    nav.header-nav a:hover, nav.header-nav a.active { color: var(--primary); font-weight: 600; }
+    .layout {
+      max-width: 1040px;
+      margin: 48px auto 80px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .sidebar {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.07);
+      position: sticky;
+      top: 78px;
+    }
+    .sidebar-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .sidebar a {
+      display: block;
+      font-size: .84rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 7px;
+      margin-bottom: 2px;
+      transition: all .15s;
+    }
+    .sidebar a:hover { color: var(--primary); background: #f0f0ff; }
+    .sidebar a.active { color: var(--primary); background: #ede9fe; font-weight: 600; }
+    .sidebar-section { margin-top: 18px; }
+    .content { min-width: 0; }
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 44px 48px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      margin-bottom: 28px;
+    }
+    .badge {
+      display: inline-block;
+      background: #ede9fe;
+      color: var(--primary);
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 12px; }
+    .lead { font-size: 1rem; color: var(--muted); margin-bottom: 0; }
+    h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; margin: 0 0 14px; color: var(--text); }
+    p { color: #374151; font-size: .93rem; margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+    ul { padding-left: 20px; margin-bottom: 14px; }
+    ul li { color: #374151; font-size: .93rem; margin-bottom: 8px; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .feature-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+    }
+    .feature-icon { font-size: 1.6rem; margin-bottom: 10px; }
+    .feature-title { font-size: .9rem; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .feature-desc { font-size: .83rem; color: var(--muted); margin: 0; line-height: 1.6; }
+    .team-badge {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: .03em;
+    }
+    .priority-row { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+    .priority-chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    .p-high   { background: #fee2e2; color: #991b1b; }
+    .p-medium { background: #fef3c7; color: #92400e; }
+    .p-low    { background: #dcfce7; color: #166534; }
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+    footer a { color: var(--muted); margin: 0 8px; }
+    footer a:hover { color: var(--primary); }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .card { padding: 30px 22px; }
+      h1 { font-size: 1.6rem; }
+      .feature-grid { grid-template-columns: 1fr; }
+      nav.header-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="header-logo" href="../index.html">TaskBoard</a>
+    <nav class="header-nav">
+      <a href="../about.html">About</a>
+      <a href="getting-started.html" class="active">Docs</a>
+      <a href="faq.html">FAQ</a>
+      <a href="../index.html">Open App</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+      <div class="sidebar-title">Documentation</div>
+      <a href="getting-started.html">Getting Started</a>
+      <a href="features.html" class="active">All Features</a>
+      <a href="faq.html">FAQ</a>
+      <div class="sidebar-section">
+        <div class="sidebar-title">More</div>
+        <a href="../about.html">About</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../terms-of-service.html">Terms of Service</a>
+      </div>
+    </aside>
+
+    <div class="content">
+
+      <div class="card">
+        <span class="badge">Docs</span>
+        <h1>All Features</h1>
+        <p class="lead">A complete reference of everything TaskBoard can do — from basic task management to team collaboration.</p>
+      </div>
+
+      <div class="card">
+        <h2>Kanban Board</h2>
+        <p>Your tasks are organized across four columns that represent stages of work. Every task card shows the title, priority, due date, and assigned user at a glance. The board updates in real time — no page refresh needed.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">📋</div>
+            <div class="feature-title">Four-stage pipeline</div>
+            <p class="feature-desc">To Do → In Progress → In Review → Done. Move tasks as work advances.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔢</div>
+            <div class="feature-title">Live task counts</div>
+            <p class="feature-desc">Each column header shows how many tasks are currently in that stage.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">☁️</div>
+            <div class="feature-title">Cloud sync</div>
+            <p class="feature-desc">All changes save to the cloud instantly. Pick up from any device.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📱</div>
+            <div class="feature-title">Responsive layout</div>
+            <p class="feature-desc">Works on desktop, tablet, and mobile browsers without an app install.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Task Details</h2>
+        <p>Click any task card to open the full task panel. Here you can view and edit everything about a task in one place.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">✏️</div>
+            <div class="feature-title">Title &amp; description</div>
+            <p class="feature-desc">Give tasks a clear name and add as much context as you need in the description field.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📅</div>
+            <div class="feature-title">Due dates</div>
+            <p class="feature-desc">Assign a deadline. Overdue tasks are automatically flagged in red so nothing slips through.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📎</div>
+            <div class="feature-title">File &amp; link attachments</div>
+            <p class="feature-desc">Attach images, documents, or paste URLs directly onto the task.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">💬</div>
+            <div class="feature-title">Notes &amp; comments <span class="team-badge">Team</span></div>
+            <p class="feature-desc">Leave notes on tasks for yourself or add comments for teammates to review.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Priority Levels</h2>
+        <p>Every task gets a priority to help you focus on what matters most. Priority is visible directly on the card so you don't need to open a task to see it.</p>
+        <div class="priority-row">
+          <span class="priority-chip p-high">High</span>
+          <span class="priority-chip p-medium">Medium</span>
+          <span class="priority-chip p-low">Low</span>
+        </div>
+        <ul>
+          <li><strong>High</strong> — urgent work that needs attention today</li>
+          <li><strong>Medium</strong> — important but not blocking; work on it next</li>
+          <li><strong>Low</strong> — nice to have; tackle when higher priorities are clear</li>
+        </ul>
+        <p>Each column has a priority filter dropdown so you can focus on, say, only High priority In Progress tasks without hiding everything else.</p>
+      </div>
+
+      <div class="card">
+        <h2>Filters &amp; Views</h2>
+        <p>Filters let you slice your board without losing any data. Everything is still there — you're just narrowing the view.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">🔺</div>
+            <div class="feature-title">Priority filter</div>
+            <p class="feature-desc">Per-column dropdown to show only High, Medium, or Low tasks in that column.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📆</div>
+            <div class="feature-title">Date filter</div>
+            <p class="feature-desc">Filter by Today, Yesterday, Last Week, Last Month, Next Week, Next Month, Last 30 Days, Overdue, or a custom date range.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">👤</div>
+            <div class="feature-title">User filter <span class="team-badge">Team</span></div>
+            <p class="feature-desc">Show only tasks assigned to a specific team member.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🧹</div>
+            <div class="feature-title">Clear filters</div>
+            <p class="feature-desc">A single click clears all active filters and restores the full board view.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Team Collaboration <span class="team-badge">Team</span></h2>
+        <p>The Team Board adds multi-user features built for small groups working together on shared projects.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">🙋</div>
+            <div class="feature-title">Task assignment</div>
+            <p class="feature-desc">Assign any task to one or more team members. Assigned tasks show the member's avatar on the card.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔔</div>
+            <div class="feature-title">Notifications</div>
+            <p class="feature-desc">Get notified when a task is assigned to you, a due date is approaching, or a teammate leaves a comment.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🏢</div>
+            <div class="feature-title">Workspaces</div>
+            <p class="feature-desc">Create separate workspaces for different projects or clients, each with its own board and members.</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🖼️</div>
+            <div class="feature-title">Profile avatars</div>
+            <p class="feature-desc">Upload a profile photo to help teammates identify who's assigned to what at a glance.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Data &amp; Privacy</h2>
+        <p>TaskBoard stores your data securely in Google Firebase with real-time sync. Your task data is never shared with third parties for advertising. See our <a href="../privacy-policy.html">Privacy Policy</a> for full details.</p>
+        <ul>
+          <li>Data encrypted in transit (HTTPS)</li>
+          <li>Firebase Realtime Database with security rules</li>
+          <li>No data stored in your browser — clearing cache won't lose your tasks</li>
+          <li>Delete your account and all data at any time from Profile Settings</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Ready to dive deeper?</h2>
+        <ul>
+          <li><a href="getting-started.html">Getting Started guide</a> — step-by-step setup walkthrough</li>
+          <li><a href="faq.html">FAQ</a> — answers to common questions</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>© 2026 TaskBoard &nbsp;·&nbsp;</span>
+    <a href="../index.html">Home</a>
+    <a href="../about.html">About</a>
+    <a href="getting-started.html">Docs</a>
+    <a href="faq.html">FAQ</a>
+    <a href="../terms-of-service.html">Terms</a>
+    <a href="../privacy-policy.html">Privacy</a>
+  </footer>
+
+</body>
+</html>

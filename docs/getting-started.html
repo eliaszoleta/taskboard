@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started with TaskBoard — Quick Start Guide</title>
+  <meta name="description" content="Learn how to set up and use TaskBoard in minutes. Create your first task board, add tasks, set priorities, assign due dates, and move work through your pipeline.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://eliaszoleta.github.io/taskboard/docs/getting-started.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f0f2f5;
+      --white: #ffffff;
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .header-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -.03em;
+      text-decoration: none;
+    }
+    nav.header-nav { display: flex; gap: 20px; align-items: center; }
+    nav.header-nav a {
+      font-size: .85rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    nav.header-nav a:hover, nav.header-nav a.active { color: var(--primary); font-weight: 600; }
+    .layout {
+      max-width: 1040px;
+      margin: 48px auto 80px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .sidebar {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.07);
+      position: sticky;
+      top: 78px;
+    }
+    .sidebar-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .sidebar a {
+      display: block;
+      font-size: .84rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 7px;
+      margin-bottom: 2px;
+      transition: all .15s;
+    }
+    .sidebar a:hover { color: var(--primary); background: #f0f0ff; }
+    .sidebar a.active { color: var(--primary); background: #ede9fe; font-weight: 600; }
+    .sidebar-section { margin-top: 18px; }
+    .content { min-width: 0; }
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 44px 48px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      margin-bottom: 28px;
+    }
+    .badge {
+      display: inline-block;
+      background: #ede9fe;
+      color: var(--primary);
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 12px; }
+    .lead { font-size: 1rem; color: var(--muted); margin-bottom: 0; }
+    h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; margin: 32px 0 12px; color: var(--text); }
+    h2:first-of-type { margin-top: 0; }
+    h3 { font-size: .95rem; font-weight: 700; margin: 20px 0 8px; color: var(--text); }
+    p { color: #374151; font-size: .93rem; margin-bottom: 14px; }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; }
+    ul li, ol li { color: #374151; font-size: .93rem; margin-bottom: 8px; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .step-list { list-style: none; padding: 0; counter-reset: steps; }
+    .step-list li {
+      counter-increment: steps;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 22px;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .82rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { display: block; font-size: .93rem; margin-bottom: 4px; color: var(--text); }
+    .step-body p { margin: 0; }
+    .tip-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: .88rem;
+      color: #0369a1;
+    }
+    .tip-box strong { display: block; margin-bottom: 4px; }
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: .85em;
+      color: var(--primary-dark);
+    }
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .col-chip {
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: .8rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .col-todo    { background: #f1f5f9; color: #475569; }
+    .col-doing   { background: #eff6ff; color: #2563eb; }
+    .col-review  { background: #fdf4ff; color: #9333ea; }
+    .col-done    { background: #f0fdf4; color: #16a34a; }
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+    footer a { color: var(--muted); margin: 0 8px; }
+    footer a:hover { color: var(--primary); }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .card { padding: 30px 22px; }
+      h1 { font-size: 1.6rem; }
+      .columns-grid { grid-template-columns: 1fr 1fr; }
+      nav.header-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="header-logo" href="../index.html">TaskBoard</a>
+    <nav class="header-nav">
+      <a href="../about.html">About</a>
+      <a href="getting-started.html" class="active">Docs</a>
+      <a href="faq.html">FAQ</a>
+      <a href="../index.html">Open App</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+      <div class="sidebar-title">Documentation</div>
+      <a href="getting-started.html" class="active">Getting Started</a>
+      <a href="features.html">All Features</a>
+      <a href="faq.html">FAQ</a>
+      <div class="sidebar-section">
+        <div class="sidebar-title">More</div>
+        <a href="../about.html">About</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../terms-of-service.html">Terms of Service</a>
+      </div>
+    </aside>
+
+    <div class="content">
+
+      <div class="card">
+        <span class="badge">Docs</span>
+        <h1>Getting Started</h1>
+        <p class="lead">TaskBoard takes about two minutes to set up. This guide walks you through everything from opening your first board to completing your first task.</p>
+      </div>
+
+      <div class="card">
+        <h2>How TaskBoard is organized</h2>
+        <p>TaskBoard uses a <strong>kanban board</strong> — a visual method of managing tasks by moving cards through columns that represent stages of progress. Your board has four columns:</p>
+        <div class="columns-grid">
+          <div class="col-chip col-todo">To Do</div>
+          <div class="col-chip col-doing">In Progress</div>
+          <div class="col-chip col-review">In Review</div>
+          <div class="col-chip col-done">Done</div>
+        </div>
+        <p>Every task lives in one of these columns at any given time. You move tasks across as work progresses. At a glance, you can always see what's waiting, what's being worked on, what needs a final check, and what's finished.</p>
+      </div>
+
+      <div class="card">
+        <h2>Opening your board</h2>
+
+        <h3>Solo Board (no account needed)</h3>
+        <ol class="step-list">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Go to the board page</strong>
+              <p>Open <a href="../board.html">TaskBoard Solo</a>. You'll see an "Open Taskboard" prompt.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Enter a board name</strong>
+              <p>Type any name — your name, project name, or anything memorable (e.g. <code>johns-work</code>). This name is your unique identifier. Keep it private — anyone who knows the name can access the board.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Click Open</strong>
+              <p>Your board loads instantly. The name is remembered in your browser so you won't need to type it again on future visits.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="tip-box">
+          <strong>💡 Tip — Returning to your board</strong>
+          If you clear your browser data, just enter your board name again — all your tasks are saved in the cloud, not in your browser.
+        </div>
+
+        <h3>Team Board (with account)</h3>
+        <ol class="step-list">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Open the Team app</strong>
+              <p>Go to the <a href="../index.html">TaskBoard home page</a> and click "Create Account".</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Enter your name, email, and a password</strong>
+              <p>The email is only used for password recovery — it's optional. Your name appears on tasks you create or are assigned to.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Create or join a workspace</strong>
+              <p>After signing in, create a new workspace or ask a teammate to invite you to theirs.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Creating your first task</h2>
+        <ol class="step-list">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Click "+ New Task"</strong>
+              <p>The button is in the top-right corner of the header. A task creation panel will slide open.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Add a title</strong>
+              <p>Keep it short and action-oriented — e.g. "Write homepage copy" or "Fix login bug".</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Set a priority</strong>
+              <p>Choose <strong>High</strong>, <strong>Medium</strong>, or <strong>Low</strong>. High-priority tasks show a red indicator so they stand out on the board.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <strong>Pick a due date (optional)</strong>
+              <p>Tasks with a due date show a countdown. Overdue tasks are flagged in red automatically.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <strong>Add a description (optional)</strong>
+              <p>Use the description to capture context, requirements, or links that relate to the task.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">6</div>
+            <div class="step-body">
+              <strong>Click Save</strong>
+              <p>Your task appears in the <strong>To Do</strong> column, ready to be worked on.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Moving tasks through the board</h2>
+        <p>To change a task's status, open the task by clicking on it, then use the status buttons at the top of the task detail panel to move it to <strong>In Progress</strong>, <strong>In Review</strong>, or <strong>Done</strong>.</p>
+        <p>Tasks automatically appear in the correct column after you update their status. Completed tasks move to the Done column and can be filtered out when you want a cleaner view of active work.</p>
+
+        <div class="tip-box">
+          <strong>💡 Tip — Filtering your board</strong>
+          Use the priority filter at the top of each column to show only High, Medium, or Low priority tasks in that column. Use the date filter in the header to narrow tasks to a specific time range like "This Week" or "Overdue".
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>What to do next</h2>
+        <ul>
+          <li>Read about <a href="features.html">all available features</a> to get the most out of TaskBoard</li>
+          <li>Check the <a href="faq.html">FAQ</a> if you run into any questions</li>
+          <li>For Team Board users: invite teammates from the workspace settings panel</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>© 2026 TaskBoard &nbsp;·&nbsp;</span>
+    <a href="../index.html">Home</a>
+    <a href="../about.html">About</a>
+    <a href="getting-started.html">Docs</a>
+    <a href="faq.html">FAQ</a>
+    <a href="../terms-of-service.html">Terms</a>
+    <a href="../privacy-policy.html">Privacy</a>
+  </footer>
+
+</body>
+</html>
