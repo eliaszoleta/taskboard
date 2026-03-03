@@ -1049,9 +1049,11 @@ document.getElementById('changeSpaceBtn').addEventListener('click', () => {
     document.getElementById('notifBadge').classList.remove('visible');
     document.getElementById('notifList').innerHTML = '';
     renderBoard();
-    showSpaceOverlay();
   }, 1800);
 });
+
+// ─── SPACE OVERLAY CLOSE ─────────────────────────────────────────────────────
+document.getElementById('spaceOverlayClose').addEventListener('click', hideSpaceOverlay);
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
@@ -1065,10 +1067,10 @@ async function init() {
         return;
       }
     } catch {}
-    // Space no longer exists, clear and show overlay
+    // Space no longer exists, clear storage and leave board empty
     localStorage.removeItem('tb-space');
   }
-  showSpaceOverlay();
+  // Don't auto-show overlay — user will trigger it via New Task
 }
 
 init();
