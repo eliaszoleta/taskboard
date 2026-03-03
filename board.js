@@ -1033,21 +1033,24 @@ document.getElementById('openSpaceInput').addEventListener('keydown', e => {
 });
 
 document.getElementById('changeSpaceBtn').addEventListener('click', () => {
-  // Unsubscribe current space listeners
-  if (tasksUnsub)          tasksUnsub();
-  if (commentsGlobalUnsub) commentsGlobalUnsub();
-  if (notifUnsub)          notifUnsub();
-  localStorage.removeItem('tb-space');
-  currentSpace = null;
-  tasks = {};
-  allNotifications = {};
-  knownNotifIds = null;
-  document.getElementById('spaceDisplay').classList.remove('visible');
-  document.getElementById('changeSpaceBtn').style.display = 'none';
-  document.getElementById('notifBadge').classList.remove('visible');
-  document.getElementById('notifList').innerHTML = '';
-  renderBoard();
-  showSpaceOverlay();
+  showToast('All tasks saved. See you next time!', 2000);
+  setTimeout(() => {
+    // Unsubscribe current space listeners
+    if (tasksUnsub)          tasksUnsub();
+    if (commentsGlobalUnsub) commentsGlobalUnsub();
+    if (notifUnsub)          notifUnsub();
+    localStorage.removeItem('tb-space');
+    currentSpace = null;
+    tasks = {};
+    allNotifications = {};
+    knownNotifIds = null;
+    document.getElementById('spaceDisplay').classList.remove('visible');
+    document.getElementById('changeSpaceBtn').style.display = 'none';
+    document.getElementById('notifBadge').classList.remove('visible');
+    document.getElementById('notifList').innerHTML = '';
+    renderBoard();
+    showSpaceOverlay();
+  }, 1800);
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
