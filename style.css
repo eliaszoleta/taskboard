@@ -1572,8 +1572,8 @@ h1 {
   line-height: 1.65;
 }
 .seo-compare-list {
-  list-style: none;
-  padding: 0;
+  list-style: disc;
+  padding-left: 20px;
   margin-bottom: 16px;
 }
 .seo-compare-list li {
