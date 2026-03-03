@@ -168,8 +168,8 @@
 
       <p><strong>Solo Board (eliaszoleta.github.io/taskboard/board.html)</strong></p>
       <ul>
-        <li><strong>Board name</strong> — the name you choose for your task space, stored in your browser's <code>localStorage</code> for convenience.</li>
-        <li><strong>Task data</strong> — titles, descriptions, due dates, priorities, statuses, notes, and file attachments you create.</li>
+        <li><strong>Board name</strong> — the name you choose for your task space. Your board name acts as your unique identifier. It is stored in your browser's <code>localStorage</code> as a convenience so you don't have to retype it on every visit — but your actual data is safely stored in Firebase (see Section 3), not in your browser. If you clear your browser data, simply use "Open Taskboard" and enter your board name to restore full access to all your tasks.</li>
+        <li><strong>Task data</strong> — titles, descriptions, due dates, priorities, statuses, notes, and file attachments you create, all stored in Firebase Realtime Database.</li>
         <li>No account or email is required to use the Solo Board.</li>
       </ul>
 
@@ -192,7 +192,7 @@
       </ul>
 
       <h2>4. Cookies and Local Storage</h2>
-      <p>TaskBoard does not set cookies directly. We use the browser's <code>localStorage</code> to remember your active board name between sessions on the Solo Board. This data never leaves your device unless you explicitly enter it into the app.</p>
+      <p>TaskBoard does not set cookies directly. We use the browser's <code>localStorage</code> to remember your active board name between sessions on the Solo Board, purely as a convenience. Your actual task data is stored in Firebase (cloud), not in your browser — so clearing browser data will not delete your tasks. You can always re-open your board by entering your board name in the "Open Taskboard" form.</p>
       <p>Third-party services integrated into TaskBoard (listed above) may set their own cookies or use similar tracking technologies, subject to their respective privacy policies.</p>
 
       <h2>5. Advertising</h2>
