@@ -195,12 +195,12 @@ function readFileAsDataURL(file) {
 
 // ─── USER SELECTION ───────────────────────────────────────────────────────────
 function loadCurrentUser() {
-  try { currentUser = JSON.parse(localStorage.getItem('taskboard-user')); } catch { currentUser = null; }
+  try { currentUser = JSON.parse(localStorage.getItem('achieverboard-user')); } catch { currentUser = null; }
 }
 
 function saveCurrentUser(user) {
   currentUser = user;
-  localStorage.setItem('taskboard-user', JSON.stringify(user));
+  localStorage.setItem('achieverboard-user', JSON.stringify(user));
 }
 
 function showUserOverlay() {
@@ -1203,7 +1203,7 @@ function renderNotifSidebar() {
 let audioCtx        = null;  // persistent context — unlocked during login gesture
 let pendingSound    = false; // true when a notif arrived while the tab was hidden
 let pendingNotifCount = 0;   // unread count accumulated while tab is hidden
-const BASE_TITLE    = 'TaskBoard';
+const BASE_TITLE    = 'AchieverBoard';
 
 function setTabNotifTitle(count) {
   document.title = count > 0 ? `(${count}) New notification! — ${BASE_TITLE}` : BASE_TITLE;
@@ -1456,7 +1456,7 @@ document.getElementById('deleteAccountOverlayOk').addEventListener('click', asyn
   closeDeleteAccountOverlay();
   await remove(ref(db, `users/${currentUser.id}`));
   await remove(ref(db, `notifications/${currentUser.id}`));
-  localStorage.removeItem('taskboard-user');
+  localStorage.removeItem('achieverboard-user');
   currentUser = null;
   if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
   knownNotifIds = null;
