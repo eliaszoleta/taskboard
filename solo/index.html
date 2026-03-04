@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO -->
+  <title>Free Kanban Board Online — No Sign-Up Required | AchieverBoard</title>
+  <meta name="description" content="Create a free kanban board in seconds — no account, no sign-up, no credit card. Organize personal tasks by status and priority, set due dates, and stay on top of your work. 100% free and private.">
+  <meta name="keywords" content="free kanban board no sign up, free task board online, free to-do list no registration, personal task manager free, free task tracker, kanban board free, online task board no account, free private task manager">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://achieverboard.com/">
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AchieverBoard">
+  <meta property="og:title" content="Free Kanban Board Online — No Sign-Up Required | AchieverBoard">
+  <meta property="og:description" content="Create a free kanban board instantly — no account needed. Manage tasks, set due dates, attach files, and stay organized. 100% free forever.">
+  <meta property="og:url" content="https://achieverboard.com/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Free Kanban Board Online — No Account Needed | AchieverBoard">
+  <meta name="twitter:description" content="Instant free kanban board — no sign-up, no credit card. Just open, create a board, and start organizing your tasks.">
+
+  <!-- Structured Data: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AchieverBoard — Free Kanban Board",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web",
+    "url": "https://achieverboard.com/",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "A free online kanban board that requires no account or sign-up. Organize personal tasks across To Do, In Progress, Pending, Done, and Overdue columns. Set priorities, due dates, and attach files — all for free.",
+    "featureList": [
+      "No account or sign-up required",
+      "Free kanban board with 5 columns",
+      "Task priorities (high, medium, low)",
+      "Due date and scheduled date tracking",
+      "Automatic overdue detection",
+      "File and link attachments",
+      "Task notes and comments",
+      "Date range filters",
+      "Private — your data stays yours",
+      "100% free, no credit card"
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="board.css?v=3">
+</head>
+<body>
+
+  <!-- ── Space Entry Overlay ── -->
+  <div class="space-overlay" id="spaceOverlay">
+    <div class="space-card">
+      <button class="space-card-close" id="spaceOverlayClose">&times;</button>
+      <div class="space-card-logo">AchieverBoard</div>
+      <p class="space-card-sub">Organize your tasks — free &amp; private.</p>
+
+      <!-- Create new space -->
+      <p class="space-section-label">Create Your Taskboard</p>
+      <div class="space-section-form" id="createSection">
+        <input type="text" id="createSpaceInput" placeholder="Name your space…" maxlength="40" autocomplete="off">
+        <div class="space-hint">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Write this name down — you'll need it to open your board again on your next visit.
+        </div>
+        <button class="btn-primary" id="createSpaceBtn">Create Taskboard</button>
+        <p class="space-err" id="createErr"></p>
+      </div>
+
+      <div class="space-divider">or</div>
+
+      <!-- Open existing space -->
+      <p class="space-section-label">Already have an AchieverBoard?</p>
+      <div class="space-section-form" id="openSection">
+        <input type="text" id="openSpaceInput" placeholder="Enter your AchieverBoard name…" maxlength="40" autocomplete="off">
+        <button class="btn-secondary" id="openSpaceBtn">Open AchieverBoard</button>
+        <p class="space-err" id="openErr"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-content">
+      <h1>AchieverBoard</h1>
+      <div class="header-right">
+
+        <div class="header-actions">
+          <!-- Notifications -->
+          <div class="notif-wrapper">
+            <button class="notif-btn" id="notifBtn" title="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span class="notif-badge" id="notifBadge"></span>
+            </button>
+            <div class="notif-panel" id="notifPanel">
+              <div class="notif-panel-header">
+                <span>Notifications</span>
+                <button class="btn-text" id="markAllRead">Mark all read</button>
+              </div>
+              <div class="notif-list" id="notifList"></div>
+            </div>
+          </div>
+
+          <!-- Active space display -->
+          <div class="space-display" id="spaceDisplay">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--primary)"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="space-display-name" id="spaceNameDisplay"></span>
+          </div>
+          <button class="btn-text" id="changeSpaceBtn" style="display:none">Exit</button>
+
+          <button class="btn-primary" id="addTaskBtn">+ New Task</button>
+        </div>
+
+        <div class="header-filters">
+          <div class="date-filter-wrap">
+            <select class="date-filter" id="dateFilter" title="Filter by date">
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last-week">Last Week</option>
+              <option value="last-month">Last Month</option>
+              <option value="next-week">Next Week</option>
+              <option value="next-month">Next Month</option>
+              <option value="overdue">Overdue</option>
+              <option value="last-30-days">Last 30 days</option>
+              <option value="custom">Pick Dates…</option>
+            </select>
+
+            <div class="custom-date-row" id="customDateRow" style="display:none">
+              <label>From
+                <div class="date-field">
+                  <span class="date-field-text" id="customFromText">dd-mm-yyyy</span>
+                  <input type="date" id="customFrom" aria-label="From date">
+                </div>
+              </label>
+              <label>To
+                <div class="date-field">
+                  <span class="date-field-text" id="customToText">dd-mm-yyyy</span>
+                  <input type="date" id="customTo" aria-label="To date">
+                </div>
+              </label>
+              <button class="btn-text" id="customDateApply">Apply</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Filter Bar ── -->
+  <div class="filter-bar" id="filterBar">
+    <span id="filterBarLabel"></span>
+    <button class="filter-bar-clear" id="filterBarClear">Clear filter</button>
+  </div>
+
+  <!-- ── Board ── -->
+  <div class="board-wrapper">
+    <main class="board">
+
+      <div class="column" id="col-todo">
+        <div class="column-header todo">
+          <span class="column-title">To Do</span>
+          <span class="task-count" id="count-todo">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-todo">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-todo"></div>
+      </div>
+
+      <div class="column" id="col-inprogress">
+        <div class="column-header inprogress">
+          <span class="column-title">In Progress</span>
+          <span class="task-count" id="count-inprogress">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-inprogress">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-inprogress"></div>
+      </div>
+
+      <div class="column" id="col-pending">
+        <div class="column-header pending">
+          <span class="column-title">Pending</span>
+          <span class="task-count" id="count-pending">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-pending">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-pending"></div>
+      </div>
+
+      <div class="column" id="col-done">
+        <div class="column-header done">
+          <span class="column-title">Done</span>
+          <span class="task-count" id="count-done">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-done">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-done"></div>
+      </div>
+
+      <div class="column" id="col-overdue">
+        <div class="column-header overdue">
+          <span class="column-title">Overdue</span>
+          <span class="task-count" id="count-overdue">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-overdue">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-overdue"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Task Create / Edit Modal ── -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="modalTitle">New Task</h2>
+        <button class="btn-close" id="closeModal">&times;</button>
+      </div>
+      <form id="taskForm" novalidate>
+        <div class="form-group">
+          <label for="taskTitle">Title <span class="required">*</span></label>
+          <input type="text" id="taskTitle" placeholder="What needs to be done?" required>
+        </div>
+        <div class="form-group">
+          <label for="taskDesc">Description</label>
+          <textarea id="taskDesc" placeholder="Add more details (optional)" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskPriority">Priority</label>
+            <select id="taskPriority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskStatus">Status</label>
+            <select id="taskStatus">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="pending">Pending</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskScheduled">Scheduled for</label>
+            <input type="date" id="taskScheduled">
+          </div>
+          <div class="form-group">
+            <label for="taskDue">Due Date</label>
+            <input type="date" id="taskDue">
+          </div>
+        </div>
+
+        <!-- Resource Attachments -->
+        <div class="form-group">
+          <label>Resource Attachments</label>
+          <div id="resourceLinkSection">
+            <div id="resourceLinksContainer"></div>
+            <button type="button" class="resource-link-add" id="resourceLinkAdd">+ Add link</button>
+          </div>
+          <div class="resource-section-sep"><span>attach files</span></div>
+          <div id="resourceFileSection">
+            <div class="resource-file-row">
+              <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose Files</button>
+            </div>
+            <div class="resource-file-list" id="resourceFileList"><span class="no-files-label">No files chosen</span></div>
+            <input type="file" id="resourceFile" style="display:none" multiple>
+            <p class="resource-hint">Multiple files · 10 MB combined max</p>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn-primary">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Delete Confirmation Modal ── -->
+  <div class="modal-overlay" id="deleteConfirmOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Task</h2>
+        <button class="btn-close" id="deleteConfirmClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body">Delete "<strong id="deleteConfirmTitle"></strong>"? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteConfirmCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteConfirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── File Preview Overlay ── -->
+  <div class="file-preview-overlay" id="filePreviewOverlay">
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.55"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span class="file-preview-name" id="filePreviewName"></span>
+        <div class="file-preview-actions">
+          <a class="btn-secondary btn-sm" id="filePreviewDownload" style="text-decoration:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download
+          </a>
+          <button class="btn-close" id="filePreviewClose">&times;</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="filePreviewBody"></div>
+    </div>
+  </div>
+
+  <!-- ── Task Detail + Notes Modal ── -->
+  <div class="modal-overlay" id="detailOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <div class="detail-header-actions">
+          <button class="btn-secondary btn-sm" id="detailEditBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+          </button>
+          <button class="btn-close" id="closeDetail">&times;</button>
+        </div>
+      </div>
+      <div id="detailBody"></div>
+      <div class="comments-section">
+        <h3 class="comments-heading">Notes</h3>
+        <div class="comments-list" id="commentsList"></div>
+        <div class="comment-input-row">
+          <input type="text" id="commentInput" placeholder="Add a note…">
+          <button class="btn-primary" id="postCommentBtn">Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── SEO Features Section ── -->
+  <section class="seo-features" aria-label="AchieverBoard Solo Board Features">
+    <div class="seo-features-inner">
+      <h2>Free Kanban Board — No Account, No Sign-Up, No Catch</h2>
+      <p class="seo-features-sub">The fastest way to start managing tasks online. Open a board, add tasks, and stay organized — all without creating an account or entering a credit card.</p>
+      <div class="seo-features-grid">
+        <div class="seo-feature-card">
+          <h3>No Sign-Up Required</h3>
+          <p>Start in seconds. Just choose a board name and begin adding tasks immediately. No email, no password, no registration — completely frictionless.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>5-Column Kanban Board</h3>
+          <p>Organize tasks across To Do, In Progress, Pending, Done, and Overdue columns. Move tasks as your work progresses with a clean, distraction-free interface.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Automatic Overdue Detection</h3>
+          <p>Tasks past their due date are automatically moved to the Overdue column. Never lose track of missed deadlines again — it happens without any manual effort.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Priority Levels</h3>
+          <p>Mark tasks as High, Medium, or Low priority. Filter each column by priority to cut through the noise and focus on what's urgent right now.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Files & Link Attachments</h3>
+          <p>Attach documents, images, and resource links directly to any task. Keep all context in one place instead of scattered across apps and folders.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Private & Secure</h3>
+          <p>Your board is identified only by the name you choose. Data is stored securely in the cloud — no one else can access your tasks without knowing your board name.</p>
+        </div>
+      </div>
+      <div class="seo-compare">
+        <h2>A Better Alternative to Sticky Notes, Spreadsheets, and Expensive Apps</h2>
+        <p>Stop juggling sticky notes or overcomplicating task tracking with spreadsheets. AchieverBoard's free kanban board gives you structure without the overhead — and unlike Trello, Notion, or ClickUp, there's no account wall to climb before you can get started.</p>
+        <ul class="seo-compare-list">
+          <li>Faster to start than Trello — zero sign-up</li>
+          <li>Simpler than Notion — pure task focus</li>
+          <li>Cheaper than ClickUp, Asana, Monday — it's free</li>
+          <li>No feature limits hiding behind a paywall</li>
+          <li>Works on desktop, tablet, and mobile</li>
+        </ul>
+        <p class="seo-cta-note">Managing tasks with a team? Try the <a href="../index.html">free team task management board</a> with accounts, assignments, and real-time collaboration.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Site Footer ── -->
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span class="site-footer-brand">AchieverBoard</span>
+      <nav class="site-footer-links" aria-label="Footer navigation">
+        <a href="../about.html">About</a>
+        <a href="../docs/getting-started.html">Docs</a>
+        <a href="../docs/faq.html">FAQ</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../terms-of-service.html">Terms of Service</a>
+        <a href="../index.html">Team Board</a>
+      </nav>
+      <span class="site-footer-copy">© 2026 AchieverBoard · Free task management for everyone</span>
+    </div>
+  </footer>
+
+  <script type="module" src="board.js?v=3"></script>
+</body>
+</html>
