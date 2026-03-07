@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO -->
+  <title>Free Task Management Tool for Teams | AchieverBoard</title>
+  <meta name="description" content="AchieverBoard is a 100% free online task management tool for teams. Create kanban boards, assign tasks, track due dates, and collaborate in real time — no credit card, no subscription, ever.">
+  <meta name="keywords" content="free task management tool, free kanban board, free project management, online task manager, free team task tracker, task board free, free to-do list app, free productivity app">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://eliaszoleta.github.io/taskboard/team/">
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AchieverBoard">
+  <meta property="og:title" content="Free Task Management Tool for Teams | AchieverBoard">
+  <meta property="og:description" content="Create kanban boards, assign tasks, set due dates, and collaborate with your team — completely free, no credit card required.">
+  <meta property="og:url" content="https://eliaszoleta.github.io/taskboard/team/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Free Task Management Tool for Teams | AchieverBoard">
+  <meta name="twitter:description" content="Free kanban-style task management for teams. No subscription, no credit card — just organize and get things done.">
+
+  <!-- Structured Data: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AchieverBoard",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://eliaszoleta.github.io/taskboard/team/",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "AchieverBoard is a free online task management tool for teams. Create kanban boards, assign tasks to teammates, track due dates, attach files, and collaborate in real time — no credit card or subscription required.",
+    "featureList": [
+      "Free kanban board",
+      "Team task assignment",
+      "Due date and deadline tracking",
+      "Priority management (high, medium, low)",
+      "File and link attachments",
+      "Real-time team collaboration",
+      "Task notifications",
+      "Date and user filters",
+      "No subscription required",
+      "No credit card required"
+    ],
+    "screenshot": "https://eliaszoleta.github.io/taskboard/team/"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=11">
+</head>
+<body>
+
+  <!-- ── User Selection Overlay ── -->
+  <div class="user-overlay" id="userOverlay">
+    <div class="user-card">
+      <button class="user-overlay-close" id="userOverlayClose" title="Cancel" style="display:none">✕</button>
+
+      <!-- Step 1: Pick a user -->
+      <div id="userStep1">
+        <div class="user-card-logo">AchieverBoard</div>
+        <p class="user-card-sub">Select your profile to continue</p>
+        <div class="user-list" id="userList"></div>
+        <div class="user-divider">or create a new account</div>
+        <div class="user-join-form">
+          <input type="text"     id="newUserName"     placeholder="Your name…"                    maxlength="30">
+          <input type="email"    id="newUserEmail"    placeholder="Email for password recovery…"  maxlength="150">
+          <input type="password" id="newUserPassword" placeholder="Choose a password…"            maxlength="100">
+          <button class="btn-primary" id="joinBtn">Create Account</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Password prompt for existing user -->
+      <div id="userStep2" style="display:none">
+        <div id="pwdPromptAvatar" class="pwd-prompt-avatar"></div>
+        <div class="user-card-logo" id="pwdPromptName"></div>
+        <p class="user-card-sub">Enter your password to continue</p>
+        <div class="user-join-form">
+          <input type="password" id="loginPassword" placeholder="Password…" maxlength="100">
+          <button class="btn-primary" id="loginBtn">Sign In</button>
+        </div>
+        <p class="login-error" id="loginError"></p>
+        <div class="step2-links">
+          <button class="btn-text" id="backToList">← Back to list</button>
+          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Forgot password — email verification -->
+      <div id="userStep3" style="display:none">
+        <div class="user-card-logo">Forgot Password</div>
+        <p class="user-card-sub" id="forgotSub">Enter the email linked to your account</p>
+        <div class="user-join-form" id="forgotEmailForm">
+          <input type="email" id="forgotEmail" placeholder="Your email address…" maxlength="150">
+          <button class="btn-primary" id="forgotVerifyBtn">Verify Email</button>
+        </div>
+        <p class="login-error" id="forgotError"></p>
+        <div style="text-align:center;margin-top:10px">
+          <button class="btn-text" id="backToStep2">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step 4: New password after email verified -->
+      <div id="userStep4" style="display:none">
+        <div class="user-card-logo">Reset Password</div>
+        <p class="user-card-sub">Create a new password for your account</p>
+        <div class="user-join-form">
+          <input type="password" id="resetPassword"        placeholder="New password…"     maxlength="100">
+          <input type="password" id="resetConfirmPassword" placeholder="Confirm password…" maxlength="100">
+          <button class="btn-primary" id="resetPasswordBtn">Reset Password</button>
+        </div>
+        <p class="login-error" id="resetError"></p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Profile Settings Modal ── -->
+  <div class="modal-overlay" id="profileOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Profile Settings</h2>
+        <button class="btn-close" id="closeProfile">&times;</button>
+      </div>
+      <div class="profile-body">
+        <div class="profile-photo-row">
+          <div class="profile-photo-wrap">
+            <div class="profile-photo-preview" id="profilePhotoPreview"></div>
+            <button class="profile-photo-edit-btn" id="profilePhotoEditBtn" title="Upload photo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <input type="file" id="profilePhotoInput" accept="image/*" style="display:none">
+          </div>
+          <div class="profile-info">
+            <div class="profile-name" id="profileNameDisplay"></div>
+            <div class="profile-since" id="profileMemberSince"></div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label>Recovery Email</label>
+          <input type="email" id="profileEmail" placeholder="your@email.com" maxlength="150">
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" id="profileNewPassword" placeholder="Leave blank to keep current…" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" id="profileConfirmPassword" placeholder="Repeat new password…" maxlength="100">
+        </div>
+        <p class="profile-error" id="profileError"></p>
+        <div class="modal-actions profile-actions">
+          <button class="btn-danger" id="deleteAccountBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
+          </button>
+          <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-content">
+      <h1>AchieverBoard</h1>
+      <div class="header-right">
+
+        <div class="header-actions">
+          <!-- Notifications -->
+          <div class="notif-wrapper">
+            <button class="notif-btn" id="notifBtn" title="Notifications">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span class="notif-badge" id="notifBadge"></span>
+            </button>
+            <div class="notif-panel" id="notifPanel">
+              <div class="notif-panel-header">
+                <span>Notifications</span>
+                <button class="btn-text" id="markAllRead">Mark all read</button>
+              </div>
+              <div class="notif-list" id="notifList"></div>
+            </div>
+          </div>
+
+          <!-- Current user (click to open profile settings) -->
+          <div class="current-user" id="currentUserBtn" title="Profile settings">
+            <span id="userAvatar"></span>
+            <span class="user-name-display" id="userNameDisplay"></span>
+          </div>
+          <button class="btn-text" id="changeUserBtn">Switch</button>
+
+          <button class="btn-primary" id="addTaskBtn">+ New Task</button>
+        </div>
+
+        <div class="header-filters">
+          <select class="date-filter" id="userFilter" title="Filter by user">
+            <option value="all">All users</option>
+          </select>
+
+          <div class="date-filter-wrap">
+            <select class="date-filter" id="dateFilter" title="Filter by date created">
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="this-week">This week</option>
+              <option value="next-week">Next week</option>
+              <option value="last-week">Last week</option>
+              <option value="this-month">This month</option>
+              <option value="overdue">Overdue</option>
+              <option value="custom">Pick dates…</option>
+            </select>
+
+            <div class="custom-date-row" id="customDateRow" style="display:none">
+              <label>From
+                <div class="date-field">
+                  <span class="date-field-text" id="customFromText">dd-mm-yyyy</span>
+                  <input type="date" id="customFrom" aria-label="From date">
+                </div>
+              </label>
+              <label>To
+                <div class="date-field">
+                  <span class="date-field-text" id="customToText">dd-mm-yyyy</span>
+                  <input type="date" id="customTo" aria-label="To date">
+                </div>
+              </label>
+              <button class="btn-text" id="customDateApply">Apply</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Filter Bar ── -->
+  <div class="filter-bar" id="filterBar">
+    <span id="filterBarLabel"></span>
+    <button class="filter-bar-clear" id="filterBarClear">Clear filter</button>
+  </div>
+
+  <!-- ── Board Wrapper ── -->
+  <div class="board-wrapper">
+
+    <aside class="notif-sidebar">
+      <div class="notif-sidebar-header">My Activity</div>
+      <div class="notif-sidebar-body" id="notifSidebarBody">
+        <div class="sidebar-empty">Loading…</div>
+      </div>
+    </aside>
+
+    <main class="board">
+
+      <div class="column" id="col-todo">
+        <div class="column-header todo">
+          <span class="column-title">To Do</span>
+          <span class="task-count" id="count-todo">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-todo">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-todo"></div>
+      </div>
+
+      <div class="column" id="col-inprogress">
+        <div class="column-header inprogress">
+          <span class="column-title">In Progress</span>
+          <span class="task-count" id="count-inprogress">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-inprogress">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-inprogress"></div>
+      </div>
+
+      <div class="column" id="col-done">
+        <div class="column-header done">
+          <span class="column-title">Done</span>
+          <span class="task-count" id="count-done">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-done">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-done"></div>
+      </div>
+
+      <div class="column" id="col-overdue">
+        <div class="column-header overdue">
+          <span class="column-title">Overdue</span>
+          <span class="task-count" id="count-overdue">0</span>
+        </div>
+        <select class="col-priority-filter" id="pf-overdue">
+          <option value="all">Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="task-list" id="list-overdue"></div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ── SEO Features Section ── -->
+  <section class="seo-features" aria-label="AchieverBoard Features">
+    <div class="seo-features-inner">
+      <h2>The Free Task Management Tool Built for Real Teams</h2>
+      <p class="seo-features-sub">Everything you need to manage tasks — without paying a cent. No hidden fees, no feature paywalls, no expiring trials.</p>
+      <div class="seo-features-grid">
+        <div class="seo-feature-card">
+          <h3>Free Kanban Board</h3>
+          <p>Drag tasks across To Do, In Progress, and Done columns. Visualize your team's workload at a glance with a classic, intuitive kanban layout — 100% free.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Assign Tasks to Teammates</h3>
+          <p>Create team accounts and assign tasks to specific people. Everyone sees what they're responsible for, reducing miscommunication and missed deadlines.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Due Date & Deadline Tracking</h3>
+          <p>Set scheduled and due dates on every task. Overdue tasks are automatically flagged in a dedicated column so nothing slips through the cracks.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Priority Management</h3>
+          <p>Tag tasks as High, Medium, or Low priority. Filter any column by priority to focus on what matters most right now — simple and effective.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>File & Link Attachments</h3>
+          <p>Attach files and resource links directly to tasks. Keep all project context in one place so your team never hunts through emails or chat for assets.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Real-Time Collaboration</h3>
+          <p>Changes sync instantly for all team members. Leave comments on tasks, tag teammates, and get notified when tasks are updated — at zero cost.</p>
+        </div>
+      </div>
+
+      <div class="seo-compare">
+        <h2>Why Teams Choose AchieverBoard Over Expensive Alternatives</h2>
+        <p>Asana, Monday.com, and Jira charge $10–$25 per user per month. AchieverBoard gives you core task management features for free — forever. No bait-and-switch pricing, no "free plan" that runs out.</p>
+        <ul class="seo-compare-list">
+          <li>Free task boards with no member limits</li>
+          <li>No credit card required — ever</li>
+          <li>No feature locked behind a paid tier</li>
+          <li>Works on any device — desktop, tablet, mobile</li>
+          <li>Data stored securely — private to your team</li>
+        </ul>
+        <p class="seo-cta-note">Looking for a personal board without accounts? Try the <a href="../">free solo kanban board</a> — no sign-up needed.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Site Footer ── -->
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span class="site-footer-brand">AchieverBoard</span>
+      <nav class="site-footer-links" aria-label="Footer navigation">
+        <a href="../about.html">About</a>
+        <a href="../docs/getting-started.html">Docs</a>
+        <a href="../docs/faq.html">FAQ</a>
+        <a href="../privacy-policy.html">Privacy Policy</a>
+        <a href="../terms-of-service.html">Terms of Service</a>
+        <a href="../">Solo Board</a>
+      </nav>
+      <span class="site-footer-copy">© 2026 AchieverBoard · Free task management for everyone</span>
+    </div>
+  </footer>
+
+  <!-- ── Task Create / Edit Modal ── -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="modalTitle">New Task</h2>
+        <button class="btn-close" id="closeModal">&times;</button>
+      </div>
+      <form id="taskForm" novalidate>
+        <div class="form-group">
+          <label for="taskTitle">Title <span class="required">*</span></label>
+          <input type="text" id="taskTitle" placeholder="What needs to be done?" required>
+        </div>
+        <div class="form-group">
+          <label for="taskDesc">Description</label>
+          <textarea id="taskDesc" placeholder="Add more details (optional)" rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskPriority">Priority</label>
+            <select id="taskPriority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskStatus">Status</label>
+            <select id="taskStatus">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskScheduled">Scheduled for</label>
+            <input type="date" id="taskScheduled">
+          </div>
+          <div class="form-group">
+            <label for="taskDue">Due Date</label>
+            <input type="date" id="taskDue">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="taskAssignee">Assign To</label>
+          <select id="taskAssignee">
+            <option value="">Unassigned</option>
+          </select>
+        </div>
+
+        <!-- ── Resource Attachment ── -->
+        <div class="form-group">
+          <label>Resource Attachments</label>
+          <div id="resourceLinkSection" class="resource-section">
+            <div id="resourceLinksContainer"></div>
+            <button type="button" class="resource-link-add" id="resourceLinkAdd">+ Add link</button>
+          </div>
+          <div class="resource-section-sep">
+            <span>attach files</span>
+          </div>
+          <div id="resourceFileSection" class="resource-section">
+            <div class="resource-file-row">
+              <button type="button" class="resource-file-btn" id="resourceFileBtn">Choose Files</button>
+            </div>
+            <div class="resource-file-list" id="resourceFileList"><span class="no-files-label">No files chosen</span></div>
+            <input type="file" id="resourceFile" style="display:none" multiple>
+            <p class="resource-hint">Multiple files · 10 MB combined max · Stored as data URLs</p>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn-primary">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Delete Confirmation Modal ── -->
+  <div class="modal-overlay" id="deleteConfirmOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Task</h2>
+        <button class="btn-close" id="deleteConfirmClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body">Delete "<strong id="deleteConfirmTitle"></strong>"? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteConfirmCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteConfirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Delete Account Confirmation Modal ── -->
+  <div class="modal-overlay" id="deleteAccountOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Account</h2>
+        <button class="btn-close" id="deleteAccountOverlayClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body" id="deleteAccountMsg">Are you sure you want to delete your account? This cannot be undone.</p>
+      <div class="form-group" id="deleteAccountPwdGroup" style="display:none;padding:0 24px 4px">
+        <label for="deleteAccountPwdInput" style="font-size:.82rem;color:var(--text-muted)">Enter your password to confirm</label>
+        <input type="password" id="deleteAccountPwdInput" class="form-control" placeholder="Password" autocomplete="current-password">
+        <p class="field-error" id="deleteAccountPwdError" style="color:var(--danger);font-size:.8rem;margin:4px 0 0"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteAccountOverlayCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteAccountOverlayOk">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── File Preview Overlay ── -->
+  <div class="file-preview-overlay" id="filePreviewOverlay">
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.55"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span class="file-preview-name" id="filePreviewName"></span>
+        <div class="file-preview-actions">
+          <a class="btn-secondary btn-sm" id="filePreviewDownload" style="text-decoration:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download
+          </a>
+          <button class="btn-close" id="filePreviewClose">&times;</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="filePreviewBody"></div>
+    </div>
+  </div>
+
+  <!-- ── Task Detail + Comments Modal ── -->
+  <div class="modal-overlay" id="detailOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <div class="detail-header-actions">
+          <button class="btn-secondary btn-sm" id="detailEditBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+          </button>
+          <button class="btn-close" id="closeDetail">&times;</button>
+        </div>
+      </div>
+      <div id="detailBody"></div>
+      <div class="comments-section">
+        <h3 class="comments-heading">Comments</h3>
+        <div class="comments-list" id="commentsList"></div>
+        <div class="comment-input-row">
+          <input type="text" id="commentInput" placeholder="Write a comment…">
+          <button class="btn-primary" id="postCommentBtn">Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../app.js?v=21"></script>
+</body>
+</html>
