@@ -66,9 +66,20 @@
     <div class="user-card">
       <button class="user-overlay-close" id="userOverlayClose" title="Cancel" style="display:none">✕</button>
 
-      <!-- Step 1: Sign in or create account -->
-      <div id="userStep1">
+      <!-- Step: Enter workspace name -->
+      <div id="stepWorkspace">
         <div class="user-card-logo">AchieverBoard</div>
+        <p class="user-card-sub">Enter your workspace name to get started</p>
+        <div class="user-join-form">
+          <input type="text" id="wsNameInput" placeholder="Workspace name…" maxlength="50" autocomplete="off">
+          <button class="btn-primary" id="wsContinueBtn">Continue →</button>
+        </div>
+        <p class="login-error" id="wsError"></p>
+      </div>
+
+      <!-- Step: Sign in to workspace -->
+      <div id="stepLogin" style="display:none">
+        <div class="user-card-logo" id="loginWsName"></div>
         <p class="user-card-sub">Sign in to your account</p>
         <div class="user-join-form">
           <input type="text"     id="loginNameInput" placeholder="Your account name…"   maxlength="30"  autocomplete="username">
@@ -79,17 +90,40 @@
         <div style="text-align:center;margin-top:4px">
           <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
         </div>
-        <div class="user-divider">or create a new account</div>
-        <div class="user-join-form">
-          <input type="text"     id="newUserName"     placeholder="Your name…"                    maxlength="30">
-          <input type="email"    id="newUserEmail"    placeholder="Email for password recovery…"  maxlength="150">
-          <input type="password" id="newUserPassword" placeholder="Choose a password…"            maxlength="100">
-          <button class="btn-primary" id="joinBtn">Create Account</button>
+        <div style="text-align:center;margin-top:8px">
+          <button class="btn-text" id="backToWorkspaceBtn">← Change workspace</button>
         </div>
       </div>
 
-      <!-- Step 3: Forgot password — email verification -->
-      <div id="userStep3" style="display:none">
+      <!-- Step: Create new workspace -->
+      <div id="stepCreate" style="display:none">
+        <div class="user-card-logo">Create Workspace</div>
+        <p class="user-card-sub" id="createWsSub">Set up your team workspace</p>
+        <div class="user-join-form">
+          <input type="text"     id="adminName"            placeholder="Your name (admin)…"         maxlength="30">
+          <input type="email"    id="adminEmail"           placeholder="Email for password recovery…" maxlength="150">
+          <input type="password" id="adminPassword"        placeholder="Choose a password…"         maxlength="100">
+          <input type="password" id="adminConfirmPassword" placeholder="Confirm password…"          maxlength="100">
+          <select id="teamSizeSelect">
+            <option value="2">2 users (you + 1 member)</option>
+            <option value="3">3 users</option>
+            <option value="4">4 users</option>
+            <option value="5" selected>5 users</option>
+            <option value="10">10 users</option>
+            <option value="15">15 users</option>
+            <option value="20">20 users</option>
+            <option value="0">Unlimited</option>
+          </select>
+          <button class="btn-primary" id="createWsBtn">Create Workspace</button>
+        </div>
+        <p class="login-error" id="createError"></p>
+        <div style="text-align:center;margin-top:8px">
+          <button class="btn-text" id="backToWorkspaceFromCreate">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step: Forgot password — email verification -->
+      <div id="stepForgot" style="display:none">
         <div class="user-card-logo">Forgot Password</div>
         <p class="user-card-sub" id="forgotSub">Enter the email linked to your account</p>
         <div class="user-join-form" id="forgotEmailForm">
@@ -98,12 +132,12 @@
         </div>
         <p class="login-error" id="forgotError"></p>
         <div style="text-align:center;margin-top:10px">
-          <button class="btn-text" id="backToStep2">← Back</button>
+          <button class="btn-text" id="backToLoginBtn">← Back to sign in</button>
         </div>
       </div>
 
-      <!-- Step 4: New password after email verified -->
-      <div id="userStep4" style="display:none">
+      <!-- Step: Reset password -->
+      <div id="stepReset" style="display:none">
         <div class="user-card-logo">Reset Password</div>
         <p class="user-card-sub">Create a new password for your account</p>
         <div class="user-join-form">
@@ -125,6 +159,18 @@
         <button class="btn-close" id="closeProfile">&times;</button>
       </div>
       <div class="profile-body">
+
+        <!-- Admin: Team Members section (only visible to workspace admin) -->
+        <div id="adminTeamSection" style="display:none">
+          <div class="admin-section-header">
+            <strong class="admin-section-title">Team Members</strong>
+            <span id="seatUsage" class="seat-usage"></span>
+          </div>
+          <div id="membersList" class="members-list"></div>
+          <button class="btn-secondary" id="addMemberBtn" style="margin-top:10px;width:100%">+ Add Team Member</button>
+          <hr style="margin:20px 0;border:none;border-top:1px solid var(--border)">
+        </div>
+
         <div class="profile-photo-row">
           <div class="profile-photo-wrap">
             <div class="profile-photo-preview" id="profilePhotoPreview"></div>
@@ -236,6 +282,14 @@
   <div class="filter-bar" id="filterBar">
     <span id="filterBarLabel"></span>
     <button class="filter-bar-clear" id="filterBarClear">Clear filter</button>
+  </div>
+
+  <!-- ── Guest Banner (shown when not logged in) ── -->
+  <div class="guest-banner" id="guestBanner" style="display:none">
+    <div class="guest-banner-inner">
+      <p>Sign in to your workspace to view and manage tasks.</p>
+      <button class="btn-primary" id="guestSignInBtn">Sign In / Create Workspace</button>
+    </div>
   </div>
 
   <!-- ── Board Wrapper ── -->
@@ -487,6 +541,35 @@
     </div>
   </div>
 
+  <!-- ── Add Team Member Modal ── -->
+  <div class="modal-overlay" id="addMemberOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Add Team Member</h2>
+        <button class="btn-close" id="addMemberClose">&times;</button>
+      </div>
+      <div style="padding:0 24px 20px">
+        <div class="form-group">
+          <label>Name <span class="required">*</span></label>
+          <input type="text" id="memberName" placeholder="Their name…" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label>Email <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <input type="email" id="memberEmail" placeholder="For password recovery…" maxlength="150">
+        </div>
+        <div class="form-group">
+          <label>Password <span class="required">*</span></label>
+          <input type="password" id="memberPassword" placeholder="Set a password for them…" maxlength="100">
+        </div>
+        <p class="login-error" id="addMemberError" style="margin-bottom:12px"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="addMemberCancel">Cancel</button>
+          <button type="button" class="btn-primary"   id="addMemberSubmit">Add Member</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── File Preview Overlay ── -->
   <div class="file-preview-overlay" id="filePreviewOverlay">
     <div class="file-preview-panel">
@@ -528,6 +611,6 @@
     </div>
   </div>
 
-  <script type="module" src="../app.js?v=21"></script>
+  <script type="module" src="../app.js?v=30"></script>
 </body>
 </html>

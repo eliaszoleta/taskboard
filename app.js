@@ -39,34 +39,45 @@ const ICONS = {
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let currentUser        = null;   // { id, name }
-let pendingAfterLogin  = null;   // fn to call once user logs in
-let users              = {};     // { userId: { name, passwordHash?, photoURL?, email?, createdAt } }
-let tasks              = {};     // { taskId: { ...fields } }
+let currentUser          = null;   // { id, workspaceId, name, role }
+let users                = {};     // workspace users { userId: { name, passwordHash, email?, role, createdAt, photoURL? } }
+let tasks                = {};
+let commentCounts        = {};
+let allNotifications     = {};
+let currentWorkspaceMeta = null;   // { name, adminId, maxUsers, createdAt }
+
+// Workspace Firebase listener unsubscribers
+let wsMetaUnsub        = null;
+let wsUsersUnsub       = null;
+let wsTasksUnsub       = null;
+let wsCommentsUnsub    = null;
+let wsNotifsAllUnsub   = null;
+let notifBadgeUnsub    = null;
+let commentsUnsub      = null;
+
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
-let editingTaskId      = null;
-let detailTaskId       = null;
-let draggedId          = null;
-let commentsUnsub      = null;
-let notifBadgeUnsub    = null;
-let currentFilter      = 'all';
-let currentUserFilter  = 'all';
-let colPriorityFilter  = { todo: 'all', inprogress: 'all', done: 'all', overdue: 'all' };
-let customDateStart    = null;
-let customDateEnd      = null;
-let commentCounts      = {};
-let allNotifications   = {};
-let sidebarLimit       = 10;
-let knownNotifIds      = null; // null = first load, skip sound
-let pendingLoginUid    = null;
-let pendingProfilePhoto = null;
-let pendingResourceFiles = [];   // [{ dataUrl, name, size }]
-let pendingResourceLinks = [''];  // array of URL strings (at least one)
+
+let editingTaskId        = null;
+let detailTaskId         = null;
+let draggedId            = null;
+let currentFilter        = 'all';
+let currentUserFilter    = 'all';
+let colPriorityFilter    = { todo: 'all', inprogress: 'all', done: 'all', overdue: 'all' };
+let customDateStart      = null;
+let customDateEnd        = null;
+let sidebarLimit         = 10;
+let knownNotifIds        = null;
+let pendingLoginUid      = null;    // user ID within workspace during login flow
+let pendingWorkspaceId   = null;    // workspace key during login flow
+let loginWorkspaceUsers  = {};      // users loaded during login (before listeners start)
+let pendingAfterLogin    = null;
+let pendingProfilePhoto  = null;
+let pendingResourceFiles = [];
+let pendingResourceLinks = [''];
 let pendingDeleteId      = null;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-/** Normalise both old single-resource and new multi-resource formats */
 function getTaskResources(task) {
   if (task.resources && task.resources.length) return task.resources;
   if (task.resourceUrl) return [{ type: task.resourceType || 'link', url: task.resourceUrl, name: task.resourceName || task.resourceUrl }];
@@ -116,7 +127,6 @@ function taskMatchesFilter(task) {
     if (!task.due) return false;
     return new Date(task.due + 'T00:00:00') < today;
   }
-  // Use explicit scheduledFor date if set; otherwise fall back to createdAt
   const d = task.scheduledFor
     ? new Date(task.scheduledFor + 'T00:00:00')
     : (() => { const t = new Date(Number(task.createdAt) || Date.now()); t.setHours(0,0,0,0); return t; })();
@@ -194,27 +204,54 @@ function readFileAsDataURL(file) {
   });
 }
 
-// ─── USER SELECTION ───────────────────────────────────────────────────────────
+function toWorkspaceKey(name) {
+  return name.trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || null;
+}
+
+// Workspace-scoped Firebase ref helper (requires currentUser to be set)
+const wsRef = (...path) => ref(db, ['workspaces', currentUser.workspaceId, ...path].join('/'));
+
+// ─── USER AUTH / STORAGE ──────────────────────────────────────────────────────
 function loadCurrentUser() {
-  try { currentUser = JSON.parse(localStorage.getItem('achieverboard-user')); } catch { currentUser = null; }
+  try { currentUser = JSON.parse(localStorage.getItem('achieverboard-ws-user')); } catch { currentUser = null; }
 }
 
 function saveCurrentUser(user) {
   currentUser = user;
-  localStorage.setItem('achieverboard-user', JSON.stringify(user));
+  localStorage.setItem('achieverboard-ws-user', JSON.stringify(user));
+}
+
+function clearCurrentUser() {
+  currentUser = null;
+  localStorage.removeItem('achieverboard-ws-user');
+}
+
+// ─── OVERLAY MANAGEMENT ───────────────────────────────────────────────────────
+function setActiveStep(activeId) {
+  ['stepWorkspace','stepLogin','stepCreate','stepForgot','stepReset'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === activeId ? '' : 'none';
+  });
 }
 
 function showUserOverlay() {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = currentUser ? '' : 'none';
-  showStep1();
+  showStepWorkspace();
 }
 
 function hideUserOverlay() {
   document.getElementById('userOverlay').classList.remove('open');
   sidebarLimit = 10;
+  // Update guest banner / board visibility
+  const guestBanner  = document.getElementById('guestBanner');
+  const boardWrapper = document.querySelector('.board-wrapper');
+  if (guestBanner)  guestBanner.style.display  = currentUser ? 'none' : '';
+  if (boardWrapper) boardWrapper.style.display = currentUser ? ''     : 'none';
   updateHeaderUser();
-  currentUserFilter = currentUser.id;
+  if (currentUser) currentUserFilter = currentUser.id;
   renderBoard();
   setupNotifListener();
   renderNotifSidebar();
@@ -226,145 +263,97 @@ function hideUserOverlay() {
   }
 }
 
-// ── Step navigation ──
-function showStep1() {
-  ['userStep1','userStep3','userStep4'].forEach(id => {
-    document.getElementById(id).style.display = id === 'userStep1' ? '' : 'none';
-  });
-  pendingLoginUid = null;
+function showStepWorkspace() {
+  setActiveStep('stepWorkspace');
+  pendingLoginUid     = null;
+  pendingWorkspaceId  = null;
+  loginWorkspaceUsers = {};
+  const inp = document.getElementById('wsNameInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const err = document.getElementById('wsError');
+  if (err) err.textContent = '';
+}
+
+function showStepLogin(wsId, wsDisplayName) {
+  pendingWorkspaceId = wsId;
+  const nameEl = document.getElementById('loginWsName');
+  if (nameEl) nameEl.textContent = wsDisplayName;
+  setActiveStep('stepLogin');
   document.getElementById('loginNameInput').value  = '';
   document.getElementById('loginPassword').value   = '';
-  document.getElementById('newUserName').value     = '';
-  document.getElementById('newUserEmail').value    = '';
-  document.getElementById('newUserPassword').value = '';
   document.getElementById('loginError').textContent = '';
+  document.getElementById('loginNameInput').focus();
 }
 
-function showStep2(uid) {
-  const u = users[uid];
-  if (!u) return;
-  pendingLoginUid = uid;
-  ['userStep1','userStep3','userStep4'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('userStep2').style.display = '';
-  document.getElementById('pwdPromptName').textContent = u.name;
-  document.getElementById('pwdPromptAvatar').innerHTML = avatarHtml(u.name);
-  document.getElementById('loginPassword').value       = '';
-  document.getElementById('loginError').textContent    = '';
-  document.getElementById('loginPassword').focus();
+function showStepCreate(wsId, wsDisplayName) {
+  pendingWorkspaceId = wsId;
+  const sub = document.getElementById('createWsSub');
+  if (sub) sub.textContent = `Create workspace "${wsDisplayName}"`;
+  setActiveStep('stepCreate');
+  document.getElementById('adminName').value            = '';
+  document.getElementById('adminEmail').value           = '';
+  document.getElementById('adminPassword').value        = '';
+  document.getElementById('adminConfirmPassword').value = '';
+  document.getElementById('teamSizeSelect').value       = '5';
+  document.getElementById('createError').textContent    = '';
+  document.getElementById('adminName').focus();
 }
 
-function showStep3() {
-  const u = users[pendingLoginUid];
-  ['userStep1','userStep2','userStep4'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('userStep3').style.display = '';
+function showStepForgot() {
+  setActiveStep('stepForgot');
   document.getElementById('forgotEmail').value       = '';
   document.getElementById('forgotError').textContent = '';
-
+  const u    = loginWorkspaceUsers[pendingLoginUid];
   const sub  = document.getElementById('forgotSub');
   const form = document.getElementById('forgotEmailForm');
   if (!u?.email) {
-    sub.textContent  = 'No recovery email is linked to this account. Add one in Profile Settings after signing in.';
+    sub.textContent    = 'No recovery email is linked to this account. Contact your workspace admin.';
     form.style.display = 'none';
   } else {
     const [local, domain] = u.email.split('@');
     const masked = local.slice(0, 2) + '***@' + domain;
-    sub.textContent  = `Enter the email linked to your account (hint: ${masked})`;
+    sub.textContent    = `Enter the email linked to your account (hint: ${masked})`;
     form.style.display = '';
     document.getElementById('forgotEmail').focus();
   }
 }
 
-function showStep4() {
-  ['userStep1','userStep2','userStep3'].forEach(id => document.getElementById(id).style.display = 'none');
-  document.getElementById('userStep4').style.display = '';
-  document.getElementById('resetPassword').value        = '';
-  document.getElementById('resetConfirmPassword').value = '';
-  document.getElementById('resetError').textContent     = '';
-  document.getElementById('resetPassword').focus();
-}
+// ─── WORKSPACE LOOKUP ─────────────────────────────────────────────────────────
+async function handleWsContinue() {
+  const name  = document.getElementById('wsNameInput').value.trim();
+  const errEl = document.getElementById('wsError');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Please enter your workspace name.'; return; }
+  const wsKey = toWorkspaceKey(name);
+  if (!wsKey) { errEl.textContent = 'Invalid workspace name.'; return; }
 
-async function handleForgotVerify() {
-  const uid = pendingLoginUid;
-  const u   = users[uid];
-  if (!uid || !u?.email) return;
-
-  const inputEmail = document.getElementById('forgotEmail').value.trim().toLowerCase();
-  if (!inputEmail) {
-    document.getElementById('forgotError').textContent = 'Please enter your email address.';
-    return;
-  }
-  if (inputEmail !== u.email.toLowerCase()) {
-    document.getElementById('forgotError').textContent = 'Email does not match our records. Try again.';
-    return;
-  }
-  showStep4();
-}
-
-async function handleResetPassword() {
-  const uid = pendingLoginUid;
-  if (!uid) return;
-
-  const newPwd     = document.getElementById('resetPassword').value;
-  const confirmPwd = document.getElementById('resetConfirmPassword').value;
-  const errEl      = document.getElementById('resetError');
-
-  if (!newPwd)                  { errEl.textContent = 'Please enter a new password.'; return; }
-  if (newPwd !== confirmPwd)    { errEl.textContent = 'Passwords do not match.'; return; }
-  if (newPwd.length < 4)        { errEl.textContent = 'Password must be at least 4 characters.'; return; }
-
-  const hash = await hashPassword(newPwd);
-  await update(ref(db, `users/${uid}`), { passwordHash: hash });
-  users[uid] = { ...users[uid], passwordHash: hash };
-
-  saveCurrentUser({ id: uid, name: users[uid].name });
-  hideUserOverlay();
-}
-
-// ── Render user list ──
-function renderUserList() {
-  const list    = document.getElementById('userList');
-  const userArr = Object.entries(users)
-    .map(([id, u]) => ({ id, ...u }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  if (!userArr.length) {
-    list.innerHTML = '<p class="no-users">No users yet — be the first to join!</p>';
-    return;
-  }
-
-  list.innerHTML = userArr.map(u => `
-    <button class="user-chip" data-uid="${u.id}">
-      ${avatarHtml(u.name)}
-      <span class="chip-name">${escHtml(u.name)}</span>
-      ${u.passwordHash
-        ? `<span class="chip-lock" title="Password protected">${ICONS.lock}</span>`
-        : `<span class="no-pwd-tag">no password</span>`}
-    </button>`).join('');
-
-  list.querySelectorAll('.user-chip').forEach(btn => {
-    btn.addEventListener('click', () => handleUserChipClick(btn.dataset.uid));
-  });
-}
-
-async function handleUserChipClick(uid) {
-  const u = users[uid];
-  if (!u) return;
-  if (u.passwordHash) {
-    showStep2(uid);
-  } else {
-    saveCurrentUser({ id: uid, name: u.name });
-    hideUserOverlay();
+  errEl.textContent = 'Looking up workspace…';
+  try {
+    const snap = await get(ref(db, `workspaces/${wsKey}/meta`));
+    if (snap.exists()) {
+      const usersSnap    = await get(ref(db, `workspaces/${wsKey}/users`));
+      loginWorkspaceUsers = usersSnap.val() || {};
+      errEl.textContent  = '';
+      showStepLogin(wsKey, snap.val().name || name);
+    } else {
+      errEl.textContent = '';
+      showStepCreate(wsKey, name);
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    console.error(e);
   }
 }
 
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 async function attemptLogin() {
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
   const name = document.getElementById('loginNameInput').value.trim();
   const pwd  = document.getElementById('loginPassword').value;
   if (!name) { errEl.textContent = 'Please enter your account name.'; return; }
-  const found = Object.entries(users).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
-  if (!found) { errEl.textContent = 'Account not found. Check your name or create a new account below.'; return; }
+  const found = Object.entries(loginWorkspaceUsers).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
+  if (!found) { errEl.textContent = 'Account not found. Check your name or contact your workspace admin.'; return; }
   const [uid, u] = found;
   if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
   const hash = await hashPassword(pwd);
@@ -373,83 +362,197 @@ async function attemptLogin() {
     document.getElementById('loginPassword').select();
     return;
   }
-  pendingLoginUid = uid;
-  saveCurrentUser({ id: uid, name: u.name });
+  saveCurrentUser({ id: uid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
+  startWorkspaceListeners();
   hideUserOverlay();
 }
 
-async function joinAs(name, email, password) {
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  const existing = Object.entries(users).find(([, u]) => u.name.toLowerCase() === trimmed.toLowerCase());
-  if (existing) {
-    alert(`"${trimmed}" already exists. Please select them from the list above to sign in.`);
+// ─── CREATE WORKSPACE ─────────────────────────────────────────────────────────
+async function createWorkspace() {
+  const errEl      = document.getElementById('createError');
+  errEl.textContent = '';
+  const adminName    = document.getElementById('adminName').value.trim();
+  const adminEmail   = document.getElementById('adminEmail').value.trim().toLowerCase();
+  const adminPwd     = document.getElementById('adminPassword').value;
+  const confirmPwd   = document.getElementById('adminConfirmPassword').value;
+  const teamSize     = parseInt(document.getElementById('teamSizeSelect').value, 10);
+
+  if (!adminName)              { errEl.textContent = 'Please enter your name.';                    return; }
+  if (!adminPwd)               { errEl.textContent = 'Please choose a password.';                 return; }
+  if (adminPwd.length < 4)    { errEl.textContent = 'Password must be at least 4 characters.';    return; }
+  if (adminPwd !== confirmPwd) { errEl.textContent = 'Passwords do not match.';                   return; }
+
+  try {
+    // Guard against race condition
+    const existing = await get(ref(db, `workspaces/${pendingWorkspaceId}/meta`));
+    if (existing.exists()) {
+      errEl.textContent = 'This workspace was just created by someone else. Click "← Back" and sign in.';
+      return;
+    }
+
+    const hash    = await hashPassword(adminPwd);
+    const now     = Date.now();
+    const wsName  = document.getElementById('createWsSub').textContent
+      .replace(/^Create workspace "/, '').replace(/"$/, '');
+
+    // Create workspace meta (without adminId first)
+    await set(ref(db, `workspaces/${pendingWorkspaceId}/meta`), {
+      name: wsName, maxUsers: teamSize || 0, createdAt: now,
+    });
+
+    // Create admin user
+    const userRef  = push(ref(db, `workspaces/${pendingWorkspaceId}/users`));
+    const adminData = { name: adminName, passwordHash: hash, role: 'admin', createdAt: now };
+    if (adminEmail) adminData.email = adminEmail;
+    await set(userRef, adminData);
+
+    // Store adminId in meta
+    await update(ref(db, `workspaces/${pendingWorkspaceId}/meta`), { adminId: userRef.key });
+
+    saveCurrentUser({ id: userRef.key, workspaceId: pendingWorkspaceId, name: adminName, role: 'admin' });
+    startWorkspaceListeners();
+    hideUserOverlay();
+  } catch (e) {
+    errEl.textContent = 'Error creating workspace. Please try again.';
+    console.error(e);
+  }
+}
+
+// ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
+function handleForgotPwdClick() {
+  const name  = document.getElementById('loginNameInput').value.trim();
+  const errEl = document.getElementById('loginError');
+  if (!name) { errEl.textContent = 'Enter your account name first.'; return; }
+  const found = Object.entries(loginWorkspaceUsers).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
+  if (!found) { errEl.textContent = 'Account not found.'; return; }
+  pendingLoginUid = found[0];
+  showStepForgot();
+}
+
+async function handleForgotVerify() {
+  const u     = loginWorkspaceUsers[pendingLoginUid];
+  const errEl = document.getElementById('forgotError');
+  if (!u?.email) return;
+  const inputEmail = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  if (!inputEmail) { errEl.textContent = 'Please enter your email address.'; return; }
+  if (inputEmail !== u.email.toLowerCase()) {
+    errEl.textContent = 'Email does not match our records. Try again.';
     return;
   }
-  if (!password) {
-    alert('Please choose a password for your account.');
-    document.getElementById('newUserPassword').focus();
-    return;
+  setActiveStep('stepReset');
+  document.getElementById('resetPassword').value        = '';
+  document.getElementById('resetConfirmPassword').value = '';
+  document.getElementById('resetError').textContent     = '';
+  document.getElementById('resetPassword').focus();
+}
+
+async function handleResetPassword() {
+  const errEl     = document.getElementById('resetError');
+  const newPwd    = document.getElementById('resetPassword').value;
+  const confirmPwd = document.getElementById('resetConfirmPassword').value;
+  if (!newPwd)               { errEl.textContent = 'Please enter a new password.';               return; }
+  if (newPwd !== confirmPwd) { errEl.textContent = 'Passwords do not match.';                    return; }
+  if (newPwd.length < 4)     { errEl.textContent = 'Password must be at least 4 characters.';   return; }
+
+  const hash = await hashPassword(newPwd);
+  await update(ref(db, `workspaces/${pendingWorkspaceId}/users/${pendingLoginUid}`), { passwordHash: hash });
+  if (loginWorkspaceUsers[pendingLoginUid]) {
+    loginWorkspaceUsers[pendingLoginUid] = { ...loginWorkspaceUsers[pendingLoginUid], passwordHash: hash };
   }
-  if (password.length < 4) {
-    alert('Password must be at least 4 characters.');
-    document.getElementById('newUserPassword').focus();
-    return;
-  }
-  const hash    = await hashPassword(password);
-  const newData = { name: trimmed, passwordHash: hash, createdAt: Date.now() };
-  if (email.trim()) newData.email = email.trim().toLowerCase();
-  const newRef  = push(ref(db, 'users'));
-  await set(newRef, newData);
-  saveCurrentUser({ id: newRef.key, name: trimmed });
+  const u = loginWorkspaceUsers[pendingLoginUid];
+  saveCurrentUser({ id: pendingLoginUid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
+  startWorkspaceListeners();
   hideUserOverlay();
 }
 
-// ── Event wiring for user overlay ──
+// ─── EVENT WIRING: OVERLAY ────────────────────────────────────────────────────
+document.getElementById('wsContinueBtn').addEventListener('click', handleWsContinue);
+document.getElementById('wsNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsContinue(); });
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 document.getElementById('loginNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
-document.getElementById('forgotPwdBtn').addEventListener('click', showStep3);
-document.getElementById('backToStep2').addEventListener('click', showStep1);
+document.getElementById('forgotPwdBtn').addEventListener('click', handleForgotPwdClick);
+document.getElementById('backToWorkspaceBtn').addEventListener('click', showStepWorkspace);
+document.getElementById('backToWorkspaceFromCreate').addEventListener('click', showStepWorkspace);
+document.getElementById('createWsBtn').addEventListener('click', createWorkspace);
+document.getElementById('backToLoginBtn').addEventListener('click', () => {
+  setActiveStep('stepLogin');
+  document.getElementById('forgotError').textContent = '';
+});
 document.getElementById('forgotVerifyBtn').addEventListener('click', handleForgotVerify);
 document.getElementById('forgotEmail').addEventListener('keydown', e => { if (e.key === 'Enter') handleForgotVerify(); });
 document.getElementById('resetPasswordBtn').addEventListener('click', handleResetPassword);
 document.getElementById('resetPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('resetConfirmPassword').focus(); });
 document.getElementById('resetConfirmPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleResetPassword(); });
-
-document.getElementById('joinBtn').addEventListener('click', () =>
-  joinAs(
-    document.getElementById('newUserName').value,
-    document.getElementById('newUserEmail').value,
-    document.getElementById('newUserPassword').value,
-  ));
-document.getElementById('newUserPassword').addEventListener('keydown', e => {
-  if (e.key === 'Enter') joinAs(
-    document.getElementById('newUserName').value,
-    document.getElementById('newUserEmail').value,
-    document.getElementById('newUserPassword').value,
-  );
-});
-document.getElementById('newUserName').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('newUserEmail').focus();
-});
-document.getElementById('newUserEmail').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('newUserPassword').focus();
-});
 document.getElementById('changeUserBtn').addEventListener('click', showUserOverlay);
 document.getElementById('userOverlayClose').addEventListener('click', hideUserOverlay);
-
-// ─── USERS LISTENER ───────────────────────────────────────────────────────────
-onValue(ref(db, 'users'), snap => {
-  users = snap.val() || {};
-  populateAssigneeDropdown();
-  populateUserFilter();
-  renderNotifSidebar();
-  updateHeaderUser();
+document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
+  pendingAfterLogin = () => openNew();
+  showUserOverlay();
 });
 
-function updateHeaderUser() {
+// ─── WORKSPACE LISTENERS ──────────────────────────────────────────────────────
+function startWorkspaceListeners() {
+  stopWorkspaceListeners();
   if (!currentUser) return;
+  const wsId = currentUser.workspaceId;
+
+  wsMetaUnsub = onValue(ref(db, `workspaces/${wsId}/meta`), snap => {
+    currentWorkspaceMeta = snap.val() || null;
+    // Refresh admin section if profile is open
+    if (document.getElementById('profileOverlay')?.classList.contains('open')) {
+      renderAdminSection();
+    }
+  });
+
+  wsUsersUnsub = onValue(ref(db, `workspaces/${wsId}/users`), snap => {
+    users = snap.val() || {};
+    populateAssigneeDropdown();
+    populateUserFilter();
+    renderNotifSidebar();
+    updateHeaderUser();
+    if (document.getElementById('profileOverlay')?.classList.contains('open')) {
+      renderAdminSection();
+    }
+  });
+
+  wsTasksUnsub = onValue(ref(db, `workspaces/${wsId}/tasks`), snap => {
+    tasks = snap.val() || {};
+    _resolveTasksLoaded();
+    renderBoard();
+    checkAndNotifyOverdue();
+  });
+
+  wsCommentsUnsub = onValue(ref(db, `workspaces/${wsId}/comments`), snap => {
+    const data = snap.val() || {};
+    commentCounts = {};
+    for (const [taskId, cmts] of Object.entries(data)) {
+      commentCounts[taskId] = Object.keys(cmts).length;
+    }
+    renderBoard();
+  });
+
+  wsNotifsAllUnsub = onValue(ref(db, `workspaces/${wsId}/notifications`), snap => {
+    allNotifications = snap.val() || {};
+    renderNotifSidebar();
+  });
+}
+
+function stopWorkspaceListeners() {
+  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub]
+    .forEach(u => { if (u) u(); });
+  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = null;
+  users = {}; tasks = {}; commentCounts = {}; allNotifications = {};
+  currentWorkspaceMeta = null;
+}
+
+// ─── HEADER USER DISPLAY ──────────────────────────────────────────────────────
+function updateHeaderUser() {
+  if (!currentUser) {
+    document.getElementById('userNameDisplay').textContent = '';
+    document.getElementById('userAvatar').innerHTML = '';
+    return;
+  }
   document.getElementById('userNameDisplay').textContent = currentUser.name;
   const u  = users[currentUser.id];
   const el = document.getElementById('userAvatar');
@@ -479,42 +582,6 @@ function populateUserFilter() {
       .sort(([,a],[,b]) => a.name.localeCompare(b.name))
       .map(([id, u]) => `<option value="${id}">${escHtml(u.name)}</option>`).join('');
   if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
-}
-
-// ─── TASKS LISTENER ───────────────────────────────────────────────────────────
-onValue(ref(db, 'tasks'), snap => {
-  tasks = snap.val() || {};
-  _resolveTasksLoaded();
-  renderBoard();
-  checkAndNotifyOverdue();
-});
-
-// ─── GLOBAL COMMENTS LISTENER ────────────────────────────────────────────────
-onValue(ref(db, 'comments'), snap => {
-  const data = snap.val() || {};
-  commentCounts = {};
-  for (const [taskId, cmts] of Object.entries(data)) {
-    commentCounts[taskId] = Object.keys(cmts).length;
-  }
-  renderBoard();
-});
-
-// ─── OVERDUE AUTO-NOTIFY ──────────────────────────────────────────────────────
-async function checkAndNotifyOverdue() {
-  const now = Date.now();
-  for (const [id, task] of Object.entries(tasks)) {
-    if (task.status === 'done')     continue;
-    if (task.overdueNotifiedAt)     continue;
-    if (!isOverdue(task.due))       continue;
-
-    const msg      = `Task "${task.title}" is now overdue!`;
-    const toNotify = new Set([task.createdBy, task.assignedTo].filter(Boolean));
-    for (const uid of toNotify) {
-      await push(ref(db, `notifications/${uid}`), { message: msg, taskId: id, read: false, createdAt: now });
-    }
-    await update(ref(db, `tasks/${id}`), { overdueNotifiedAt: now });
-    tasks[id] = { ...tasks[id], overdueNotifiedAt: now };
-  }
 }
 
 // ─── BOARD ────────────────────────────────────────────────────────────────────
@@ -568,7 +635,6 @@ function renderBoard() {
     }
   });
 
-  // Overdue column — always shows all overdue non-done tasks, newest first
   const overdueList  = document.getElementById('list-overdue');
   const overdueCount = document.getElementById('count-overdue');
   const overdueTasks = Object.entries(tasks)
@@ -605,7 +671,6 @@ function buildCard(task) {
   card.className = 'task-card';
   card.dataset.id = task.id;
 
-  // Only owned tasks are draggable
   if (owned) {
     card.draggable = true;
     card.style.cursor = 'grab';
@@ -644,7 +709,6 @@ function buildCard(task) {
   }
 
   card.addEventListener('click', () => openDetail(task.id));
-
   return card;
 }
 
@@ -662,12 +726,11 @@ document.querySelectorAll('.task-list').forEach(list => {
     if (newStatus === 'overdue') return;
     const task = tasks[id];
     if (!task || task.status === newStatus) return;
-    // Only owners can move tasks
     if (!isTaskOwner(task)) return;
     const oldStatus = task.status;
     tasks[id] = { ...task, status: newStatus };
     renderBoard();
-    await update(ref(db, `tasks/${id}`), { status: newStatus });
+    await update(wsRef('tasks', id), { status: newStatus });
     if (newStatus === 'done' && oldStatus !== 'done') {
       await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
     }
@@ -719,7 +782,6 @@ function renderFileList() {
 document.getElementById('resourceLinkAdd').addEventListener('click', () => {
   pendingResourceLinks.push('');
   renderLinkRows();
-  // Focus the new input
   const inputs = document.querySelectorAll('.resource-url-input');
   inputs[inputs.length - 1]?.focus();
 });
@@ -732,13 +794,13 @@ document.getElementById('resourceFile').addEventListener('change', async e => {
   const files = Array.from(e.target.files);
   e.target.value = '';
   if (!files.length) return;
-  const MAX_TOTAL = 10 * 1024 * 1024; // 10 MB
+  const MAX_TOTAL = 10 * 1024 * 1024;
   const newEntries = [];
   for (const file of files) {
     const dataUrl = await readFileAsDataURL(file);
     newEntries.push({ dataUrl, name: file.name, size: file.size });
   }
-  const combined = [...pendingResourceFiles, ...newEntries];
+  const combined  = [...pendingResourceFiles, ...newEntries];
   const totalSize = combined.reduce((s, f) => s + (f.size || 0), 0);
   if (totalSize > MAX_TOTAL) {
     showToast(`Combined size (${formatSize(totalSize)}) exceeds the 10 MB limit.`);
@@ -762,14 +824,8 @@ function populateResourceFields(task) {
   if (!resources.length) return;
   const linkResources = resources.filter(r => r.type !== 'file');
   const fileResources = resources.filter(r => r.type === 'file');
-  if (linkResources.length) {
-    pendingResourceLinks = linkResources.map(r => r.url);
-    renderLinkRows();
-  }
-  if (fileResources.length) {
-    pendingResourceFiles = fileResources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 }));
-    renderFileList();
-  }
+  if (linkResources.length) { pendingResourceLinks = linkResources.map(r => r.url); renderLinkRows(); }
+  if (fileResources.length) { pendingResourceFiles = fileResources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 })); renderFileList(); }
 }
 
 // ─── TASK CREATE / EDIT MODAL ─────────────────────────────────────────────────
@@ -810,10 +866,8 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
-  // Collect links and files from both sections — they can coexist in one task
   const linkItems = pendingResourceLinks.map(u => u.trim()).filter(u => u)
     .map(url => {
-      // Ensure URL has a protocol so browsers don't treat it as a relative path
       const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
       return { type: 'link', url: normalized, name: url };
     });
@@ -825,22 +879,21 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
   const newStatus   = document.getElementById('taskStatus').value;
   const fields = {
     title,
-    desc:          document.getElementById('taskDesc').value.trim(),
-    priority:      document.getElementById('taskPriority').value,
-    scheduledFor:  document.getElementById('taskScheduled').value || null,
-    due:           document.getElementById('taskDue').value || null,
-    status:        newStatus,
-    assignedTo:    newAssignee,
-    resources:     resources,
-    // Clear legacy single-resource fields
-    resourceType:  null,
-    resourceUrl:   null,
-    resourceName:  null,
+    desc:         document.getElementById('taskDesc').value.trim(),
+    priority:     document.getElementById('taskPriority').value,
+    scheduledFor: document.getElementById('taskScheduled').value || null,
+    due:          document.getElementById('taskDue').value || null,
+    status:       newStatus,
+    assignedTo:   newAssignee,
+    resources,
+    resourceType: null,
+    resourceUrl:  null,
+    resourceName: null,
   };
 
   if (editingTaskId) {
     const old = tasks[editingTaskId];
-    await update(ref(db, `tasks/${editingTaskId}`), fields);
+    await update(wsRef('tasks', editingTaskId), fields);
     tasks[editingTaskId] = { ...old, ...fields };
     closeModal();
     renderBoard();
@@ -851,7 +904,7 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
       await notifyParticipants({...old,...fields}, editingTaskId, `${currentUser.name} completed "${title}"`);
     }
   } else {
-    const newRef   = push(ref(db, 'tasks'));
+    const newRef   = push(wsRef('tasks'));
     const taskData = { ...fields, createdBy: currentUser.id, createdAt: Date.now() };
     await set(newRef, taskData);
     tasks[newRef.key] = taskData;
@@ -878,26 +931,42 @@ async function confirmDeleteTask() {
   const id = pendingDeleteId;
   closeDeleteConfirm();
   if (!id) return;
-  await remove(ref(db, `tasks/${id}`));
-  await remove(ref(db, `comments/${id}`));
+  await remove(wsRef('tasks', id));
+  await remove(wsRef('comments', id));
   delete tasks[id];
   renderBoard();
 }
 
+// ─── OVERDUE AUTO-NOTIFY ──────────────────────────────────────────────────────
+async function checkAndNotifyOverdue() {
+  if (!currentUser) return;
+  const now = Date.now();
+  for (const [id, task] of Object.entries(tasks)) {
+    if (task.status === 'done')  continue;
+    if (task.overdueNotifiedAt)  continue;
+    if (!isOverdue(task.due))    continue;
+    const msg      = `Task "${task.title}" is now overdue!`;
+    const toNotify = new Set([task.createdBy, task.assignedTo].filter(Boolean));
+    for (const uid of toNotify) {
+      await push(wsRef('notifications', uid), { message: msg, taskId: id, read: false, createdAt: now });
+    }
+    await update(wsRef('tasks', id), { overdueNotifiedAt: now });
+    tasks[id] = { ...tasks[id], overdueNotifiedAt: now };
+  }
+}
+
 // ─── FILE PREVIEW ─────────────────────────────────────────────────────────────
 function openFilePreview(resource) {
-  const overlay  = document.getElementById('filePreviewOverlay');
-  const nameEl   = document.getElementById('filePreviewName');
-  const bodyEl   = document.getElementById('filePreviewBody');
-  const dlBtn    = document.getElementById('filePreviewDownload');
+  const overlay = document.getElementById('filePreviewOverlay');
+  const nameEl  = document.getElementById('filePreviewName');
+  const bodyEl  = document.getElementById('filePreviewBody');
+  const dlBtn   = document.getElementById('filePreviewDownload');
 
   nameEl.textContent = resource.name || 'File';
   dlBtn.href         = resource.url;
   dlBtn.download     = resource.name || 'download';
 
-  // Detect MIME from data URL prefix
   const mime = resource.url.match(/^data:([^;]+);/)?.[1] || '';
-
   if (mime.startsWith('image/')) {
     bodyEl.innerHTML = `<img class="fp-image" src="${resource.url}" alt="${escHtml(resource.name || 'File')}">`;
   } else if (mime === 'application/pdf') {
@@ -916,31 +985,25 @@ function openFilePreview(resource) {
   } else {
     bodyEl.innerHTML = `<div class="fp-unsupported">Preview not available for this file type.<br>Use the Download button above.</div>`;
   }
-
   overlay.classList.add('open');
 }
 
 function closeFilePreview() {
-  const overlay = document.getElementById('filePreviewOverlay');
-  overlay.classList.remove('open');
+  document.getElementById('filePreviewOverlay').classList.remove('open');
   document.getElementById('filePreviewBody').innerHTML = '';
 }
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 async function openDetail(id) {
-  // Guard against obviously invalid IDs (empty string, literal "undefined"/"null")
   if (!id || id === 'undefined' || id === 'null') {
     showToast('This notification is not linked to a task.');
     return false;
   }
-  // Wait for the tasks cache to be ready (guards against clicking a notification
-  // before the Firebase onValue has fired on page load).
   await tasksLoaded;
-  // Primary lookup: local cache. Fallback: fetch directly from Firebase.
   let task = tasks[id];
   if (!task) {
     try {
-      const snap = await get(ref(db, `tasks/${id}`));
+      const snap = await get(wsRef('tasks', id));
       if (snap.exists()) { task = snap.val(); tasks[id] = task; }
     } catch (err) {
       console.error('openDetail: Firebase fetch error', err);
@@ -952,13 +1015,12 @@ async function openDetail(id) {
   }
   detailTaskId = id;
 
-  const assignee = task.assignedTo ? users[task.assignedTo] : null;
-  const creator  = task.createdBy  ? users[task.createdBy]  : null;
-  const overdue  = isOverdue(task.due);
-  const owned    = isTaskOwner(task);
-
-  // Build resource HTML (supports both old single-resource and new multi-resource formats)
+  const assignee      = task.assignedTo ? users[task.assignedTo] : null;
+  const creator       = task.createdBy  ? users[task.createdBy]  : null;
+  const overdue       = isOverdue(task.due);
+  const owned         = isTaskOwner(task);
   const taskResources = getTaskResources(task);
+
   let resourceHtml = '';
   if (taskResources.length) {
     const hasFiles = taskResources.some(r => r.type === 'file');
@@ -1011,7 +1073,6 @@ async function openDetail(id) {
     </div>
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
 
-  // Wire file preview buttons (rendered into innerHTML above)
   document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
     const idx = parseInt(btn.dataset.resIdx, 10);
     if (!isNaN(idx) && taskResources[idx]) {
@@ -1023,16 +1084,14 @@ async function openDetail(id) {
     const sel        = document.getElementById('detailStatusSel');
     const saveBtn    = document.getElementById('saveStatusBtn');
     const origStatus = task.status;
-
     sel.addEventListener('change', () => {
       saveBtn.style.display = sel.value !== origStatus ? '' : 'none';
     });
-
     saveBtn.addEventListener('click', async () => {
       const newStatus = sel.value;
       const oldStatus = tasks[id]?.status;
       saveBtn.disabled = true;
-      await update(ref(db, `tasks/${id}`), { status: newStatus });
+      await update(wsRef('tasks', id), { status: newStatus });
       tasks[id] = { ...tasks[id], status: newStatus };
       saveBtn.style.display = 'none';
       saveBtn.disabled = false;
@@ -1041,16 +1100,14 @@ async function openDetail(id) {
         await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
       }
     });
-
     document.getElementById('detailEditBtn').style.display = '';
     document.getElementById('detailEditBtn').onclick = () => { closeDetail(); openEdit(id); };
   } else {
     document.getElementById('detailEditBtn').style.display = 'none';
   }
 
-  // Real-time comments listener
   if (commentsUnsub) commentsUnsub();
-  commentsUnsub = onValue(ref(db, `comments/${id}`), snap => {
+  commentsUnsub = onValue(wsRef('comments', id), snap => {
     if (detailTaskId !== id) return;
     const data     = snap.val() || {};
     const comments = Object.entries(data).map(([cid, c]) => ({ id: cid, ...c })).sort((a,b) => a.createdAt - b.createdAt);
@@ -1092,7 +1149,7 @@ async function postComment() {
   const text  = input.value.trim();
   if (!text) return;
 
-  await push(ref(db, `comments/${detailTaskId}`), { text, author: currentUser.id, createdAt: Date.now() });
+  await push(wsRef('comments', detailTaskId), { text, author: currentUser.id, createdAt: Date.now() });
   input.value = '';
 
   const task = tasks[detailTaskId];
@@ -1109,7 +1166,7 @@ document.getElementById('commentInput').addEventListener('keydown', e => { if (e
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 async function notify(toUserId, message, taskId) {
   if (!toUserId || toUserId === currentUser?.id) return;
-  await push(ref(db, `notifications/${toUserId}`), { message, taskId: taskId || '', read: false, createdAt: Date.now() });
+  await push(wsRef('notifications', toUserId), { message, taskId: taskId || '', read: false, createdAt: Date.now() });
 }
 
 async function notifyParticipants(task, taskId, message) {
@@ -1119,45 +1176,25 @@ async function notifyParticipants(task, taskId, message) {
 }
 
 // ─── NOTIFICATION TASK ID RESOLVER ────────────────────────────────────────────
-// Notifications created before taskId was stored have no taskId in the database.
-// This helper recovers the correct task ID by:
-//   1. Fetching the notification fresh from the server (fixes stale-cache hits).
-//   2. Falling back to a title-match against the tasks object when the server
-//      record genuinely has no taskId (old notification format).
-// It also back-fills the taskId in Firebase so future clicks work immediately.
 async function resolveNotifTaskId(notifId) {
   if (!notifId || !currentUser) return '';
   try {
-    const s = await get(ref(db, `notifications/${currentUser.id}/${notifId}`));
+    const s = await get(wsRef('notifications', currentUser.id, notifId));
     if (!s.exists()) return '';
     const val = s.val();
-
-    // Case 1: server notification already has a valid taskId.
     if (val.taskId) return val.taskId;
-
-    // Case 2: old notification — no taskId on the server.
-    // Extract the task title from the message (always wrapped in double-quotes).
     await tasksLoaded;
     const m = (val.message || '').match(/"([^"]+)"/);
     if (!m) return '';
-    const title = m[1];
+    const title   = m[1];
     const matchId = Object.keys(tasks).find(id => tasks[id]?.title === title);
     if (!matchId) return '';
-
-    // Back-fill so future clicks work without going through recovery.
-    update(ref(db, `notifications/${currentUser.id}/${notifId}`), { taskId: matchId });
+    update(wsRef('notifications', currentUser.id, notifId), { taskId: matchId });
     return matchId;
-  } catch {
-    return '';
-  }
+  } catch { return ''; }
 }
 
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
-onValue(ref(db, 'notifications'), snap => {
-  allNotifications = snap.val() || {};
-  renderNotifSidebar();
-});
-
 function renderNotifSidebar() {
   const body = document.getElementById('notifSidebarBody');
   if (!body) return;
@@ -1194,14 +1231,12 @@ function renderNotifSidebar() {
       if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
         taskId = await resolveNotifTaskId(notifId);
       }
-      const found   = await openDetail(taskId);
-      // Auto-clean stale notifications that point to deleted tasks
+      const found = await openDetail(taskId);
       if (found === false && notifId && currentUser) {
-        remove(ref(db, `notifications/${currentUser.id}/${notifId}`));
+        remove(wsRef('notifications', currentUser.id, notifId));
       }
-      // Mark as read on successful open
       if (found && notifId && currentUser) {
-        update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
+        update(wsRef('notifications', currentUser.id, notifId), { read: true });
       }
     });
   });
@@ -1211,21 +1246,19 @@ function renderNotifSidebar() {
 }
 
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
-let audioCtx        = null;  // persistent context — unlocked during login gesture
-let pendingSound    = false; // true when a notif arrived while the tab was hidden
-let pendingNotifCount = 0;   // unread count accumulated while tab is hidden
-const BASE_TITLE    = 'AchieverBoard';
+let audioCtx          = null;
+let pendingSound      = false;
+let pendingNotifCount = 0;
+const BASE_TITLE      = 'AchieverBoard';
 
 function setTabNotifTitle(count) {
   document.title = count > 0 ? `(${count}) New notification! — ${BASE_TITLE}` : BASE_TITLE;
 }
 
-// Call once during a user-gesture (login click) to unlock audio for the session
 function unlockAudioContext() {
   if (audioCtx) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Play a silent buffer to unlock the context immediately
     const buf = audioCtx.createBuffer(1, 1, 22050);
     const src = audioCtx.createBufferSource();
     src.buffer = buf;
@@ -1263,13 +1296,12 @@ function playNotificationSound() {
   if (document.visibilityState === 'visible') {
     _playBeep();
   } else {
-    pendingSound = true; // play it when the user returns to this tab
+    pendingSound = true;
     pendingNotifCount++;
     setTabNotifTitle(pendingNotifCount);
   }
 }
 
-// Fire queued sound and clear tab title the moment the user returns
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (pendingSound) { pendingSound = false; _playBeep(); }
@@ -1280,23 +1312,20 @@ document.addEventListener('visibilitychange', () => {
 // ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
 function setupNotifListener() {
   if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
-
   const badge = document.getElementById('notifBadge');
   badge.textContent = '';
   badge.classList.remove('visible');
   document.getElementById('notifList').innerHTML = '<div class="no-notifs">No notifications yet</div>';
-
   if (!currentUser) return;
 
-  notifBadgeUnsub = onValue(ref(db, `notifications/${currentUser.id}`), snap => {
+  notifBadgeUnsub = onValue(wsRef('notifications', currentUser.id), snap => {
     const data   = snap.val() || {};
     const notifs = Object.entries(data).map(([id, n]) => ({ id, ...n })).sort((a,b) => b.createdAt - a.createdAt);
     const unread = notifs.filter(n => !n.read).length;
 
-    // Play sound for genuinely new notifications (skip initial page-load snapshot)
     const incomingIds = new Set(Object.keys(data));
     if (knownNotifIds === null) {
-      knownNotifIds = incomingIds; // first snapshot — just remember, no sound
+      knownNotifIds = incomingIds;
     } else {
       const newNotifs = notifs.filter(n => !knownNotifIds.has(n.id));
       if (newNotifs.length) playNotificationSound();
@@ -1329,10 +1358,9 @@ function setupNotifListener() {
         }
         const found = await openDetail(taskId);
         if (found === false && notifId && currentUser) {
-          // Task no longer exists — remove the stale notification
-          remove(ref(db, `notifications/${currentUser.id}/${notifId}`));
+          remove(wsRef('notifications', currentUser.id, notifId));
         } else if (notifId && currentUser) {
-          update(ref(db, `notifications/${currentUser.id}/${notifId}`), { read: true });
+          update(wsRef('notifications', currentUser.id, notifId), { read: true });
         }
       });
     });
@@ -1346,10 +1374,10 @@ document.getElementById('notifBtn').addEventListener('click', e => {
 
 document.getElementById('markAllRead').addEventListener('click', async () => {
   if (!currentUser) return;
-  const snap = await get(ref(db, `notifications/${currentUser.id}`));
+  const snap = await get(wsRef('notifications', currentUser.id));
   const data = snap.val() || {};
   const upd  = Object.fromEntries(Object.keys(data).map(k => [`${k}/read`, true]));
-  if (Object.keys(upd).length) await update(ref(db, `notifications/${currentUser.id}`), upd);
+  if (Object.keys(upd).length) await update(wsRef('notifications', currentUser.id), upd);
 });
 
 function closeNotifPanel() { document.getElementById('notifPanel').classList.remove('open'); }
@@ -1382,6 +1410,7 @@ function openProfile() {
   pendingProfilePhoto = null;
   document.getElementById('profilePhotoInput').value = '';
 
+  renderAdminSection();
   document.getElementById('profileOverlay').classList.add('open');
 }
 
@@ -1418,31 +1447,35 @@ document.getElementById('saveProfileBtn').addEventListener('click', async () => 
   err.textContent = '';
 
   const updates = {};
-  if (newPwd)             updates.passwordHash = await hashPassword(newPwd);
-  if (pendingProfilePhoto) updates.photoURL    = pendingProfilePhoto;
+  if (newPwd)              updates.passwordHash = await hashPassword(newPwd);
+  if (pendingProfilePhoto) updates.photoURL     = pendingProfilePhoto;
   updates.email = email || null;
 
-  await update(ref(db, `users/${currentUser.id}`), updates);
-
+  await update(wsRef('users', currentUser.id), updates);
   pendingProfilePhoto = null;
   closeProfile();
 });
 
+// ─── DELETE ACCOUNT ───────────────────────────────────────────────────────────
 document.getElementById('deleteAccountBtn').addEventListener('click', () => {
   if (!currentUser) return;
-  const hasPwd = !!currentUser.passwordHash;
-  document.getElementById('deleteAccountMsg').textContent =
-    `Delete your account "${currentUser.name}"? This cannot be undone.`;
-  const pwdGroup = document.getElementById('deleteAccountPwdGroup');
-  pwdGroup.style.display = hasPwd ? '' : 'none';
-  document.getElementById('deleteAccountPwdInput').value = '';
-  document.getElementById('deleteAccountPwdError').textContent = '';
+  const u      = users[currentUser.id];
+  const hasPwd = !!u?.passwordHash;
+  const isAdmin = currentUser.role === 'admin';
+
+  document.getElementById('deleteAccountMsg').textContent = isAdmin
+    ? `Delete your admin account "${currentUser.name}"? This will permanently delete the entire workspace and all its tasks, members, and data. This cannot be undone.`
+    : `Delete your account "${currentUser.name}"? This cannot be undone.`;
+
+  document.getElementById('deleteAccountPwdGroup').style.display = hasPwd ? '' : 'none';
+  document.getElementById('deleteAccountPwdInput').value         = '';
+  document.getElementById('deleteAccountPwdError').textContent   = '';
   document.getElementById('deleteAccountOverlay').classList.add('open');
 });
 
 function closeDeleteAccountOverlay() {
   document.getElementById('deleteAccountOverlay').classList.remove('open');
-  document.getElementById('deleteAccountPwdInput').value = '';
+  document.getElementById('deleteAccountPwdInput').value       = '';
   document.getElementById('deleteAccountPwdError').textContent = '';
 }
 
@@ -1452,28 +1485,140 @@ document.getElementById('deleteAccountOverlay').addEventListener('click', e => {
 
 document.getElementById('deleteAccountOverlayOk').addEventListener('click', async () => {
   if (!currentUser) return;
-  if (currentUser.passwordHash) {
+  const u = users[currentUser.id];
+
+  if (u?.passwordHash) {
     const pwd = document.getElementById('deleteAccountPwdInput').value;
-    if (!pwd) {
-      document.getElementById('deleteAccountPwdError').textContent = 'Please enter your password.';
-      return;
-    }
+    if (!pwd) { document.getElementById('deleteAccountPwdError').textContent = 'Please enter your password.'; return; }
     const hash = await hashPassword(pwd);
-    if (hash !== currentUser.passwordHash) {
-      document.getElementById('deleteAccountPwdError').textContent = 'Incorrect password.';
-      return;
-    }
+    if (hash !== u.passwordHash) { document.getElementById('deleteAccountPwdError').textContent = 'Incorrect password.'; return; }
   }
+
   closeDeleteAccountOverlay();
-  await remove(ref(db, `users/${currentUser.id}`));
-  await remove(ref(db, `notifications/${currentUser.id}`));
-  localStorage.removeItem('achieverboard-user');
-  currentUser = null;
-  if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
+  const wsId = currentUser.workspaceId;
+  const uid  = currentUser.id;
+  const role = currentUser.role;
+
+  stopWorkspaceListeners();
+  if (role === 'admin') {
+    // Admin deletes the entire workspace
+    await remove(ref(db, `workspaces/${wsId}`));
+  } else {
+    // Member removes only their own account
+    await remove(ref(db, `workspaces/${wsId}/users/${uid}`));
+    await remove(ref(db, `workspaces/${wsId}/notifications/${uid}`));
+  }
+
+  clearCurrentUser();
   knownNotifIds = null;
+  tasks = {}; users = {}; commentCounts = {}; allNotifications = {};
   closeProfile();
-  showUserOverlay();
+  renderBoard();
+  renderNotifSidebar();
+  updateHeaderUser();
+  setupNotifListener();
+
+  // Show guest banner, hide board
+  const guestBanner  = document.getElementById('guestBanner');
+  const boardWrapper = document.querySelector('.board-wrapper');
+  if (guestBanner)  guestBanner.style.display  = '';
+  if (boardWrapper) boardWrapper.style.display = 'none';
 });
+
+// ─── ADMIN TEAM PANEL ─────────────────────────────────────────────────────────
+function renderAdminSection() {
+  const section = document.getElementById('adminTeamSection');
+  if (!section) return;
+  if (!currentUser || currentUser.role !== 'admin') { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const userArr    = Object.entries(users).map(([id, u]) => ({ id, ...u })).sort((a, b) => a.name.localeCompare(b.name));
+  const maxUsers   = currentWorkspaceMeta?.maxUsers || 0;
+  const memberCount = userArr.length;
+
+  document.getElementById('seatUsage').textContent = maxUsers > 0
+    ? `${memberCount} / ${maxUsers} seats`
+    : `${memberCount} member${memberCount !== 1 ? 's' : ''}`;
+
+  const canAdd = maxUsers === 0 || memberCount < maxUsers;
+  const addBtn = document.getElementById('addMemberBtn');
+  if (addBtn) {
+    addBtn.disabled = !canAdd;
+    addBtn.title    = !canAdd ? `All ${maxUsers} seats are filled` : '';
+  }
+
+  document.getElementById('membersList').innerHTML = userArr.map(u => `
+    <div class="member-row">
+      ${avatarHtml(u.name)}
+      <span class="member-name">${escHtml(u.name)}${u.role === 'admin' ? ' <span class="admin-tag">admin</span>' : ''}</span>
+      ${u.id !== currentUser.id
+        ? `<button class="btn-icon delete remove-member-btn" data-uid="${u.id}" title="Remove ${escHtml(u.name)}">${ICONS.trash}</button>`
+        : '<span class="its-you-tag">you</span>'}
+    </div>`).join('');
+
+  document.getElementById('membersList').querySelectorAll('.remove-member-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeMember(btn.dataset.uid));
+  });
+}
+
+async function removeMember(uid) {
+  if (!currentUser || currentUser.role !== 'admin' || uid === currentUser.id) return;
+  const u = users[uid];
+  if (!u) return;
+  if (!confirm(`Remove "${u.name}" from the workspace?\n\nThey will lose access, but their tasks will remain.`)) return;
+  await remove(wsRef('users', uid));
+  await remove(wsRef('notifications', uid));
+}
+
+function openAddMemberModal() {
+  document.getElementById('memberName').value          = '';
+  document.getElementById('memberEmail').value         = '';
+  document.getElementById('memberPassword').value      = '';
+  document.getElementById('addMemberError').textContent = '';
+  document.getElementById('addMemberOverlay').classList.add('open');
+  document.getElementById('memberName').focus();
+}
+
+function closeAddMemberModal() {
+  document.getElementById('addMemberOverlay').classList.remove('open');
+}
+
+async function submitAddMember() {
+  const name  = document.getElementById('memberName').value.trim();
+  const email = document.getElementById('memberEmail').value.trim().toLowerCase();
+  const pwd   = document.getElementById('memberPassword').value;
+  const errEl = document.getElementById('addMemberError');
+  errEl.textContent = '';
+
+  if (!name)          { errEl.textContent = 'Please enter a name.';                      return; }
+  if (!pwd)           { errEl.textContent = 'Please set a password.';                    return; }
+  if (pwd.length < 4) { errEl.textContent = 'Password must be at least 4 characters.';  return; }
+
+  if (Object.values(users).some(u => u.name.toLowerCase() === name.toLowerCase())) {
+    errEl.textContent = 'A member with this name already exists.';
+    return;
+  }
+
+  const maxUsers = currentWorkspaceMeta?.maxUsers || 0;
+  if (maxUsers > 0 && Object.keys(users).length >= maxUsers) {
+    errEl.textContent = 'Workspace is full. No more seats available.';
+    return;
+  }
+
+  const hash       = await hashPassword(pwd);
+  const memberData = { name, passwordHash: hash, role: 'member', createdAt: Date.now() };
+  if (email) memberData.email = email;
+
+  await push(wsRef('users'), memberData);
+  closeAddMemberModal();
+  showToast(`${name} has been added to the workspace.`);
+}
+
+document.getElementById('addMemberBtn')?.addEventListener('click', openAddMemberModal);
+document.getElementById('addMemberClose')?.addEventListener('click', closeAddMemberModal);
+document.getElementById('addMemberCancel')?.addEventListener('click', closeAddMemberModal);
+document.getElementById('addMemberSubmit')?.addEventListener('click', submitAddMember);
+document.getElementById('addMemberOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeAddMemberModal(); });
 
 // ─── GLOBAL UI EVENTS ─────────────────────────────────────────────────────────
 ['todo', 'inprogress', 'done', 'overdue'].forEach(col => {
@@ -1514,10 +1659,10 @@ document.getElementById('customDateApply').addEventListener('click', () => {
 document.getElementById('filterBarClear').addEventListener('click', () => {
   currentFilter = 'all'; currentUserFilter = 'all';
   customDateStart = null; customDateEnd = null;
-  document.getElementById('customFrom').value           = '';
-  document.getElementById('customTo').value             = '';
-  document.getElementById('customFromText').textContent = 'dd-mm-yyyy';
-  document.getElementById('customToText').textContent   = 'dd-mm-yyyy';
+  document.getElementById('customFrom').value            = '';
+  document.getElementById('customTo').value              = '';
+  document.getElementById('customFromText').textContent  = 'dd-mm-yyyy';
+  document.getElementById('customToText').textContent    = 'dd-mm-yyyy';
   document.getElementById('customDateRow').style.display = 'none';
   renderBoard();
 });
@@ -1541,7 +1686,12 @@ document.getElementById('deleteConfirmOk').addEventListener('click', confirmDele
 document.getElementById('deleteConfirmOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteConfirm(); });
 document.getElementById('filePreviewClose').addEventListener('click', closeFilePreview);
 document.getElementById('filePreviewOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeFilePreview(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm(); closeDeleteAccountOverlay(); closeFilePreview(); } });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm();
+    closeDeleteAccountOverlay(); closeFilePreview(); closeAddMemberModal();
+  }
+});
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 let toastTimer = null;
@@ -1561,8 +1711,18 @@ function showToast(msg) {
 
 // ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
 loadCurrentUser();
+const _guestBanner  = document.getElementById('guestBanner');
+const _boardWrapper = document.querySelector('.board-wrapper');
+
 if (currentUser) {
+  if (_guestBanner)  _guestBanner.style.display  = 'none';
+  if (_boardWrapper) _boardWrapper.style.display = '';
   updateHeaderUser();
   currentUserFilter = currentUser.id;
+  startWorkspaceListeners();
   setupNotifListener();
+} else {
+  if (_guestBanner)  _guestBanner.style.display  = '';
+  if (_boardWrapper) _boardWrapper.style.display = 'none';
 }
+
