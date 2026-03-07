@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AchieverBoard FAQ — Frequently Asked Questions</title>
+  <meta name="description" content="Answers to common AchieverBoard questions — how data is saved, how to recover a board, what the difference between Solo and Team is, and more.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://achieverboard.com/faq.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #f0f2f5;
+      --white: #ffffff;
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .header-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -.03em;
+      text-decoration: none;
+    }
+    nav.header-nav { display: flex; gap: 20px; align-items: center; }
+    nav.header-nav a {
+      font-size: .85rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    nav.header-nav a:hover, nav.header-nav a.active { color: var(--primary); font-weight: 600; }
+    .layout {
+      max-width: 1040px;
+      margin: 48px auto 80px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .sidebar {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.07);
+      position: sticky;
+      top: 78px;
+    }
+    .sidebar-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .sidebar a {
+      display: block;
+      font-size: .84rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 7px;
+      margin-bottom: 2px;
+      transition: all .15s;
+    }
+    .sidebar a:hover { color: var(--primary); background: #f0f0ff; }
+    .sidebar a.active { color: var(--primary); background: #ede9fe; font-weight: 600; }
+    .sidebar-section { margin-top: 18px; }
+    .content { min-width: 0; }
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 44px 48px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      margin-bottom: 28px;
+    }
+    .badge {
+      display: inline-block;
+      background: #ede9fe;
+      color: var(--primary);
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: 12px; }
+    .lead { font-size: 1rem; color: var(--muted); margin-bottom: 0; }
+    h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; margin: 0 0 12px; color: var(--text); }
+    p { color: #374151; font-size: .93rem; margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .faq-list { display: flex; flex-direction: column; gap: 0; }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+    }
+    .faq-item:first-child { padding-top: 0; }
+    .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .faq-q {
+      font-size: .97rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .faq-q-mark {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: #ede9fe;
+      color: var(--primary);
+      border-radius: 50%;
+      font-size: .72rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .contact-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-top: 16px;
+    }
+    .contact-box p { margin: 0; }
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+    footer a { color: var(--muted); margin: 0 8px; }
+    footer a:hover { color: var(--primary); }
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .card { padding: 30px 22px; }
+      h1 { font-size: 1.6rem; }
+      nav.header-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="header-logo" href="/achieverboard/">AchieverBoard</a>
+    <nav class="header-nav">
+      <a href="/achieverboard/about.html">About</a>
+      <a href="/achieverboard/getting-started.html">Docs</a>
+      <a href="/achieverboard/faq.html" class="active">FAQ</a>
+      <a href="/achieverboard/">Open App</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+      <div class="sidebar-title">Documentation</div>
+      <a href="/achieverboard/getting-started.html">Getting Started</a>
+      <a href="/achieverboard/features.html">All Features</a>
+      <a href="/achieverboard/faq.html" class="active">FAQ</a>
+      <div class="sidebar-section">
+        <div class="sidebar-title">More</div>
+        <a href="/achieverboard/about.html">About</a>
+        <a href="/achieverboard/privacy-policy.html">Privacy Policy</a>
+        <a href="/achieverboard/terms-of-service.html">Terms of Service</a>
+      </div>
+    </aside>
+
+    <div class="content">
+
+      <div class="card">
+        <span class="badge">FAQ</span>
+        <h1>Frequently Asked Questions</h1>
+        <p class="lead">Quick answers to the most common questions about AchieverBoard.</p>
+      </div>
+
+      <div class="card">
+        <h2>Getting Started</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Do I need to create an account to use AchieverBoard?
+            </div>
+            <p>No. The <strong>Solo Board</strong> requires no account at all. Just go to <a href="/achieverboard/">AchieverBoard Solo</a>, enter a board name of your choice, and your board is ready. Your data is saved to the cloud automatically.</p>
+            <p>If you want to collaborate with a team, assign tasks to specific people, or get notifications, you'll need to create a free account for the <strong>Team Board</strong>.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Is AchieverBoard really free?
+            </div>
+            <p>Yes. The Solo Board is completely free with no limits on tasks, no ads inside the board, and no credit card required. The Team Board is also free for basic use. We may introduce paid plans for advanced team features in the future, but core functionality will always be free.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              What's the difference between the Solo Board and the Team Board?
+            </div>
+            <p>The <strong>Solo Board</strong> is designed for one person. It requires no account — just a board name — and is the fastest way to get started. It's great for personal task tracking, freelance work, or any situation where you're the only one managing the tasks.</p>
+            <p>The <strong>Team Board</strong> adds multi-user accounts, task assignment, real-time collaboration, workspaces, and notifications. It's built for groups of 2 or more people who need to coordinate work together.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Data &amp; Storage</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Where is my data stored?
+            </div>
+            <p>All task data is stored securely in <strong>Google Firebase</strong> — a cloud database hosted on Google's infrastructure. Your data is not stored in your browser's local storage (though your board name is cached there as a convenience). This means your tasks are safe even if you clear your browser cache or switch devices.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              I cleared my browser data and now my board is empty. Did I lose my tasks?
+            </div>
+            <p>No — your tasks are safe. Clearing your browser data removes the cached board name, which is why the board appears empty. To get back in, simply go to <a href="/achieverboard/">AchieverBoard Solo</a>, enter your board name again, and all your tasks will load from the cloud.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Can I access my board from a different computer or phone?
+            </div>
+            <p>Yes. Since your data is in the cloud, you can open your board from any browser on any device. For the Solo Board, just enter your board name. For the Team Board, log in with your account credentials.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              How do I delete my data?
+            </div>
+            <p>For the Solo Board, you can delete individual tasks using the delete button inside each task. For the Team Board, you can delete your account — and all associated data — from the Profile Settings screen inside the app. If you need help, contact us at <a href="mailto:contact@achieverboard.app">contact@achieverboard.app</a>.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Using the Board</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              How do I move a task from one column to another?
+            </div>
+            <p>Click on the task card to open it, then use the status buttons at the top of the task detail panel to change its stage. Options are <strong>To Do</strong>, <strong>In Progress</strong>, <strong>In Review</strong>, and <strong>Done</strong>. The task card will move to the correct column automatically.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              How do filters work?
+            </div>
+            <p>There are two types of filters:</p>
+            <p><strong>Priority filter</strong> — each column has a dropdown at the top that lets you show only High, Medium, or Low priority tasks in that column.</p>
+            <p><strong>Date filter</strong> — the header has a date filter that applies across all columns, letting you narrow tasks to a time window like "Overdue", "This Week", or a custom date range.</p>
+            <p>Click "Clear filter" in the filter bar to remove all active filters and see your full board.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Can I attach files to a task?
+            </div>
+            <p>Yes. Open any task and look for the attachment section. You can upload image files or paste URLs as link attachments. Attachments are stored alongside the task and are accessible whenever you open it.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              What happens to overdue tasks?
+            </div>
+            <p>Tasks past their due date are automatically highlighted in red so they're easy to spot on the board. You can also use the <strong>Overdue</strong> option in the date filter to show only overdue tasks across all columns at once.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Privacy &amp; Security</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Is my board private?
+            </div>
+            <p>For the Solo Board: your board is identified by the name you choose. Anyone who knows your exact board name can access it, so treat your board name like a password — don't share it publicly. We recommend using a board name that isn't easy to guess.</p>
+            <p>For the Team Board: your account is protected by a password. Only users you invite can access your workspace.</p>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-q">
+              <span class="faq-q-mark">Q</span>
+              Does AchieverBoard sell my data?
+            </div>
+            <p>No. We do not sell, rent, or share your personal data with third parties for marketing. Task data is used solely to provide the service to you. See our <a href="/achieverboard/privacy-policy.html">Privacy Policy</a> for full details.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Still have a question?</h2>
+        <p>If you didn't find the answer above, reach out — we're happy to help.</p>
+        <div class="contact-box">
+          <p><strong>AchieverBoard Support</strong><br>
+          Email: <a href="mailto:contact@achieverboard.app">contact@achieverboard.app</a></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>© 2026 AchieverBoard &nbsp;·&nbsp;</span>
+    <a href="/achieverboard/">Home</a>
+    <a href="/achieverboard/about.html">About</a>
+    <a href="/achieverboard/getting-started.html">Docs</a>
+    <a href="/achieverboard/faq.html">FAQ</a>
+    <a href="/achieverboard/terms-of-service.html">Terms</a>
+    <a href="/achieverboard/privacy-policy.html">Privacy</a>
+  </footer>
+
+</body>
+</html>
