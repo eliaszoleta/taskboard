@@ -9,14 +9,14 @@
   <meta name="description" content="AchieverBoard is a 100% free online task management tool for teams. Create kanban boards, assign tasks, track due dates, and collaborate in real time — no credit card, no subscription, ever.">
   <meta name="keywords" content="free task management tool, free kanban board, free project management, online task manager, free team task tracker, task board free, free to-do list app, free productivity app">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://eliaszoleta.github.io/taskboard/team/">
+  <link rel="canonical" href="https://achieverboard.com/team/">
 
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="AchieverBoard">
   <meta property="og:title" content="Free Task Management Tool for Teams | AchieverBoard">
   <meta property="og:description" content="Create kanban boards, assign tasks, set due dates, and collaborate with your team — completely free, no credit card required.">
-  <meta property="og:url" content="https://eliaszoleta.github.io/taskboard/team/">
+  <meta property="og:url" content="https://achieverboard.com/team/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
@@ -31,7 +31,7 @@
     "name": "AchieverBoard",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
-    "url": "https://eliaszoleta.github.io/taskboard/team/",
+    "url": "https://achieverboard.com/team/",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -50,7 +50,7 @@
       "No subscription required",
       "No credit card required"
     ],
-    "screenshot": "https://eliaszoleta.github.io/taskboard/team/"
+    "screenshot": "https://achieverboard.com/team/"
   }
   </script>
 
@@ -66,33 +66,25 @@
     <div class="user-card">
       <button class="user-overlay-close" id="userOverlayClose" title="Cancel" style="display:none">✕</button>
 
-      <!-- Step 1: Pick a user -->
+      <!-- Step 1: Sign in or create account -->
       <div id="userStep1">
         <div class="user-card-logo">AchieverBoard</div>
-        <p class="user-card-sub">Select your profile to continue</p>
-        <div class="user-list" id="userList"></div>
+        <p class="user-card-sub">Sign in to your account</p>
+        <div class="user-join-form">
+          <input type="text"     id="loginNameInput" placeholder="Your account name…"   maxlength="30"  autocomplete="username">
+          <input type="password" id="loginPassword"  placeholder="Password…"            maxlength="100" autocomplete="current-password">
+          <button class="btn-primary" id="loginBtn">Sign In</button>
+        </div>
+        <p class="login-error" id="loginError"></p>
+        <div style="text-align:center;margin-top:4px">
+          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
+        </div>
         <div class="user-divider">or create a new account</div>
         <div class="user-join-form">
           <input type="text"     id="newUserName"     placeholder="Your name…"                    maxlength="30">
           <input type="email"    id="newUserEmail"    placeholder="Email for password recovery…"  maxlength="150">
           <input type="password" id="newUserPassword" placeholder="Choose a password…"            maxlength="100">
           <button class="btn-primary" id="joinBtn">Create Account</button>
-        </div>
-      </div>
-
-      <!-- Step 2: Password prompt for existing user -->
-      <div id="userStep2" style="display:none">
-        <div id="pwdPromptAvatar" class="pwd-prompt-avatar"></div>
-        <div class="user-card-logo" id="pwdPromptName"></div>
-        <p class="user-card-sub">Enter your password to continue</p>
-        <div class="user-join-form">
-          <input type="password" id="loginPassword" placeholder="Password…" maxlength="100">
-          <button class="btn-primary" id="loginBtn">Sign In</button>
-        </div>
-        <p class="login-error" id="loginError"></p>
-        <div class="step2-links">
-          <button class="btn-text" id="backToList">← Back to list</button>
-          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
         </div>
       </div>
 

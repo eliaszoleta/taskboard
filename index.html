@@ -9,14 +9,14 @@
   <meta name="description" content="Create a free kanban board in seconds — no account, no sign-up, no credit card. Organize personal tasks by status and priority, set due dates, and stay on top of your work. 100% free and private.">
   <meta name="keywords" content="free kanban board no sign up, free task board online, free to-do list no registration, personal task manager free, free task tracker, kanban board free, online task board no account, free private task manager">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://eliaszoleta.github.io/taskboard/">
+  <link rel="canonical" href="https://achieverboard.com/">
 
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="AchieverBoard">
   <meta property="og:title" content="Free Kanban Board Online — No Sign-Up Required | AchieverBoard">
   <meta property="og:description" content="Create a free kanban board instantly — no account needed. Manage tasks, set due dates, attach files, and stay organized. 100% free forever.">
-  <meta property="og:url" content="https://eliaszoleta.github.io/taskboard/">
+  <meta property="og:url" content="https://achieverboard.com/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
@@ -31,7 +31,7 @@
     "name": "AchieverBoard — Free Kanban Board",
     "applicationCategory": "ProductivityApplication",
     "operatingSystem": "Web",
-    "url": "https://eliaszoleta.github.io/taskboard/",
+    "url": "https://achieverboard.com/",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -119,6 +119,7 @@
             <span class="space-display-name" id="spaceNameDisplay"></span>
           </div>
           <button class="btn-text" id="changeSpaceBtn" style="display:none">Exit</button>
+          <button class="btn-text" id="deleteSpaceBtn" style="display:none;color:var(--danger,#dc2626)">Delete Board</button>
 
           <button class="btn-primary" id="addTaskBtn">+ New Task</button>
         </div>
@@ -367,6 +368,21 @@
           <input type="text" id="commentInput" placeholder="Add a note…">
           <button class="btn-primary" id="postCommentBtn">Post</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Delete Board Confirmation ── -->
+  <div class="modal-overlay" id="deleteSpaceOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Board</h2>
+        <button class="btn-close" id="deleteSpaceClose">&times;</button>
+      </div>
+      <p class="delete-confirm-body">Delete "<strong id="deleteSpaceName"></strong>" and all its tasks? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="deleteSpaceCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="deleteSpaceOk">Delete Board</button>
       </div>
     </div>
   </div>

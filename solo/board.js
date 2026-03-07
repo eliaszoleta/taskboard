@@ -197,6 +197,7 @@ function enterBoard() {
   nameEl.textContent = currentSpace.name;
   document.getElementById('spaceDisplay').classList.add('visible');
   document.getElementById('changeSpaceBtn').style.display = '';
+  document.getElementById('deleteSpaceBtn').style.display = '';
   subscribeToSpace();
 }
 
@@ -1046,10 +1047,51 @@ document.getElementById('changeSpaceBtn').addEventListener('click', () => {
     knownNotifIds = null;
     document.getElementById('spaceDisplay').classList.remove('visible');
     document.getElementById('changeSpaceBtn').style.display = 'none';
+    document.getElementById('deleteSpaceBtn').style.display = 'none';
     document.getElementById('notifBadge').classList.remove('visible');
     document.getElementById('notifList').innerHTML = '';
     renderBoard();
   }, 1800);
+});
+
+// ─── DELETE BOARD ─────────────────────────────────────────────────────────────
+document.getElementById('deleteSpaceBtn').addEventListener('click', () => {
+  if (!currentSpace) return;
+  document.getElementById('deleteSpaceName').textContent = currentSpace.name;
+  document.getElementById('deleteSpaceOverlay').classList.add('open');
+});
+
+function closeDeleteSpaceOverlay() {
+  document.getElementById('deleteSpaceOverlay').classList.remove('open');
+}
+
+document.getElementById('deleteSpaceClose').addEventListener('click', closeDeleteSpaceOverlay);
+document.getElementById('deleteSpaceCancel').addEventListener('click', closeDeleteSpaceOverlay);
+document.getElementById('deleteSpaceOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDeleteSpaceOverlay();
+});
+
+document.getElementById('deleteSpaceOk').addEventListener('click', async () => {
+  if (!currentSpace) return;
+  const key = currentSpace.key;
+  // Unsubscribe all listeners before deleting
+  if (tasksUnsub)          { tasksUnsub();          tasksUnsub = null; }
+  if (commentsGlobalUnsub) { commentsGlobalUnsub();  commentsGlobalUnsub = null; }
+  if (notifUnsub)          { notifUnsub();           notifUnsub = null; }
+  closeDeleteSpaceOverlay();
+  await remove(ref(db, `spaces/${key}`));
+  localStorage.removeItem('tb-space');
+  currentSpace = null;
+  tasks = {};
+  allNotifications = {};
+  knownNotifIds = null;
+  document.getElementById('spaceDisplay').classList.remove('visible');
+  document.getElementById('changeSpaceBtn').style.display = 'none';
+  document.getElementById('deleteSpaceBtn').style.display = 'none';
+  document.getElementById('notifBadge').classList.remove('visible');
+  document.getElementById('notifList').innerHTML = '';
+  renderBoard();
+  showSpaceOverlay();
 });
 
 // ─── SPACE OVERLAY CLOSE ─────────────────────────────────────────────────────

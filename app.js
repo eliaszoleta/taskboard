@@ -40,6 +40,7 @@ const ICONS = {
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let currentUser        = null;   // { id, name }
+let pendingAfterLogin  = null;   // fn to call once user logs in
 let users              = {};     // { userId: { name, passwordHash?, photoURL?, email?, createdAt } }
 let tasks              = {};     // { taskId: { ...fields } }
 let _resolveTasksLoaded;
@@ -207,7 +208,6 @@ function showUserOverlay() {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = currentUser ? '' : 'none';
   showStep1();
-  renderUserList();
 }
 
 function hideUserOverlay() {
@@ -219,14 +219,21 @@ function hideUserOverlay() {
   setupNotifListener();
   renderNotifSidebar();
   unlockAudioContext();
+  if (pendingAfterLogin) {
+    const fn = pendingAfterLogin;
+    pendingAfterLogin = null;
+    fn();
+  }
 }
 
 // ── Step navigation ──
 function showStep1() {
-  ['userStep1','userStep2','userStep3','userStep4'].forEach(id => {
+  ['userStep1','userStep3','userStep4'].forEach(id => {
     document.getElementById(id).style.display = id === 'userStep1' ? '' : 'none';
   });
   pendingLoginUid = null;
+  document.getElementById('loginNameInput').value  = '';
+  document.getElementById('loginPassword').value   = '';
   document.getElementById('newUserName').value     = '';
   document.getElementById('newUserEmail').value    = '';
   document.getElementById('newUserPassword').value = '';
@@ -351,17 +358,22 @@ async function handleUserChipClick(uid) {
 }
 
 async function attemptLogin() {
-  const uid = pendingLoginUid;
-  const u   = users[uid];
-  if (!uid || !u) return;
-  const pwd = document.getElementById('loginPassword').value;
-  if (!pwd) { document.getElementById('loginError').textContent = 'Please enter your password.'; return; }
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  const name = document.getElementById('loginNameInput').value.trim();
+  const pwd  = document.getElementById('loginPassword').value;
+  if (!name) { errEl.textContent = 'Please enter your account name.'; return; }
+  const found = Object.entries(users).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
+  if (!found) { errEl.textContent = 'Account not found. Check your name or create a new account below.'; return; }
+  const [uid, u] = found;
+  if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
   const hash = await hashPassword(pwd);
   if (hash !== u.passwordHash) {
-    document.getElementById('loginError').textContent = 'Incorrect password. Try again.';
+    errEl.textContent = 'Incorrect password. Try again.';
     document.getElementById('loginPassword').select();
     return;
   }
+  pendingLoginUid = uid;
   saveCurrentUser({ id: uid, name: u.name });
   hideUserOverlay();
 }
@@ -396,9 +408,9 @@ async function joinAs(name, email, password) {
 // ── Event wiring for user overlay ──
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
-document.getElementById('backToList').addEventListener('click', showStep1);
+document.getElementById('loginNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
 document.getElementById('forgotPwdBtn').addEventListener('click', showStep3);
-document.getElementById('backToStep2').addEventListener('click', () => showStep2(pendingLoginUid));
+document.getElementById('backToStep2').addEventListener('click', showStep1);
 document.getElementById('forgotVerifyBtn').addEventListener('click', handleForgotVerify);
 document.getElementById('forgotEmail').addEventListener('keydown', e => { if (e.key === 'Enter') handleForgotVerify(); });
 document.getElementById('resetPasswordBtn').addEventListener('click', handleResetPassword);
@@ -430,7 +442,6 @@ document.getElementById('userOverlayClose').addEventListener('click', hideUserOv
 // ─── USERS LISTENER ───────────────────────────────────────────────────────────
 onValue(ref(db, 'users'), snap => {
   users = snap.val() || {};
-  renderUserList();
   populateAssigneeDropdown();
   populateUserFilter();
   renderNotifSidebar();
@@ -1511,7 +1522,14 @@ document.getElementById('filterBarClear').addEventListener('click', () => {
   renderBoard();
 });
 
-document.getElementById('addTaskBtn').addEventListener('click', () => openNew());
+document.getElementById('addTaskBtn').addEventListener('click', () => {
+  if (!currentUser) {
+    pendingAfterLogin = () => openNew();
+    showUserOverlay();
+    return;
+  }
+  openNew();
+});
 document.getElementById('closeModal').addEventListener('click', closeModal);
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
@@ -1547,6 +1565,4 @@ if (currentUser) {
   updateHeaderUser();
   currentUserFilter = currentUser.id;
   setupNotifListener();
-} else {
-  showUserOverlay();
 }
