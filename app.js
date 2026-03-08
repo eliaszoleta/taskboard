@@ -546,9 +546,11 @@ document.getElementById('resetPasswordBtn').addEventListener('click', handleRese
 document.getElementById('resetPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('resetConfirmPassword').focus(); });
 document.getElementById('resetConfirmPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleResetPassword(); });
 document.getElementById('changeUserBtn').addEventListener('click', logout);
-document.getElementById('userOverlayClose').addEventListener('click', hideUserOverlay);
+document.getElementById('userOverlayClose').addEventListener('click', () => {
+  pendingAfterLogin = null;
+  hideUserOverlay();
+});
 document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
-  pendingAfterLogin = () => openNew();
   showUserOverlay();
 });
 
