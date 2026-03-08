@@ -259,9 +259,12 @@ h1 {
   flex-shrink: 0;
   display: block;
 }
+.logo-name {
+  color: #1e1b4b;
+}
 .logo-sub {
   font-weight: 600;
-  color: #818cf8;
+  color: #7c3aed;
   letter-spacing: -.01em;
 }
 .header-right {
