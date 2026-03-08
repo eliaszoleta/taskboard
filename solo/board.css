@@ -71,6 +71,9 @@ body {
 }
 
 .space-card-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 1.8rem;
   font-weight: 800;
   color: var(--primary);
@@ -1210,7 +1213,7 @@ h1 {
 .site-footer-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .site-footer-brand-text {
   display: flex;
@@ -1220,14 +1223,14 @@ h1 {
 }
 .site-footer-brand-name {
   font-weight: 800;
-  font-size: .92rem;
+  font-size: 1.1rem;
   color: #fff;
   letter-spacing: -.02em;
 }
 .site-footer-brand-sub {
-  font-size: .48rem;
+  font-size: .5rem;
   font-weight: 700;
-  color: #64748b;
+  color: #94a3b8;
   letter-spacing: .14em;
   text-transform: uppercase;
 }

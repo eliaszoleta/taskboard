@@ -51,11 +51,29 @@
       box-shadow: 0 1px 3px rgba(0,0,0,.06);
     }
     .header-logo {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--primary);
-      letter-spacing: -.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       text-decoration: none;
+    }
+    .header-logo-wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+      gap: 3px;
+    }
+    .header-logo-name {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -.02em;
+    }
+    .header-logo-sub {
+      font-size: .5rem;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: .14em;
+      text-transform: uppercase;
     }
     nav.header-nav { display: flex; gap: 20px; align-items: center; }
     nav.header-nav a {
@@ -213,7 +231,16 @@
 <body>
 
   <header>
-    <a class="header-logo" href="/achieverboard/">AchieverBoard</a>
+    <a class="header-logo" href="/achieverboard/">
+  <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="36" height="36" rx="9" fill="#4f6ef5"/>
+    <path d="M10 18.5L15.5 24L26 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span class="header-logo-wordmark">
+    <span class="header-logo-name">Achiever</span>
+    <span class="header-logo-sub">Board</span>
+  </span>
+</a>
     <nav class="header-nav">
       <a href="/achieverboard/about.html">About</a>
       <a href="/achieverboard/getting-started.html" class="active">Docs</a>
