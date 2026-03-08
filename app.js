@@ -611,11 +611,17 @@ function stopWorkspaceListeners() {
 
 // ─── HEADER USER DISPLAY ──────────────────────────────────────────────────────
 function updateHeaderUser() {
+  const logoutBtn     = document.getElementById('changeUserBtn');
+  const currentUserEl = document.getElementById('currentUserBtn');
   if (!currentUser) {
     document.getElementById('userNameDisplay').textContent = '';
     document.getElementById('userAvatar').innerHTML = '';
+    if (logoutBtn)     logoutBtn.style.display     = 'none';
+    if (currentUserEl) currentUserEl.style.display = 'none';
     return;
   }
+  if (logoutBtn)     logoutBtn.style.display     = '';
+  if (currentUserEl) currentUserEl.style.display = '';
   document.getElementById('userNameDisplay').textContent = currentUser.name;
   const u  = users[currentUser.id];
   const el = document.getElementById('userAvatar');
