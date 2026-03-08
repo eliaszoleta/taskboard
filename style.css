@@ -1757,10 +1757,28 @@ h1 {
   gap: 12px;
 }
 .site-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.site-footer-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 3px;
+}
+.site-footer-brand-name {
   font-weight: 800;
-  font-size: .95rem;
+  font-size: .92rem;
   color: #fff;
   letter-spacing: -.02em;
+}
+.site-footer-brand-sub {
+  font-size: .48rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: .14em;
+  text-transform: uppercase;
 }
 .site-footer-links {
   display: flex;
