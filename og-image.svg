@@ -15,7 +15,7 @@
   <text x="212" y="152" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" fill="#1e293b" letter-spacing="-1">Achiever</text>
   <text x="212" y="175" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#94a3b8" letter-spacing="5" text-transform="uppercase">BOARD</text>
   <!-- Tagline -->
-  <text x="120" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-2">Free Kanban Board Online</text>
+  <text x="120" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#1e293b" letter-spacing="-2">Free Task Management Board</text>
   <text x="120" y="338" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#4f6ef5" letter-spacing="-2">No Sign-Up Required</text>
   <!-- Subtitle -->
   <text x="120" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#64748b">Organize tasks instantly — no account, no credit card, 100% free.</text>
