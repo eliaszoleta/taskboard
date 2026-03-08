@@ -228,6 +228,17 @@ function clearCurrentUser() {
   localStorage.removeItem('achieverboard-ws-user');
 }
 
+function logout() {
+  closeProfile();
+  stopWorkspaceListeners();
+  clearCurrentUser();
+  const guestBanner  = document.getElementById('guestBanner');
+  const boardWrapper = document.querySelector('.board-wrapper');
+  if (guestBanner)  guestBanner.style.display  = '';
+  if (boardWrapper) boardWrapper.style.display = 'none';
+  updateHeaderUser();
+}
+
 // ─── OVERLAY MANAGEMENT ───────────────────────────────────────────────────────
 function setActiveStep(activeId) {
   ['stepWorkspace','stepLogin','stepCreate','stepForgot','stepReset'].forEach(id => {
@@ -238,7 +249,7 @@ function setActiveStep(activeId) {
 
 function showUserOverlay() {
   document.getElementById('userOverlay').classList.add('open');
-  document.getElementById('userOverlayClose').style.display = currentUser ? '' : 'none';
+  document.getElementById('userOverlayClose').style.display = '';
   showStepWorkspace();
 }
 
@@ -288,7 +299,7 @@ function showStepLogin(wsId, wsDisplayName) {
 function showStepCreate(wsId, wsDisplayName) {
   pendingWorkspaceId = wsId;
   const sub = document.getElementById('createWsSub');
-  if (sub) sub.textContent = `Create workspace "${wsDisplayName}"`;
+  if (sub) sub.textContent = `Create teamboard "${wsDisplayName}"`;
   setActiveStep('stepCreate');
   document.getElementById('adminName').value            = '';
   document.getElementById('adminEmail').value           = '';
@@ -386,14 +397,14 @@ async function createWorkspace() {
     // Guard against race condition
     const existing = await get(ref(db, `workspaces/${pendingWorkspaceId}/meta`));
     if (existing.exists()) {
-      errEl.textContent = 'This workspace was just created by someone else. Click "← Back" and sign in.';
+      errEl.textContent = 'This teamboard was just created by someone else. Click "← Back" and sign in.';
       return;
     }
 
     const hash    = await hashPassword(adminPwd);
     const now     = Date.now();
     const wsName  = document.getElementById('createWsSub').textContent
-      .replace(/^Create workspace "/, '').replace(/"$/, '');
+      .replace(/^Create teamboard "/, '').replace(/"$/, '');
 
     // Create workspace meta (without adminId first)
     await set(ref(db, `workspaces/${pendingWorkspaceId}/meta`), {
@@ -1420,6 +1431,7 @@ function closeProfile() {
 
 document.getElementById('closeProfile').addEventListener('click', closeProfile);
 document.getElementById('profileOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeProfile(); });
+document.getElementById('logoutBtn').addEventListener('click', logout);
 
 document.getElementById('profilePhotoEditBtn').addEventListener('click', () => {
   document.getElementById('profilePhotoInput').click();

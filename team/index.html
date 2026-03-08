@@ -64,12 +64,12 @@
   <!-- ── User Selection Overlay ── -->
   <div class="user-overlay" id="userOverlay">
     <div class="user-card">
-      <button class="user-overlay-close" id="userOverlayClose" title="Cancel" style="display:none">✕</button>
+      <button class="user-overlay-close" id="userOverlayClose" title="Close">✕</button>
 
       <!-- Step: Enter workspace name -->
       <div id="stepWorkspace">
         <div class="user-card-logo">AchieverBoard</div>
-        <p class="user-card-sub">Enter your workspace name to get started</p>
+        <p class="user-card-sub">Sign in to your existing teamboard, or create a new one</p>
         <div class="user-join-form">
           <input type="text" id="wsNameInput" placeholder="Workspace name…" maxlength="50" autocomplete="off">
           <button class="btn-primary" id="wsContinueBtn">Continue →</button>
@@ -97,8 +97,8 @@
 
       <!-- Step: Create new workspace -->
       <div id="stepCreate" style="display:none">
-        <div class="user-card-logo">Create Workspace</div>
-        <p class="user-card-sub" id="createWsSub">Set up your team workspace</p>
+        <div class="user-card-logo">Create Teamboard</div>
+        <p class="user-card-sub" id="createWsSub">Set up your team teamboard</p>
         <div class="user-join-form">
           <input type="text"     id="adminName"            placeholder="Your name (admin)…"         maxlength="30">
           <input type="email"    id="adminEmail"           placeholder="Email for password recovery…" maxlength="150">
@@ -114,7 +114,7 @@
             <option value="20">20 users</option>
             <option value="0">Unlimited</option>
           </select>
-          <button class="btn-primary" id="createWsBtn">Create Workspace</button>
+          <button class="btn-primary" id="createWsBtn">Create Teamboard</button>
         </div>
         <p class="login-error" id="createError"></p>
         <div style="text-align:center;margin-top:8px">
@@ -200,6 +200,9 @@
         <div class="modal-actions profile-actions">
           <button class="btn-danger" id="deleteAccountBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
+          </button>
+          <button class="btn-secondary" id="logoutBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log Out
           </button>
           <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
         </div>
