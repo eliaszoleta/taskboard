@@ -1,0 +1,31 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#f0f2f5"/>
+  <!-- Card -->
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="#ffffff" filter="url(#shadow)"/>
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="24" flood-color="#0000001a"/>
+    </filter>
+  </defs>
+  <!-- Logo icon -->
+  <rect x="120" y="120" width="72" height="72" rx="18" fill="#4f6ef5"/>
+  <path d="M136 157L149 170L168 144" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark -->
+  <text x="212" y="152" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" fill="#1e293b" letter-spacing="-1">Achiever</text>
+  <text x="212" y="175" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#94a3b8" letter-spacing="5" text-transform="uppercase">BOARD</text>
+  <!-- Tagline -->
+  <text x="120" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-2">Free Kanban Board Online</text>
+  <text x="120" y="338" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#4f6ef5" letter-spacing="-2">No Sign-Up Required</text>
+  <!-- Subtitle -->
+  <text x="120" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#64748b">Organize tasks instantly — no account, no credit card, 100% free.</text>
+  <!-- Badges -->
+  <rect x="120" y="460" width="200" height="44" rx="22" fill="#ede9fe"/>
+  <text x="220" y="488" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#4f46e5">✓ Always Free</text>
+  <rect x="338" y="460" width="220" height="44" rx="22" fill="#ede9fe"/>
+  <text x="448" y="488" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#4f46e5">✓ No Account</text>
+  <rect x="576" y="460" width="220" height="44" rx="22" fill="#ede9fe"/>
+  <text x="686" y="488" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#4f46e5">✓ Cloud Saved</text>
+  <!-- URL -->
+  <text x="1080" y="548" text-anchor="end" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8">achieverboard.com</text>
+</svg>
