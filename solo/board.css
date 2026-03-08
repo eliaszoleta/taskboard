@@ -187,8 +187,9 @@ h1 {
   gap: 9px;
 }
 .logo-icon { flex-shrink: 0; display: block; }
-.logo-name { color: #1e1b4b; }
-.logo-sub  { font-weight: 600; color: #7c3aed; letter-spacing: -.01em; }
+.logo-wordmark { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+.logo-name { font-size: 1.15rem; font-weight: 800; color: #1e293b; letter-spacing: -.02em; line-height: 1; }
+.logo-sub  { font-size: .52rem; font-weight: 700; color: #94a3b8; letter-spacing: .14em; text-transform: uppercase; line-height: 1; }
 .header-right {
   display: flex;
   align-items: center;
