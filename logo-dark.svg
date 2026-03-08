@@ -1,0 +1,30 @@
+<svg width="280" height="64" viewBox="0 0 280 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background for preview -->
+  <rect width="280" height="64" rx="10" fill="#0f0f1a"/>
+
+  <!-- Icon -->
+  <rect x="8" y="4" width="56" height="56" rx="14" fill="url(#iconGrad)"/>
+  <rect x="8" y="4" width="56" height="28" rx="14" fill="white" opacity="0.07"/>
+
+  <rect x="17" y="38" width="10" height="14" rx="3" fill="white" opacity="0.4"/>
+  <rect x="31" y="28" width="10" height="24" rx="3" fill="white" opacity="0.7"/>
+  <rect x="45" y="17" width="10" height="35" rx="3" fill="white"/>
+  <path d="M50 8 L51.1 11.4 L54.5 11.4 L51.8 13.5 L52.8 17 L50 15 L47.2 17 L48.2 13.5 L45.5 11.4 L48.9 11.4 Z" fill="white" opacity="0.95" filter="url(#glow)"/>
+
+  <!-- Wordmark (light version) -->
+  <text font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="-0.5">
+    <tspan x="80" y="36" fill="white">Achiever</tspan><tspan fill="#a78bfa">Board</tspan>
+  </text>
+  <text x="80" y="52" font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" font-weight="400" fill="#6b7280" letter-spacing="0.4">Track. Compete. Achieve.</text>
+</svg>
