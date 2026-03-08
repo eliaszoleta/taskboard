@@ -281,8 +281,12 @@ function showStepWorkspace() {
   loginWorkspaceUsers = {};
   const inp = document.getElementById('wsNameInput');
   if (inp) { inp.value = ''; inp.focus(); }
+  const inp2 = document.getElementById('wsCreateNameInput');
+  if (inp2) inp2.value = '';
   const err = document.getElementById('wsError');
   if (err) err.textContent = '';
+  const err2 = document.getElementById('wsCreateError');
+  if (err2) err2.textContent = '';
 }
 
 function showStepLogin(wsId, wsDisplayName) {
@@ -330,15 +334,16 @@ function showStepForgot() {
 }
 
 // ─── WORKSPACE LOOKUP ─────────────────────────────────────────────────────────
+// Sign In path: look up existing teamboard → go to login step
 async function handleWsContinue() {
   const name  = document.getElementById('wsNameInput').value.trim();
   const errEl = document.getElementById('wsError');
   errEl.textContent = '';
-  if (!name) { errEl.textContent = 'Please enter your workspace name.'; return; }
+  if (!name) { errEl.textContent = 'Please enter your teamboard name.'; return; }
   const wsKey = toWorkspaceKey(name);
-  if (!wsKey) { errEl.textContent = 'Invalid workspace name.'; return; }
+  if (!wsKey) { errEl.textContent = 'Invalid teamboard name.'; return; }
 
-  errEl.textContent = 'Looking up workspace…';
+  errEl.textContent = 'Looking up teamboard…';
   try {
     const snap = await get(ref(db, `workspaces/${wsKey}/meta`));
     if (snap.exists()) {
@@ -347,9 +352,32 @@ async function handleWsContinue() {
       errEl.textContent  = '';
       showStepLogin(wsKey, snap.val().name || name);
     } else {
-      errEl.textContent = '';
-      showStepCreate(wsKey, name);
+      errEl.textContent = 'Teamboard not found. Check the name or create a new one below.';
     }
+  } catch (e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    console.error(e);
+  }
+}
+
+// Create path: go directly to create step with the chosen name
+async function handleWsCreate() {
+  const name  = document.getElementById('wsCreateNameInput').value.trim();
+  const errEl = document.getElementById('wsCreateError');
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Please enter a name for your teamboard.'; return; }
+  const wsKey = toWorkspaceKey(name);
+  if (!wsKey) { errEl.textContent = 'Invalid teamboard name.'; return; }
+
+  errEl.textContent = 'Checking availability…';
+  try {
+    const snap = await get(ref(db, `workspaces/${wsKey}/meta`));
+    if (snap.exists()) {
+      errEl.textContent = 'A teamboard with this name already exists. Sign in above instead.';
+      return;
+    }
+    errEl.textContent = '';
+    showStepCreate(wsKey, name);
   } catch (e) {
     errEl.textContent = 'Connection error. Please try again.';
     console.error(e);
@@ -479,6 +507,8 @@ async function handleResetPassword() {
 // ─── EVENT WIRING: OVERLAY ────────────────────────────────────────────────────
 document.getElementById('wsContinueBtn').addEventListener('click', handleWsContinue);
 document.getElementById('wsNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsContinue(); });
+document.getElementById('wsCreateBtn').addEventListener('click', handleWsCreate);
+document.getElementById('wsCreateNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsCreate(); });
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 document.getElementById('loginNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });

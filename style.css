@@ -66,6 +66,64 @@ body {
 }
 .user-overlay-close:hover { background: #f1f5f9; color: var(--text); }
 
+/* ─── Workspace overlay: two-section layout ─── */
+.ws-section-label {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  text-align: left;
+}
+.ws-section-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.ws-section-form input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .9rem;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .18s, box-shadow .18s;
+}
+.ws-section-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+}
+.ws-section-form .btn-primary,
+.ws-section-form .btn-secondary { width: 100%; padding: 11px; }
+.ws-section-err {
+  font-size: .8rem;
+  color: var(--danger, #dc2626);
+  min-height: 1.1em;
+  text-align: left;
+}
+.ws-divider {
+  color: var(--muted);
+  font-size: .8rem;
+  margin: 18px 0;
+  position: relative;
+  text-align: center;
+}
+.ws-divider::before,
+.ws-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 44%;
+  height: 1px;
+  background: var(--border);
+}
+.ws-divider::before { left: 0; }
+.ws-divider::after  { right: 0; }
+
 .user-card-logo {
   font-size: 1.8rem;
   font-weight: 800;

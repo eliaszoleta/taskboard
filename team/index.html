@@ -69,12 +69,25 @@
       <!-- Step: Enter workspace name -->
       <div id="stepWorkspace">
         <div class="user-card-logo">AchieverBoard</div>
-        <p class="user-card-sub">Sign in to your existing teamboard, or create a new one</p>
-        <div class="user-join-form">
-          <input type="text" id="wsNameInput" placeholder="Workspace name…" maxlength="50" autocomplete="off">
-          <button class="btn-primary" id="wsContinueBtn">Continue →</button>
+        <p class="user-card-sub">Organize your team — free &amp; private.</p>
+
+        <!-- Sign in to existing teamboard -->
+        <p class="ws-section-label">Sign In to Your Teamboard</p>
+        <div class="ws-section-form" id="signInSection">
+          <input type="text" id="wsNameInput" placeholder="Your teamboard name…" maxlength="50" autocomplete="off">
+          <button class="btn-primary" id="wsContinueBtn">Sign In →</button>
+          <p class="ws-section-err" id="wsError"></p>
         </div>
-        <p class="login-error" id="wsError"></p>
+
+        <div class="ws-divider">or</div>
+
+        <!-- Create new teamboard -->
+        <p class="ws-section-label">New to AchieverBoard?</p>
+        <div class="ws-section-form" id="createSection">
+          <input type="text" id="wsCreateNameInput" placeholder="Choose a teamboard name…" maxlength="50" autocomplete="off">
+          <button class="btn-secondary" id="wsCreateBtn">Create Teamboard</button>
+          <p class="ws-section-err" id="wsCreateError"></p>
+        </div>
       </div>
 
       <!-- Step: Sign in to workspace -->
