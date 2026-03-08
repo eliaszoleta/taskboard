@@ -93,15 +93,17 @@
       <!-- Step: Sign in to workspace -->
       <div id="stepLogin" style="display:none">
         <div class="user-card-logo" id="loginWsName"></div>
-        <p class="user-card-sub">Sign in to your account</p>
-        <div class="user-join-form">
-          <input type="text"     id="loginNameInput" placeholder="Your account name…"   maxlength="30"  autocomplete="username">
-          <input type="password" id="loginPassword"  placeholder="Password…"            maxlength="100" autocomplete="current-password">
-          <button class="btn-primary" id="loginBtn">Sign In</button>
+        <p class="user-card-sub">Who are you?</p>
+        <div class="user-list" id="loginUserList"></div>
+        <div id="loginPasswordSection" style="display:none">
+          <div class="user-join-form">
+            <input type="password" id="loginPassword" placeholder="Password…" maxlength="100" autocomplete="current-password">
+            <button class="btn-primary" id="loginBtn">Login</button>
+          </div>
         </div>
         <p class="login-error" id="loginError"></p>
         <div style="text-align:center;margin-top:4px">
-          <button class="btn-text" id="forgotPwdBtn">Forgot password?</button>
+          <button class="btn-text" id="forgotPwdBtn" style="display:none">Forgot password?</button>
         </div>
         <div style="text-align:center;margin-top:8px">
           <button class="btn-text" id="backToWorkspaceBtn">← Change taskboard</button>
@@ -211,11 +213,8 @@
         </div>
         <p class="profile-error" id="profileError"></p>
         <div class="modal-actions profile-actions">
-          <button class="btn-danger" id="deleteAccountBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
-          </button>
-          <button class="btn-secondary" id="logoutBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log Out
+          <button class="btn-danger-sm" id="deleteAccountBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
           </button>
           <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
         </div>
@@ -250,7 +249,10 @@
             <span id="userAvatar"></span>
             <span class="user-name-display" id="userNameDisplay"></span>
           </div>
-          <button class="btn-text" id="changeUserBtn">Switch</button>
+          <button class="btn-logout-header" id="changeUserBtn" title="Log out">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log out
+          </button>
 
           <button class="btn-primary" id="addTaskBtn">+ New Task</button>
         </div>

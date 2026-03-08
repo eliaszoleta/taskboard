@@ -293,11 +293,39 @@ function showStepLogin(wsId, wsDisplayName) {
   pendingWorkspaceId = wsId;
   const nameEl = document.getElementById('loginWsName');
   if (nameEl) nameEl.textContent = wsDisplayName;
-  setActiveStep('stepLogin');
-  document.getElementById('loginNameInput').value  = '';
-  document.getElementById('loginPassword').value   = '';
+
+  // Build user chip list
+  const list = document.getElementById('loginUserList');
+  list.innerHTML = '';
+  pendingLoginUid = null;
+  document.getElementById('loginPasswordSection').style.display = 'none';
+  document.getElementById('forgotPwdBtn').style.display = 'none';
+  document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').textContent = '';
-  document.getElementById('loginNameInput').focus();
+
+  Object.entries(loginWorkspaceUsers)
+    .sort(([,a],[,b]) => a.name.localeCompare(b.name))
+    .forEach(([uid, u]) => {
+      const chip = document.createElement('button');
+      chip.className = 'user-chip';
+      chip.type = 'button';
+      chip.innerHTML = `${avatarHtml(u.name)}<span class="chip-name">${escHtml(u.name)}</span>` +
+        (u.role === 'admin' ? `<span class="admin-tag">ADMIN</span>` : '');
+      chip.addEventListener('click', () => {
+        pendingLoginUid = uid;
+        document.getElementById('loginPasswordSection').style.display = '';
+        document.getElementById('forgotPwdBtn').style.display = '';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginPassword').focus();
+        // highlight selected chip
+        list.querySelectorAll('.user-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      });
+      list.appendChild(chip);
+    });
+
+  setActiveStep('stepLogin');
 }
 
 function showStepCreate(wsId, wsDisplayName) {
@@ -388,12 +416,9 @@ async function handleWsCreate() {
 async function attemptLogin() {
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
-  const name = document.getElementById('loginNameInput').value.trim();
-  const pwd  = document.getElementById('loginPassword').value;
-  if (!name) { errEl.textContent = 'Please enter your account name.'; return; }
-  const found = Object.entries(loginWorkspaceUsers).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
-  if (!found) { errEl.textContent = 'Account not found. Check your name or contact your workspace admin.'; return; }
-  const [uid, u] = found;
+  if (!pendingLoginUid) { errEl.textContent = 'Please select who you are first.'; return; }
+  const u   = loginWorkspaceUsers[pendingLoginUid];
+  const pwd = document.getElementById('loginPassword').value;
   if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
   const hash = await hashPassword(pwd);
   if (hash !== u.passwordHash) {
@@ -401,7 +426,7 @@ async function attemptLogin() {
     document.getElementById('loginPassword').select();
     return;
   }
-  saveCurrentUser({ id: uid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
+  saveCurrentUser({ id: pendingLoginUid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
   startWorkspaceListeners();
   hideUserOverlay();
 }
@@ -459,12 +484,8 @@ async function createWorkspace() {
 
 // ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
 function handleForgotPwdClick() {
-  const name  = document.getElementById('loginNameInput').value.trim();
   const errEl = document.getElementById('loginError');
-  if (!name) { errEl.textContent = 'Enter your account name first.'; return; }
-  const found = Object.entries(loginWorkspaceUsers).find(([, u]) => u.name.toLowerCase() === name.toLowerCase());
-  if (!found) { errEl.textContent = 'Account not found.'; return; }
-  pendingLoginUid = found[0];
+  if (!pendingLoginUid) { errEl.textContent = 'Select your account first.'; return; }
   showStepForgot();
 }
 
@@ -511,7 +532,6 @@ document.getElementById('wsCreateBtn').addEventListener('click', handleWsCreate)
 document.getElementById('wsCreateNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsCreate(); });
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
-document.getElementById('loginNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
 document.getElementById('forgotPwdBtn').addEventListener('click', handleForgotPwdClick);
 document.getElementById('backToWorkspaceBtn').addEventListener('click', showStepWorkspace);
 document.getElementById('backToWorkspaceFromCreate').addEventListener('click', showStepWorkspace);
@@ -525,7 +545,7 @@ document.getElementById('forgotEmail').addEventListener('keydown', e => { if (e.
 document.getElementById('resetPasswordBtn').addEventListener('click', handleResetPassword);
 document.getElementById('resetPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('resetConfirmPassword').focus(); });
 document.getElementById('resetConfirmPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleResetPassword(); });
-document.getElementById('changeUserBtn').addEventListener('click', showUserOverlay);
+document.getElementById('changeUserBtn').addEventListener('click', logout);
 document.getElementById('userOverlayClose').addEventListener('click', hideUserOverlay);
 document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
   pendingAfterLogin = () => openNew();
@@ -1461,7 +1481,6 @@ function closeProfile() {
 
 document.getElementById('closeProfile').addEventListener('click', closeProfile);
 document.getElementById('profileOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeProfile(); });
-document.getElementById('logoutBtn').addEventListener('click', logout);
 
 document.getElementById('profilePhotoEditBtn').addEventListener('click', () => {
   document.getElementById('profilePhotoInput').click();
