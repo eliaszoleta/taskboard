@@ -251,6 +251,18 @@ h1 {
   color: var(--primary);
   letter-spacing: -.02em;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.logo-icon {
+  flex-shrink: 0;
+  display: block;
+}
+.logo-sub {
+  font-weight: 600;
+  color: #818cf8;
+  letter-spacing: -.01em;
 }
 .header-right {
   display: flex;
