@@ -888,6 +888,14 @@ h1 {
 }
 .comment-edit-actions { display: flex; gap: 7px; }
 
+/* Smaller avatars inside the detail modal */
+.detail-meta .avatar,
+.detail-meta .avatar-lg,
+.detail-meta .avatar-photo { width: 20px; height: 20px; font-size: .58rem; }
+.comment .avatar,
+.comment .avatar-lg,
+.comment .avatar-photo { width: 24px; height: 24px; font-size: .62rem; }
+
 /* ─── Date Filter Select ─── */
 .date-filter {
   padding: 8px 32px 8px 12px;
