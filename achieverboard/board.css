@@ -287,6 +287,7 @@ h1 {
   border: none;
   cursor: pointer;
   position: relative;
+  color: var(--muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -295,7 +296,7 @@ h1 {
   border-radius: 8px;
   transition: background .15s;
 }
-.notif-btn:hover { background: var(--bg); }
+.notif-btn:hover { background: var(--bg); color: var(--text); }
 .notif-btn svg { display: block; }
 .notif-badge {
   position: absolute;
@@ -1357,6 +1358,10 @@ h1 {
 [data-theme="dark"] input[type="date"],
 [data-theme="dark"] textarea { background: #0f172a; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .logo-name { color: var(--text); }
+[data-theme="dark"] .site-footer { background: #070e1a; border-top: 1px solid var(--border); }
+[data-theme="dark"] .notif-item.unread { background: rgba(99,102,241,.15); }
+[data-theme="dark"] .notif-item.unread:hover { background: rgba(99,102,241,.22); }
 
 /* Theme toggle button */
 .theme-btn {

@@ -311,12 +311,12 @@ h1 {
   border: none;
   cursor: pointer;
   position: relative;
-  font-size: 1.2rem;
+  color: var(--muted);
   padding: 6px;
   border-radius: 8px;
   transition: background .15s;
 }
-.notif-btn:hover { background: var(--bg); }
+.notif-btn:hover { background: var(--bg); color: var(--text); }
 .notif-badge {
   position: absolute;
   top: 2px; right: 2px;
@@ -1976,6 +1976,12 @@ h1 {
 [data-theme="dark"] textarea { background: #0f172a; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .user-overlay-close:hover { background: #334155; }
+[data-theme="dark"] .logo-name { color: var(--text); }
+[data-theme="dark"] .site-footer { background: #070e1a; border-top: 1px solid var(--border); }
+[data-theme="dark"] .notif-item.unread { background: rgba(99,102,241,.15); }
+[data-theme="dark"] .notif-item.unread:hover { background: rgba(99,102,241,.22); }
+[data-theme="dark"] .sidebar-notif-item.unread { background: rgba(99,102,241,.15); }
+[data-theme="dark"] .sidebar-notif-item.unread:hover { background: rgba(99,102,241,.22); }
 
 /* Theme toggle button */
 .theme-btn {
