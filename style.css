@@ -757,13 +757,16 @@ h1 {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 18px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .detail-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 3px 0;
 }
 .detail-row:last-child { border-bottom: none; }
 .detail-label {
@@ -831,7 +834,7 @@ h1 {
 .comment-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; flex-wrap: wrap; }
 .comment-meta strong { font-size: .83rem; }
 .comment-time { font-size: .7rem; color: var(--muted); }
-.comment-edited { font-size: .68rem; color: var(--muted); font-style: italic; }
+.comment-edited { font-size: .68rem; color: var(--muted); font-style: normal; }
 .comment-edit-btn {
   margin-left: auto;
   opacity: 0;
