@@ -770,10 +770,10 @@ h1 {
 }
 .detail-row:last-child { border-bottom: none; }
 .detail-label {
-  font-size: .68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0;
   color: var(--muted);
   width: 96px;
   flex-shrink: 0;
