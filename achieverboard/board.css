@@ -1326,3 +1326,54 @@ h1 {
   .seo-features h2 { font-size: 1.2rem; }
   .site-footer-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+/* ─── Dark Mode ─── */
+[data-theme="dark"] {
+  --bg:           #0f172a;
+  --white:        #1e293b;
+  --primary:      #6366f1;
+  --primary-dark: #4f46e5;
+  --text:         #f1f5f9;
+  --muted:        #94a3b8;
+  --border:       #334155;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
+  --shadow-md:    0 4px 16px rgba(0,0,0,.45), 0 2px 4px rgba(0,0,0,.25);
+  --shadow-lg:    0 24px 64px rgba(0,0,0,.55), 0 8px 24px rgba(0,0,0,.35);
+}
+[data-theme="dark"] body {
+  background: radial-gradient(ellipse at 0% 0%, rgba(99,102,241,.15) 0%, transparent 55%), var(--bg);
+}
+[data-theme="dark"] header { background: #1e293b; }
+[data-theme="dark"] .column { background: #1a2744; }
+[data-theme="dark"] .task-card { background: #1e293b; }
+[data-theme="dark"] .space-overlay { background: rgba(0,0,0,.7); }
+[data-theme="dark"] .space-card { background: #1e293b; }
+[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,.7); }
+[data-theme="dark"] .modal-card { background: #1e293b; }
+[data-theme="dark"] .notif-panel { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] .board-settings-dropdown { background: #1e293b; border-color: var(--border); }
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] textarea { background: #0f172a; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); border-color: var(--border); }
+
+/* Theme toggle button */
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.theme-btn:hover { background: var(--border); color: var(--text); }
+.theme-btn .icon-sun { display: none; }
+[data-theme="dark"] .theme-btn .icon-moon { display: none; }
+[data-theme="dark"] .theme-btn .icon-sun  { display: block; }

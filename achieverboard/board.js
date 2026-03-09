@@ -578,6 +578,13 @@ document.getElementById('boardSettingsBtn').addEventListener('click', e => {
   document.getElementById('boardSettingsDropdown').classList.toggle('open');
 });
 
+// ─── DARK MODE ────────────────────────────────────────────────────────────────
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  document.documentElement.dataset.theme = isDark ? 'light' : 'dark';
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+});
+
 // ─── RESOURCE ATTACHMENTS ─────────────────────────────────────────────────────
 function renderLinkRows() {
   const container = document.getElementById('resourceLinksContainer');

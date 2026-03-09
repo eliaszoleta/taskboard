@@ -1457,6 +1457,13 @@ document.getElementById('markAllRead').addEventListener('click', async () => {
 function closeNotifPanel() { document.getElementById('notifPanel').classList.remove('open'); }
 document.addEventListener('click', e => { if (!e.target.closest('.notif-wrapper')) closeNotifPanel(); });
 
+// ─── DARK MODE ────────────────────────────────────────────────────────────────
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  document.documentElement.dataset.theme = isDark ? 'light' : 'dark';
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+});
+
 // ─── PROFILE SETTINGS ─────────────────────────────────────────────────────────
 document.getElementById('currentUserBtn').addEventListener('click', openProfile);
 
