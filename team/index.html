@@ -163,6 +163,24 @@
         </div>
       </div>
 
+      <!-- Step: Payment (paid plans) -->
+      <div id="stepPayment" style="display:none">
+        <div class="user-card-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Secure Checkout
+        </div>
+        <p class="user-card-sub" id="paymentPlanSub"></p>
+        <div class="payment-summary" id="paymentSummary"></div>
+        <button class="btn-primary" id="payNowBtn" style="width:100%;margin-top:16px">
+          Continue to Payment →
+        </button>
+        <p class="payment-note">You'll be taken to Stripe's secure payment page. After paying, you'll return here and your workspace will be created automatically.</p>
+        <p class="login-error" id="paymentError"></p>
+        <div style="text-align:center;margin-top:8px">
+          <button class="btn-text" id="backFromPaymentBtn">← Back to setup</button>
+        </div>
+      </div>
+
       <!-- Step: Forgot password — email verification -->
       <div id="stepForgot" style="display:none">
         <div class="user-card-logo">Forgot Password</div>

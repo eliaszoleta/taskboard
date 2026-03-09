@@ -241,7 +241,7 @@ function logout() {
 
 // ─── OVERLAY MANAGEMENT ───────────────────────────────────────────────────────
 function setActiveStep(activeId) {
-  ['stepWorkspace','stepLogin','stepCreate','stepForgot','stepReset'].forEach(id => {
+  ['stepWorkspace','stepLogin','stepCreate','stepPayment','stepForgot','stepReset'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === activeId ? '' : 'none';
   });
@@ -350,6 +350,32 @@ const PLAN_INFO = {
   '10': { label: '$30/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
   '15': { label: '$50/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
   '20': { label: '$70/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
+};
+
+// ─── STRIPE PAYMENT LINKS ─────────────────────────────────────────────────────
+// HOW TO SET UP:
+//   1. Create a Stripe account at https://stripe.com
+//   2. Go to Dashboard → Payment Links → Create a link for each plan below
+//   3. Set the price for each link (e.g. $15/month recurring)
+//   4. In "After payment", set Confirmation page → Redirect to URL:
+//        https://achieverboard.com/team/?payment_ok=1&plan=PLAN_SIZE&session_id={CHECKOUT_SESSION_ID}
+//      Replace PLAN_SIZE with the actual number (5, 10, 15, or 20)
+//   5. Set Cancel URL to: https://achieverboard.com/team/?payment_cancelled=1
+//   6. Paste each link URL below, replacing the placeholder strings
+const STRIPE_LINKS = {
+  '5':  'PASTE_YOUR_STRIPE_LINK_FOR_STARTER_HERE',   // Starter  – $15/mo, up to 5 users
+  '10': 'PASTE_YOUR_STRIPE_LINK_FOR_GROWTH_HERE',    // Growth   – $30/mo, up to 10 users
+  '15': 'PASTE_YOUR_STRIPE_LINK_FOR_TEAM_HERE',      // Team     – $50/mo, up to 15 users
+  '20': 'PASTE_YOUR_STRIPE_LINK_FOR_BUSINESS_HERE',  // Business – $70/mo, up to 20 users
+};
+
+const PLAN_NAMES  = { '5': 'Starter', '10': 'Growth', '15': 'Team', '20': 'Business' };
+const PLAN_PRICES = { '5': '$15/month', '10': '$30/month', '15': '$50/month', '20': '$70/month' };
+const PLAN_FEATURES = {
+  '5':  ['Task assignment with instant notifications', 'Comments & real-time threads', 'File & link attachments', 'Due dates & overdue tracking', 'Flat rate — not per user'],
+  '10': ['Everything in Starter', 'Up to 10 team members', 'Flat rate — not per user'],
+  '15': ['Everything in Growth', 'Up to 15 team members', 'Flat rate — not per user'],
+  '20': ['Everything in Team', 'Up to 20 team members', 'Flat rate — not per user'],
 };
 function updatePlanInfo() {
   const sel  = document.getElementById('teamSizeSelect');
@@ -477,41 +503,136 @@ async function createWorkspace() {
   if (adminPwd.length < 4)    { errEl.textContent = 'Password must be at least 4 characters.';    return; }
   if (adminPwd !== confirmPwd) { errEl.textContent = 'Passwords do not match.';                   return; }
 
-  try {
-    // Guard against race condition
-    const existing = await get(ref(db, `workspaces/${pendingWorkspaceId}/meta`));
-    if (existing.exists()) {
-      errEl.textContent = 'This teamboard was just created by someone else. Click "← Back" and sign in.';
+  // ── Paid plan: gate behind Stripe payment before touching Firebase ──────────
+  if (teamSize > 2) {
+    const stripeLink = STRIPE_LINKS[String(teamSize)];
+    if (!stripeLink || stripeLink.startsWith('PASTE_YOUR')) {
+      errEl.textContent = 'Payments are not configured yet. Contact the site admin.';
       return;
     }
-
-    const hash    = await hashPassword(adminPwd);
-    const now     = Date.now();
-    const wsName  = document.getElementById('createWsSub').textContent
+    const wsName = document.getElementById('createWsSub').textContent
       .replace(/^Create teamboard "/, '').replace(/"$/, '');
+    const hash   = await hashPassword(adminPwd);
+    sessionStorage.setItem('ab_pending_ws', JSON.stringify({
+      workspaceId: pendingWorkspaceId,
+      workspaceName: wsName,
+      adminName, adminEmail, passwordHash: hash, teamSize,
+      savedAt: Date.now(),
+    }));
+    showPaymentStep(teamSize);
+    return;
+  }
 
-    // Create workspace meta (without adminId first)
-    await set(ref(db, `workspaces/${pendingWorkspaceId}/meta`), {
+  // ── Free plan (2 users): create immediately ─────────────────────────────────
+  await doCreateWorkspace({ workspaceId: pendingWorkspaceId, adminName, adminEmail,
+    passwordHash: await hashPassword(adminPwd), teamSize });
+}
+
+async function doCreateWorkspace({ workspaceId, adminName, adminEmail, passwordHash, teamSize }) {
+  const errEl = document.getElementById('createError');
+  try {
+    const existing = await get(ref(db, `workspaces/${workspaceId}/meta`));
+    if (existing.exists()) {
+      if (errEl) errEl.textContent = 'This teamboard was just created by someone else. Click "← Back" and sign in.';
+      return;
+    }
+    const now    = Date.now();
+    const wsName = document.getElementById('createWsSub')?.textContent
+      .replace(/^Create teamboard "/, '').replace(/"$/, '') || workspaceId;
+
+    await set(ref(db, `workspaces/${workspaceId}/meta`), {
       name: wsName, maxUsers: teamSize || 0, createdAt: now,
     });
 
-    // Create admin user
-    const userRef  = push(ref(db, `workspaces/${pendingWorkspaceId}/users`));
-    const adminData = { name: adminName, passwordHash: hash, role: 'admin', createdAt: now };
+    const userRef   = push(ref(db, `workspaces/${workspaceId}/users`));
+    const adminData = { name: adminName, passwordHash, role: 'admin', createdAt: now };
     if (adminEmail) adminData.email = adminEmail;
     await set(userRef, adminData);
+    await update(ref(db, `workspaces/${workspaceId}/meta`), { adminId: userRef.key });
 
-    // Store adminId in meta
-    await update(ref(db, `workspaces/${pendingWorkspaceId}/meta`), { adminId: userRef.key });
-
-    saveCurrentUser({ id: userRef.key, workspaceId: pendingWorkspaceId, name: adminName, role: 'admin' });
+    pendingWorkspaceId = workspaceId;
+    saveCurrentUser({ id: userRef.key, workspaceId, name: adminName, role: 'admin' });
     startWorkspaceListeners();
     hideUserOverlay();
   } catch (e) {
-    errEl.textContent = 'Error creating workspace. Please try again.';
+    if (errEl) errEl.textContent = 'Error creating workspace. Please try again.';
     console.error(e);
   }
 }
+
+// ─── PAYMENT STEP ─────────────────────────────────────────────────────────────
+function showPaymentStep(teamSize) {
+  const key   = String(teamSize);
+  const name  = PLAN_NAMES[key]  || 'Paid Plan';
+  const price = PLAN_PRICES[key] || '';
+  const feats = PLAN_FEATURES[key] || [];
+
+  document.getElementById('paymentPlanSub').textContent = `${name} Plan · ${price} · Up to ${teamSize} users`;
+  document.getElementById('paymentSummary').innerHTML = `
+    <ul class="payment-features-list">
+      ${feats.map(f => `<li>${escHtml(f)}</li>`).join('')}
+    </ul>`;
+  document.getElementById('paymentError').textContent = '';
+
+  document.getElementById('payNowBtn').onclick = () => {
+    const pending = JSON.parse(sessionStorage.getItem('ab_pending_ws') || '{}');
+    let url = STRIPE_LINKS[key];
+    const params = new URLSearchParams({ client_reference_id: pending.workspaceId || '' });
+    if (pending.adminEmail) params.set('prefilled_email', pending.adminEmail);
+    window.location.href = `${url}?${params.toString()}`;
+  };
+
+  setActiveStep('stepPayment');
+}
+
+// Resume workspace creation after returning from Stripe
+async function resumePendingWorkspaceCreation(pending) {
+  // Show user overlay in a "completing" state briefly
+  document.getElementById('userOverlay')?.classList.add('open');
+  document.getElementById('userOverlayClose').style.display = 'none';
+  setActiveStep('stepCreate');
+  const sub = document.getElementById('createWsSub');
+  if (sub) sub.textContent = `Create teamboard "${pending.workspaceName}"`;
+  const errEl = document.getElementById('createError');
+  if (errEl) errEl.textContent = 'Payment confirmed — creating your workspace…';
+
+  await doCreateWorkspace(pending);
+}
+
+// ─── STRIPE RETURN HANDLER ────────────────────────────────────────────────────
+async function handlePaymentReturn() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('payment_ok') === '1') {
+    const plan    = p.get('plan');
+    const pending = JSON.parse(sessionStorage.getItem('ab_pending_ws') || 'null');
+    history.replaceState({}, '', window.location.pathname);
+
+    if (pending && String(pending.teamSize) === plan && (Date.now() - pending.savedAt) < 7_200_000) {
+      sessionStorage.removeItem('ab_pending_ws');
+      await resumePendingWorkspaceCreation(pending);
+    } else {
+      sessionStorage.removeItem('ab_pending_ws');
+      setTimeout(() => {
+        showUserOverlay();
+        showToast('Payment received but setup data expired — please create your workspace again.', 5000);
+      }, 400);
+    }
+    return;
+  }
+  if (p.get('payment_cancelled') === '1') {
+    history.replaceState({}, '', window.location.pathname);
+    sessionStorage.removeItem('ab_pending_ws');
+    setTimeout(() => {
+      showUserOverlay();
+      showToast('Payment was cancelled. You can try again anytime.', 4000);
+    }, 400);
+  }
+}
+
+document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
+  sessionStorage.removeItem('ab_pending_ws');
+  setActiveStep('stepCreate');
+});
 
 // ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
 function handleForgotPwdClick() {
@@ -1945,5 +2066,6 @@ if (currentUser) {
 } else {
   if (_guestBanner)  _guestBanner.style.display  = '';
   if (_boardWrapper) _boardWrapper.style.display = 'none';
+  handlePaymentReturn(); // handles ?payment_ok=1 and ?payment_cancelled=1 from Stripe
 }
 
