@@ -647,6 +647,7 @@ function populateUserFilter() {
   if (!sel) return;
   const prev = sel.value;
   sel.innerHTML = '<option value="all">All users</option>' +
+    '<option value="unassigned">Unassigned</option>' +
     Object.entries(users)
       .sort(([,a],[,b]) => a.name.localeCompare(b.name))
       .map(([id, u]) => `<option value="${id}">${escHtml(u.name)}</option>`).join('');
@@ -663,7 +664,9 @@ function renderBoard() {
   const bar   = document.getElementById('filterBar');
   const label = document.getElementById('filterBarLabel');
   const parts = [];
-  if (currentUserFilter !== 'all') {
+  if (currentUserFilter === 'unassigned') {
+    parts.push('Unassigned tasks');
+  } else if (currentUserFilter !== 'all') {
     const u = users[currentUserFilter];
     parts.push(u ? `${u.name}'s tasks` : 'Unknown user');
   }
@@ -689,7 +692,7 @@ function renderBoard() {
       .map(([id, t]) => ({ id, ...t }))
       .filter(t => status === 'done' || !isOverdue(t.due))
       .filter(t => taskMatchesFilter(t))
-      .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
+      .filter(t => currentUserFilter === 'all' || (currentUserFilter === 'unassigned' ? !t.assignedTo : t.assignedTo === currentUserFilter))
       .filter(t => colPriorityFilter[status] === 'all' || t.priority === colPriorityFilter[status])
       .sort(byNewest);
 

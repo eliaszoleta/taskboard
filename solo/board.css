@@ -1364,6 +1364,10 @@ h1 {
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="date"],
 [data-theme="dark"] textarea { background: #0f172a; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .date-filter {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .date-filter.active { background-color: rgba(99,102,241,.18); color: #818cf8; }
 [data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .logo-name { color: var(--text); }
 [data-theme="dark"] .site-footer { background: #070e1a; border-top: 1px solid var(--border); }
