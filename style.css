@@ -8,9 +8,9 @@
   --text:         #1e293b;
   --muted:        #64748b;
   --border:       #e2e8f0;
-  --shadow-sm:    0 1px 3px rgba(0,0,0,.08);
-  --shadow-md:    0 4px 12px rgba(0,0,0,.10);
-  --shadow-lg:    0 20px 60px rgba(0,0,0,.18);
+  --shadow-sm:    0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-md:    0 4px 16px rgba(15,23,42,.10), 0 2px 4px rgba(15,23,42,.06);
+  --shadow-lg:    0 24px 64px rgba(15,23,42,.18), 0 8px 24px rgba(15,23,42,.10);
   --col-todo:     #3b82f6;
   --col-inprog:   #f59e0b;
   --col-done:     #10b981;
@@ -21,7 +21,7 @@
 
 body {
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg);
+  background: radial-gradient(ellipse at 0% 0%, rgba(99,102,241,.07) 0%, transparent 55%), var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
@@ -32,6 +32,8 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(15,23,42,.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 300;
   align-items: center;
   justify-content: center;
@@ -47,6 +49,7 @@ body {
   position: relative;
   max-width: 480px;
   box-shadow: var(--shadow-lg);
+  border-top: 3px solid var(--primary);
   text-align: center;
   animation: modalIn .2s ease;
 }
@@ -236,7 +239,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 0 var(--border), 0 4px 20px rgba(15,23,42,.05);
 }
 .header-content {
   width: 100%;
@@ -390,7 +393,7 @@ h1 {
 
 /* ─── Buttons ─── */
 .btn-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: #fff;
   border: none;
   padding: 9px 20px;
@@ -400,9 +403,15 @@ h1 {
   font-family: 'Poppins', sans-serif;
   cursor: pointer;
   white-space: nowrap;
-  transition: background .18s;
+  box-shadow: 0 2px 8px rgba(79,70,229,.28);
+  transition: background .18s, box-shadow .18s, transform .15s;
 }
-.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  box-shadow: 0 4px 14px rgba(79,70,229,.4);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(79,70,229,.3); }
 .btn-secondary {
   background: var(--bg);
   color: var(--text);
@@ -471,7 +480,7 @@ h1 {
   background: var(--white);
   border-radius: 14px;
   padding: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(15,23,42,.07), 0 0 0 1px rgba(15,23,42,.03);
   min-height: 520px;
 }
 .column-header {
@@ -486,7 +495,26 @@ h1 {
 .column-header.inprogress { border-bottom-color: var(--col-inprog); }
 .column-header.done       { border-bottom-color: var(--col-done); }
 .column-header.overdue    { border-bottom-color: var(--high); }
-#col-overdue .task-count  { background: #fee2e2; color: var(--high); }
+#col-todo .task-count        { background: rgba(59,130,246,.1);  color: var(--col-todo); }
+#col-inprogress .task-count  { background: rgba(245,158,11,.1);  color: var(--col-inprog); }
+#col-pending .task-count     { background: rgba(139,92,246,.1);  color: var(--col-pending); }
+#col-done .task-count        { background: rgba(16,185,129,.1);  color: var(--col-done); }
+#col-overdue .task-count     { background: rgba(239,68,68,.1);   color: var(--high); }
+
+/* Status-colored column titles */
+#col-todo .column-title       { color: var(--col-todo); }
+#col-inprogress .column-title { color: var(--col-inprog); }
+#col-pending .column-title    { color: var(--col-pending); }
+#col-done .column-title       { color: var(--col-done); }
+#col-overdue .column-title    { color: var(--high); }
+
+/* Left-border status accent on task cards */
+#col-todo .task-card        { border-left: 3px solid var(--col-todo); }
+#col-inprogress .task-card  { border-left: 3px solid var(--col-inprog); }
+#col-pending .task-card     { border-left: 3px solid var(--col-pending); }
+#col-done .task-card        { border-left: 3px solid var(--col-done); }
+#col-overdue .task-card     { border-left: 3px solid var(--high); }
+
 .column-title {
   font-size: .78rem;
   font-weight: 700;
@@ -544,7 +572,7 @@ h1 {
   transition: box-shadow .18s, transform .18s;
   user-select: none;
 }
-.task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.task-card:hover { box-shadow: 0 8px 24px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06); transform: translateY(-2px); }
 .task-card.dragging { opacity: .45; cursor: grabbing; transform: scale(1.02); }
 .task-card-header {
   display: flex;
