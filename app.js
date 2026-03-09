@@ -337,10 +337,41 @@ function showStepCreate(wsId, wsDisplayName) {
   document.getElementById('adminEmail').value           = '';
   document.getElementById('adminPassword').value        = '';
   document.getElementById('adminConfirmPassword').value = '';
-  document.getElementById('teamSizeSelect').value       = '5';
+  document.getElementById('teamSizeSelect').value       = '2';
   document.getElementById('createError').textContent    = '';
+  updatePlanInfo();
   document.getElementById('adminName').focus();
 }
+
+// ─── PLAN INFO DISPLAY ─────────────────────────────────────────────────────────
+const PLAN_INFO = {
+  '2':  { label: 'Free forever',  note: 'No credit card required',         cls: 'free' },
+  '5':  { label: '$15/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
+  '10': { label: '$30/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
+  '15': { label: '$50/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
+  '20': { label: '$70/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
+};
+function updatePlanInfo() {
+  const sel  = document.getElementById('teamSizeSelect');
+  const info = document.getElementById('planInfo');
+  if (!sel || !info) return;
+  const p = PLAN_INFO[sel.value] || PLAN_INFO['2'];
+  info.innerHTML = `<span class="plan-badge plan-badge--${p.cls}">${p.label}</span>${p.note}`;
+}
+document.getElementById('teamSizeSelect')?.addEventListener('change', updatePlanInfo);
+
+// ─── UPGRADE MODAL ─────────────────────────────────────────────────────────────
+function openUpgradeModal() {
+  document.getElementById('upgradeOverlay')?.classList.add('open');
+}
+function closeUpgradeModal() {
+  document.getElementById('upgradeOverlay')?.classList.remove('open');
+}
+document.getElementById('upgradeClose')?.addEventListener('click', closeUpgradeModal);
+document.getElementById('upgradeCancel')?.addEventListener('click', closeUpgradeModal);
+document.getElementById('upgradeOverlay')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeUpgradeModal();
+});
 
 function showStepForgot() {
   setActiveStep('stepForgot');
@@ -1627,8 +1658,10 @@ function renderAdminSection() {
   const canAdd = maxUsers === 0 || memberCount < maxUsers;
   const addBtn = document.getElementById('addMemberBtn');
   if (addBtn) {
-    addBtn.disabled = !canAdd;
-    addBtn.title    = !canAdd ? `All ${maxUsers} seats are filled` : '';
+    addBtn.disabled    = false;
+    addBtn.textContent = canAdd ? '+ Add Team Member' : '↑ Upgrade Plan to Add More';
+    addBtn.title       = canAdd ? '' : `All ${maxUsers} seats are filled — upgrade to add more members`;
+    addBtn.onclick     = canAdd ? null : (e => { e.stopPropagation(); openUpgradeModal(); });
   }
 
   document.getElementById('membersList').innerHTML = userArr.map(u => `
@@ -1685,7 +1718,8 @@ async function submitAddMember() {
 
   const maxUsers = currentWorkspaceMeta?.maxUsers || 0;
   if (maxUsers > 0 && Object.keys(users).length >= maxUsers) {
-    errEl.textContent = 'Workspace is full. No more seats available.';
+    closeAddMemberModal();
+    openUpgradeModal();
     return;
   }
 

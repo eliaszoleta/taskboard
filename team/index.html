@@ -15,17 +15,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Primary SEO -->
-  <title>Free Task Management Tool for Teams | AchieverBoard</title>
-  <meta name="description" content="AchieverBoard is a 100% free online task management tool for teams. Create kanban boards, assign tasks, track due dates, and collaborate in real time — no credit card, no subscription, ever.">
-  <meta name="keywords" content="free task management tool, free kanban board, free project management, online task manager, free team task tracker, task board free, free to-do list app, free productivity app">
+  <title>Team Task Board — Free for 2 Users | AchieverBoard</title>
+  <meta name="description" content="AchieverBoard team board is free forever for 2 users. Plans from $15/month for growing teams. Assign tasks, track deadlines, leave comments with instant notifications — all features included on every plan.">
+  <meta name="keywords" content="team task management tool, free team task board, task assignment software, team kanban board, online project tracker, collaborative task manager, free team productivity app">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://achieverboard.com/team/">
 
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="AchieverBoard">
-  <meta property="og:title" content="Free Task Management Tool for Teams | AchieverBoard">
-  <meta property="og:description" content="Create kanban boards, assign tasks, set due dates, and collaborate with your team — completely free, no credit card required.">
+  <meta property="og:title" content="Team Task Board — Free for 2 Users | AchieverBoard">
+  <meta property="og:description" content="Assign tasks to teammates, track due dates, leave comments with real-time notifications. Free forever for 2 users — plans from $15/month for larger teams.">
   <meta property="og:url" content="https://achieverboard.com/team/">
   <meta property="og:image" content="https://achieverboard.com/og-image.svg">
   <meta property="og:image:width" content="1200">
@@ -34,8 +34,8 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Free Task Management Tool for Teams | AchieverBoard">
-  <meta name="twitter:description" content="Free kanban-style task management for teams. No subscription, no credit card — just organize and get things done.">
+  <meta name="twitter:title" content="Team Task Board — Free for 2 Users | AchieverBoard">
+  <meta name="twitter:description" content="Free for 2 users, plans from $15/mo for larger teams. Assign tasks, leave comments, get real-time notifications — no credit card for the free plan.">
 
   <!-- Structured Data: SoftwareApplication -->
   <script type="application/ld+json">
@@ -46,23 +46,25 @@
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "url": "https://achieverboard.com/team/",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "description": "AchieverBoard is a free online task management tool for teams. Create kanban boards, assign tasks to teammates, track due dates, attach files, and collaborate in real time — no credit card or subscription required.",
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Up to 2 users — free forever" },
+      { "@type": "Offer", "name": "Starter", "price": "15", "priceCurrency": "USD", "description": "Up to 5 users" },
+      { "@type": "Offer", "name": "Growth", "price": "30", "priceCurrency": "USD", "description": "Up to 10 users" },
+      { "@type": "Offer", "name": "Team", "price": "50", "priceCurrency": "USD", "description": "Up to 15 users" },
+      { "@type": "Offer", "name": "Business", "price": "70", "priceCurrency": "USD", "description": "Up to 20 users" }
+    ],
+    "description": "AchieverBoard is a team task management board. Free for up to 2 users; plans from $15/month for larger teams. Assign tasks to teammates, leave comments with real-time notifications, track due dates, and collaborate in real time.",
     "featureList": [
-      "Free kanban board",
-      "Team task assignment",
+      "Task assignment with instant notifications",
+      "Comments on tasks with real-time comment notifications",
+      "Personal task dashboard per user",
       "Due date and deadline tracking",
+      "Automatic overdue task flagging",
       "Priority management (high, medium, low)",
       "File and link attachments",
       "Real-time team collaboration",
-      "Task notifications",
       "Date and user filters",
-      "No subscription required",
-      "No credit card required"
+      "Free for 2 users — no credit card required"
     ],
     "screenshot": "https://achieverboard.com/team/"
   }
@@ -92,7 +94,7 @@
             <span class="logo-sub">Board</span>
           </span>
         </div>
-        <p class="user-card-sub">Organize your team — free &amp; private.</p>
+        <p class="user-card-sub">Free for 2 users · Plans from $15/mo</p>
 
         <!-- Sign in to existing teamboard -->
         <p class="ws-section-label">Login to Your Taskboard</p>
@@ -143,15 +145,16 @@
           <input type="password" id="adminPassword"        placeholder="Choose a password…"         maxlength="100">
           <input type="password" id="adminConfirmPassword" placeholder="Confirm password…"          maxlength="100">
           <select id="teamSizeSelect">
-            <option value="2">2 users (you + 1 member)</option>
-            <option value="3">3 users</option>
-            <option value="4">4 users</option>
-            <option value="5" selected>5 users</option>
-            <option value="10">10 users</option>
-            <option value="15">15 users</option>
-            <option value="20">20 users</option>
-            <option value="0">Unlimited</option>
+            <option value="2" selected>Free — 2 users (you + 1 member)</option>
+            <option value="5">Starter — Up to 5 users · $15/month</option>
+            <option value="10">Growth — Up to 10 users · $30/month</option>
+            <option value="15">Team — Up to 15 users · $50/month</option>
+            <option value="20">Business — Up to 20 users · $70/month</option>
           </select>
+          <div class="plan-info" id="planInfo">
+            <span class="plan-badge plan-badge--free">Free forever</span>
+            No credit card required
+          </div>
           <button class="btn-primary" id="createWsBtn">Create Teamboard</button>
         </div>
         <p class="login-error" id="createError"></p>
@@ -422,46 +425,95 @@
   <!-- ── SEO Features Section ── -->
   <section class="seo-features" aria-label="AchieverBoard Features">
     <div class="seo-features-inner">
-      <h2>The Free Task Management Tool Built for Real Teams</h2>
-      <p class="seo-features-sub">Everything you need to manage tasks — without paying a cent. No hidden fees, no feature paywalls, no expiring trials.</p>
+      <h2>Every Feature Your Team Actually Needs</h2>
+      <p class="seo-features-sub">All features are included on every plan — free or paid. No feature paywalls, no bait-and-switch. The only difference between plans is how many seats your workspace can hold.</p>
       <div class="seo-features-grid">
         <div class="seo-feature-card">
-          <h3>Free Kanban Board</h3>
-          <p>Drag tasks across To Do, In Progress, and Done columns. Visualize your team's workload at a glance with a classic, intuitive kanban layout — 100% free.</p>
+          <h3>Task Assignment + Instant Notifications</h3>
+          <p>Assign any task to a specific teammate — they get notified immediately. No more "I didn't know that was mine." Everyone sees exactly what they're responsible for, every day.</p>
         </div>
         <div class="seo-feature-card">
-          <h3>Assign Tasks to Teammates</h3>
-          <p>Create team accounts and assign tasks to specific people. Everyone sees what they're responsible for, reducing miscommunication and missed deadlines.</p>
+          <h3>Comments & Real-Time Threads</h3>
+          <p>Leave comments directly on tasks. Teammates get notified the moment a comment is posted on their tasks. Keep all conversations in context — no more hunting through Slack for that one message.</p>
         </div>
         <div class="seo-feature-card">
-          <h3>Due Date & Deadline Tracking</h3>
-          <p>Set scheduled and due dates on every task. Overdue tasks are automatically flagged in a dedicated column so nothing slips through the cracks.</p>
+          <h3>Personal Activity Dashboard</h3>
+          <p>Each user sees their own sidebar feed showing tasks assigned to them and recent activity. Filter the board by teammate to get a clear view of anyone's workload at a glance.</p>
+        </div>
+        <div class="seo-feature-card">
+          <h3>Due Dates & Overdue Tracking</h3>
+          <p>Set scheduled and due dates on every task. Overdue tasks are automatically moved to a dedicated Overdue column — so nothing slips and no one misses a deadline.</p>
         </div>
         <div class="seo-feature-card">
           <h3>Priority Management</h3>
-          <p>Tag tasks as High, Medium, or Low priority. Filter any column by priority to focus on what matters most right now — simple and effective.</p>
+          <p>Mark tasks as High, Medium, or Low priority. Filter any column by priority so your team always knows what to focus on, not just what's piling up.</p>
         </div>
         <div class="seo-feature-card">
           <h3>File & Link Attachments</h3>
-          <p>Attach files and resource links directly to tasks. Keep all project context in one place so your team never hunts through emails or chat for assets.</p>
-        </div>
-        <div class="seo-feature-card">
-          <h3>Real-Time Collaboration</h3>
-          <p>Changes sync instantly for all team members. Leave comments on tasks, tag teammates, and get notified when tasks are updated — at zero cost.</p>
+          <p>Attach files and resource links directly to tasks. All project context lives inside the task — no more chasing files across email threads, shared drives, or chat history.</p>
         </div>
       </div>
 
       <div class="seo-compare">
-        <h2>Why Teams Choose AchieverBoard Over Expensive Alternatives</h2>
-        <p>Asana, Monday.com, and Jira charge $10–$25 per user per month. AchieverBoard gives you core task management features for free — forever. No bait-and-switch pricing, no "free plan" that runs out.</p>
-        <ul class="seo-compare-list">
-          <li>Free task boards with no member limits</li>
-          <li>No credit card required — ever</li>
-          <li>No feature locked behind a paid tier</li>
-          <li>Works on any device — desktop, tablet, mobile</li>
-          <li>Data stored securely — private to your team</li>
-        </ul>
-        <p class="seo-cta-note">Looking for a personal board without accounts? Try the <a href="../">free solo kanban board</a> — no sign-up needed.</p>
+        <h2>Simple, Transparent Pricing</h2>
+        <p>Start free — no credit card, no trial period, no expiry. Upgrade only when your team outgrows 2 seats. Asana and Monday.com charge $10–$25 <em>per user per month</em>. AchieverBoard charges a flat rate for the whole team.</p>
+        <div class="pricing-grid">
+          <div class="pricing-card pricing-card--free">
+            <div class="pricing-tier-label">Free</div>
+            <div class="pricing-price-row"><span class="pricing-amount">$0</span><span class="pricing-period">/month</span></div>
+            <div class="pricing-seats">Up to 2 users</div>
+            <ul class="pricing-features-list">
+              <li>Task assignment</li>
+              <li>Comments &amp; notifications</li>
+              <li>Real-time sync</li>
+              <li>File &amp; link attachments</li>
+              <li>Due dates &amp; overdue tracking</li>
+              <li>No credit card needed</li>
+            </ul>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-tier-label">Starter</div>
+            <div class="pricing-price-row"><span class="pricing-amount">$15</span><span class="pricing-period">/month</span></div>
+            <div class="pricing-seats">Up to 5 users</div>
+            <ul class="pricing-features-list">
+              <li>Everything in Free</li>
+              <li>3 additional seats</li>
+              <li>User-based task filtering</li>
+              <li>Flat rate — not per user</li>
+            </ul>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-tier-label">Growth</div>
+            <div class="pricing-price-row"><span class="pricing-amount">$30</span><span class="pricing-period">/month</span></div>
+            <div class="pricing-seats">Up to 10 users</div>
+            <ul class="pricing-features-list">
+              <li>Everything in Starter</li>
+              <li>Up to 10 team members</li>
+              <li>Flat rate — not per user</li>
+            </ul>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-tier-label">Team</div>
+            <div class="pricing-price-row"><span class="pricing-amount">$50</span><span class="pricing-period">/month</span></div>
+            <div class="pricing-seats">Up to 15 users</div>
+            <ul class="pricing-features-list">
+              <li>Everything in Growth</li>
+              <li>Up to 15 team members</li>
+              <li>Flat rate — not per user</li>
+            </ul>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-tier-label">Business</div>
+            <div class="pricing-price-row"><span class="pricing-amount">$70</span><span class="pricing-period">/month</span></div>
+            <div class="pricing-seats">Up to 20 users</div>
+            <ul class="pricing-features-list">
+              <li>Everything in Team</li>
+              <li>Up to 20 team members</li>
+              <li>Flat rate — not per user</li>
+            </ul>
+          </div>
+        </div>
+        <p class="seo-cta-note">Need a personal board without accounts? Try the <a href="../">free solo task management board</a> — no sign-up needed.</p>
       </div>
     </div>
   </section>
@@ -601,6 +653,29 @@
       <div class="modal-actions">
         <button type="button" class="btn-secondary" id="deleteAccountOverlayCancel">Cancel</button>
         <button type="button" class="btn-danger"    id="deleteAccountOverlayOk">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Upgrade Plan Modal ── -->
+  <div class="modal-overlay" id="upgradeOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Upgrade Your Plan</h2>
+        <button class="btn-close" id="upgradeClose">&times;</button>
+      </div>
+      <div style="padding:0 24px 24px">
+        <p style="color:var(--muted);font-size:.88rem;margin-bottom:18px">Your workspace has reached its seat limit. Upgrade to add more team members — all features are included on every plan.</p>
+        <div class="upgrade-tiers">
+          <div class="upgrade-tier"><span class="upgrade-tier-name">Starter</span><span class="upgrade-tier-users">Up to 5 users</span><span class="upgrade-tier-price">$15<em>/mo</em></span></div>
+          <div class="upgrade-tier"><span class="upgrade-tier-name">Growth</span><span class="upgrade-tier-users">Up to 10 users</span><span class="upgrade-tier-price">$30<em>/mo</em></span></div>
+          <div class="upgrade-tier"><span class="upgrade-tier-name">Team</span><span class="upgrade-tier-users">Up to 15 users</span><span class="upgrade-tier-price">$50<em>/mo</em></span></div>
+          <div class="upgrade-tier"><span class="upgrade-tier-name">Business</span><span class="upgrade-tier-users">Up to 20 users</span><span class="upgrade-tier-price">$70<em>/mo</em></span></div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px">
+          <a href="mailto:hello@achieverboard.com?subject=Upgrade%20Plan%20Request" class="btn-primary" style="text-decoration:none">Contact Us to Upgrade</a>
+          <button class="btn-secondary" id="upgradeCancel">Close</button>
+        </div>
       </div>
     </div>
   </div>

@@ -1986,6 +1986,50 @@ h1 {
   background-color: rgba(99,102,241,.18);
   color: #818cf8;
 }
+/* ─── Pricing Grid ─── */
+.pricing-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 20px;
+  justify-content: center;
+}
+.pricing-card {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 18px 18px;
+  flex: 1;
+  min-width: 160px;
+  max-width: 210px;
+  box-shadow: var(--shadow-sm);
+}
+.pricing-card--free { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow-sm); }
+.pricing-tier-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: 8px; }
+.pricing-card--free .pricing-tier-label { color: var(--primary); }
+.pricing-price-row { display: flex; align-items: baseline; gap: 3px; margin-bottom: 3px; }
+.pricing-amount { font-size: 1.75rem; font-weight: 800; color: var(--text); line-height: 1; }
+.pricing-period { font-size: .78rem; color: var(--muted); }
+.pricing-seats { font-size: .78rem; color: var(--muted); font-weight: 500; margin-bottom: 14px; }
+.pricing-features-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pricing-features-list li { font-size: .79rem; color: var(--text); display: flex; align-items: flex-start; gap: 6px; }
+.pricing-features-list li::before { content: '✓'; color: var(--col-done); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+@media (max-width: 640px) { .pricing-grid { flex-direction: column; } .pricing-card { max-width: none; } }
+
+/* ─── Plan info badge (under team size select) ─── */
+.plan-info { display: flex; align-items: center; gap: 8px; font-size: .79rem; color: var(--muted); margin-top: 4px; margin-bottom: 4px; }
+.plan-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: .7rem; font-weight: 700; line-height: 1.5; white-space: nowrap; }
+.plan-badge--free { background: rgba(16,185,129,.12); color: #059669; }
+.plan-badge--paid { background: rgba(99,102,241,.12); color: var(--primary); }
+
+/* ─── Upgrade tiers (in upgrade modal) ─── */
+.upgrade-tiers { display: flex; flex-direction: column; gap: 8px; }
+.upgrade-tier { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+.upgrade-tier-name { font-weight: 700; font-size: .88rem; flex: 1; }
+.upgrade-tier-users { font-size: .8rem; color: var(--muted); flex: 2; }
+.upgrade-tier-price { font-weight: 800; font-size: 1rem; color: var(--primary); }
+.upgrade-tier-price em { font-style: normal; font-size: .72rem; color: var(--muted); font-weight: 400; }
+
 [data-theme="dark"] .btn-secondary { background: #334155; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .user-overlay-close:hover { background: #334155; }
 [data-theme="dark"] .logo-name { color: var(--text); }
