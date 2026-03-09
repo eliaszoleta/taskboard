@@ -363,7 +363,7 @@ const PLAN_INFO = {
 //   5. Set Cancel URL to: https://achieverboard.com/team/?payment_cancelled=1
 //   6. Paste each link URL below, replacing the placeholder strings
 const STRIPE_LINKS = {
-  '5':  'https://buy.stripe.com/test_eVqcN5fWk1tybYo5yed7q00',   // Starter  – $15/mo, up to 5 users
+  '5':  'https://buy.stripe.com/4gMdR97pOa04faA4uad7q01',   // Starter  – $15/mo, up to 5 users
   '10': 'PASTE_YOUR_STRIPE_LINK_FOR_GROWTH_HERE',    // Growth   – $30/mo, up to 10 users
   '15': 'PASTE_YOUR_STRIPE_LINK_FOR_TEAM_HERE',      // Team     – $50/mo, up to 15 users
   '20': 'PASTE_YOUR_STRIPE_LINK_FOR_BUSINESS_HERE',  // Business – $70/mo, up to 20 users
