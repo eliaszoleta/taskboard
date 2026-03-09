@@ -1090,7 +1090,7 @@ h1 {
   }
 
   /* ── Notification panel ── */
-  .notif-panel { width: calc(100vw - 28px); right: -8px; }
+  .notif-panel { position: fixed; left: 14px; right: 14px; width: auto; top: 60px; max-height: calc(100dvh - 80px); overflow-y: auto; }
 
   /* ── Modal actions: stack on very small screens ── */
   .modal-actions { flex-direction: column-reverse; gap: 8px; }

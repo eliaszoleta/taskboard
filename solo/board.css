@@ -234,6 +234,56 @@ h1 {
   min-width: 0;
 }
 
+/* ─── Board Settings Gear ─── */
+.board-settings-wrapper { position: relative; }
+.board-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.board-settings-btn:hover { background: var(--border); color: var(--text); }
+.board-settings-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 200;
+  min-width: 160px;
+}
+.board-settings-dropdown.open { display: block; }
+.board-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .88rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  transition: background .12s;
+}
+.board-settings-item:hover { background: var(--bg); }
+.board-settings-item--danger { color: var(--danger, #dc2626); }
+.board-settings-item--danger:hover { background: #fff1f1; }
+
 /* ─── Notifications ─── */
 .notif-wrapper { position: relative; }
 .notif-btn {
@@ -1055,8 +1105,9 @@ h1 {
   .header-content { height: auto; flex-wrap: wrap; padding: 10px 0; row-gap: 6px; }
   h1 { font-size: 1.15rem; }
   .header-right { width: 100%; flex-direction: column; align-items: stretch; gap: 6px; }
-  .header-actions { justify-content: flex-end; gap: 8px; }
-  .space-display-name { max-width: 110px; }
+  .header-actions { justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .space-display { flex: 1; min-width: 0; max-width: none; }
+  .space-display-name { max-width: 100%; }
 
   .header-filters { width: 100%; }
   .header-filters .date-filter-wrap { flex: 1; }
@@ -1102,7 +1153,7 @@ h1 {
   .modal-lg { max-width: 100%; }
   .form-row { flex-direction: column; gap: 0; }
   .form-group input, .form-group textarea, .form-group select { font-size: 1rem; min-height: 44px; }
-  .notif-panel { width: calc(100vw - 28px); right: -8px; }
+  .notif-panel { position: fixed; left: 14px; right: 14px; width: auto; top: 60px; max-height: calc(100dvh - 80px); overflow-y: auto; }
   .modal-actions { flex-direction: column-reverse; gap: 8px; }
   .modal-actions .btn-primary, .modal-actions .btn-secondary { width: 100%; text-align: center; }
   .space-card { padding: 28px 20px; }

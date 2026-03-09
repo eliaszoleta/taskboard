@@ -1438,7 +1438,12 @@ function setupNotifListener() {
 
 document.getElementById('notifBtn').addEventListener('click', e => {
   e.stopPropagation();
-  document.getElementById('notifPanel').classList.toggle('open');
+  const panel = document.getElementById('notifPanel');
+  if (window.innerWidth <= 640) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 8) + 'px';
+  }
+  panel.classList.toggle('open');
 });
 
 document.getElementById('markAllRead').addEventListener('click', async () => {

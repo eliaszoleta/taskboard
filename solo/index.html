@@ -86,26 +86,26 @@
       </div>
       <p class="space-card-sub">Organize your tasks — free &amp; private.</p>
 
+      <!-- Open existing space -->
+      <p class="space-section-label">Already have an AchieverBoard?</p>
+      <div class="space-section-form" id="openSection">
+        <input type="text" id="openSpaceInput" placeholder="Enter your AchieverBoard name…" maxlength="40" autocomplete="off">
+        <button class="btn-primary" id="openSpaceBtn">Open AchieverBoard</button>
+        <p class="space-err" id="openErr"></p>
+      </div>
+
+      <div class="space-divider">or</div>
+
       <!-- Create new space -->
-      <p class="space-section-label">Create Your Taskboard</p>
+      <p class="space-section-label">New here? Create your Taskboard</p>
       <div class="space-section-form" id="createSection">
         <input type="text" id="createSpaceInput" placeholder="Name your space…" maxlength="40" autocomplete="off">
         <div class="space-hint">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           Write this name down — you'll need it to open your board again on your next visit.
         </div>
-        <button class="btn-primary" id="createSpaceBtn">Create Taskboard</button>
+        <button class="btn-secondary" id="createSpaceBtn">Create Taskboard</button>
         <p class="space-err" id="createErr"></p>
-      </div>
-
-      <div class="space-divider">or</div>
-
-      <!-- Open existing space -->
-      <p class="space-section-label">Already have an AchieverBoard?</p>
-      <div class="space-section-form" id="openSection">
-        <input type="text" id="openSpaceInput" placeholder="Enter your AchieverBoard name…" maxlength="40" autocomplete="off">
-        <button class="btn-secondary" id="openSpaceBtn">Open AchieverBoard</button>
-        <p class="space-err" id="openErr"></p>
       </div>
     </div>
   </div>
@@ -137,7 +137,22 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--primary)"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span class="space-display-name" id="spaceNameDisplay"></span>
           </div>
-          <button class="btn-text" id="changeSpaceBtn" style="display:none">Exit</button>
+          <!-- Board settings gear -->
+          <div class="board-settings-wrapper" id="boardSettingsWrapper" style="display:none">
+            <button class="board-settings-btn" id="boardSettingsBtn" title="Board settings" aria-label="Board settings">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+            <div class="board-settings-dropdown" id="boardSettingsDropdown">
+              <button class="board-settings-item" id="changeSpaceBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Exit Board
+              </button>
+              <button class="board-settings-item board-settings-item--danger" id="deleteSpaceBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Delete Board
+              </button>
+            </div>
+          </div>
 
           <button class="btn-primary" id="addTaskBtn">+ New Task</button>
         </div>

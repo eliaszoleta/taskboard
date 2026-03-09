@@ -196,8 +196,7 @@ function enterBoard() {
   const nameEl = document.getElementById('spaceNameDisplay');
   nameEl.textContent = currentSpace.name;
   document.getElementById('spaceDisplay').classList.add('visible');
-  document.getElementById('changeSpaceBtn').style.display = '';
-  document.getElementById('deleteSpaceBtn').style.display = '';
+  document.getElementById('boardSettingsWrapper').style.display = '';
   subscribeToSpace();
 }
 
@@ -547,7 +546,12 @@ function tryPlaySound() {
 // Notification panel toggle
 document.getElementById('notifBtn').addEventListener('click', e => {
   e.stopPropagation();
-  document.getElementById('notifPanel').classList.toggle('open');
+  const panel = document.getElementById('notifPanel');
+  if (window.innerWidth <= 640) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 8) + 'px';
+  }
+  panel.classList.toggle('open');
 });
 
 document.getElementById('markAllRead').addEventListener('click', async () => {
@@ -563,6 +567,15 @@ document.addEventListener('click', e => {
   if (!document.getElementById('notifWrapper')?.contains(e.target)) {
     document.getElementById('notifPanel').classList.remove('open');
   }
+  if (!document.getElementById('boardSettingsWrapper')?.contains(e.target)) {
+    document.getElementById('boardSettingsDropdown')?.classList.remove('open');
+  }
+});
+
+// ─── BOARD SETTINGS GEAR ─────────────────────────────────────────────────────
+document.getElementById('boardSettingsBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('boardSettingsDropdown').classList.toggle('open');
 });
 
 // ─── RESOURCE ATTACHMENTS ─────────────────────────────────────────────────────
@@ -717,20 +730,20 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
 
   if (editingTaskId) {
     const old = tasks[editingTaskId];
-    await update(ref(db, `${spaceTasksRef}/${editingTaskId}`), fields);
     tasks[editingTaskId] = { ...old, ...fields };
     closeModal();
     renderBoard();
+    await update(ref(db, `${spaceTasksRef}/${editingTaskId}`), fields);
     if (newStatus === 'done' && old.status !== 'done') {
       await pushNotif(`"${title}" is now Done!`, editingTaskId);
     }
   } else {
     const newRef   = push(ref(db, spaceTasksRef));
     const taskData = { ...fields, createdAt: Date.now() };
-    await set(newRef, taskData);
     tasks[newRef.key] = taskData;
     closeModal();
     renderBoard();
+    await set(newRef, taskData);
     if (newStatus === 'done') await pushNotif(`"${title}" created as Done!`, newRef.key);
   }
 });
@@ -1046,8 +1059,7 @@ document.getElementById('changeSpaceBtn').addEventListener('click', () => {
     allNotifications = {};
     knownNotifIds = null;
     document.getElementById('spaceDisplay').classList.remove('visible');
-    document.getElementById('changeSpaceBtn').style.display = 'none';
-    document.getElementById('deleteSpaceBtn').style.display = 'none';
+    document.getElementById('boardSettingsWrapper').style.display = 'none';
     document.getElementById('notifBadge').classList.remove('visible');
     document.getElementById('notifList').innerHTML = '';
     renderBoard();
@@ -1086,8 +1098,7 @@ document.getElementById('deleteSpaceOk').addEventListener('click', async () => {
   allNotifications = {};
   knownNotifIds = null;
   document.getElementById('spaceDisplay').classList.remove('visible');
-  document.getElementById('changeSpaceBtn').style.display = 'none';
-  document.getElementById('deleteSpaceBtn').style.display = 'none';
+  document.getElementById('boardSettingsWrapper').style.display = 'none';
   document.getElementById('notifBadge').classList.remove('visible');
   document.getElementById('notifList').innerHTML = '';
   renderBoard();
