@@ -634,6 +634,19 @@ document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
   setActiveStep('stepCreate');
 });
 
+// Pricing table CTA buttons → open the user overlay (payment gate handles the rest)
+document.querySelectorAll('.pricing-cta-btn[data-plan]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    showUserOverlay();
+    const plan = btn.dataset.plan;
+    if (plan && plan !== '2') {
+      // Pre-select the matching plan in the dropdown once the create step is reached
+      const sel = document.getElementById('teamSizeSelect');
+      if (sel) { sel.value = plan; updatePlanInfo(); }
+    }
+  });
+});
+
 // ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
 function handleForgotPwdClick() {
   const errEl = document.getElementById('loginError');
