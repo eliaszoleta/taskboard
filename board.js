@@ -282,8 +282,10 @@ function taskMatchesFilter(task) {
     return d >= yStart && d <= yEnd;
   }
 
+  if (currentFilter === 'this-week')  { const { start, end } = weekRange(0);  return d >= start && d <= end; }
   if (currentFilter === 'last-week')  { const { start, end } = weekRange(-1); return d >= start && d <= end; }
   if (currentFilter === 'next-week')  { const { start, end } = weekRange(1);  return d >= start && d <= end; }
+  if (currentFilter === 'this-month') { return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth(); }
   if (currentFilter === 'last-month') { const { start, end } = monthRange(-1); return d >= start && d <= end; }
   if (currentFilter === 'next-month') { const { start, end } = monthRange(1);  return d >= start && d <= end; }
 
@@ -299,9 +301,11 @@ function taskMatchesFilter(task) {
 const FILTER_LABELS = {
   'today':        'Today',
   'yesterday':    'Yesterday',
+  'this-week':    'This Week',
   'last-week':    'Last Week',
-  'last-month':   'Last Month',
   'next-week':    'Next Week',
+  'this-month':   'This Month',
+  'last-month':   'Last Month',
   'next-month':   'Next Month',
   'overdue':      'Overdue',
   'last-30-days': 'Last 30 days',

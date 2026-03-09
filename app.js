@@ -1220,17 +1220,30 @@ async function openDetail(id) {
       return;
     }
     list.innerHTML = comments.map(c => {
-      const author = users[c.author];
-      const name   = author ? author.name : 'Unknown';
-      const time   = new Date(c.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-      return `<div class="comment">
+      const author   = users[c.author];
+      const name     = author ? author.name : 'Unknown';
+      const time     = new Date(c.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      const isOwn    = currentUser && c.author === currentUser.id;
+      const editedTag = c.editedAt ? '<span class="comment-edited">(edited)</span>' : '';
+      return `<div class="comment" data-cid="${c.id}">
         ${avatarHtml(name, true)}
         <div class="comment-body">
-          <div class="comment-meta"><strong>${escHtml(name)}</strong><span class="comment-time">${time}</span></div>
-          <p>${escHtml(c.text)}</p>
+          <div class="comment-meta">
+            <strong>${escHtml(name)}</strong>
+            <span class="comment-time">${time}</span>
+            ${editedTag}
+            ${isOwn ? `<button class="comment-edit-btn" data-cid="${c.id}" title="Edit comment">${ICONS.edit}</button>` : ''}
+          </div>
+          <p class="comment-text" data-cid="${c.id}">${escHtml(c.text)}</p>
         </div>
       </div>`;
     }).join('');
+    list.querySelectorAll('.comment-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cData = comments.find(x => x.id === btn.dataset.cid);
+        if (cData) startEditComment(btn.dataset.cid, cData);
+      });
+    });
     list.scrollTop = list.scrollHeight;
   });
 
@@ -1252,19 +1265,70 @@ async function postComment() {
   const text  = input.value.trim();
   if (!text) return;
 
-  await push(wsRef('comments', detailTaskId), { text, author: currentUser.id, createdAt: Date.now() });
-  input.value = '';
+  const commentData = { text, author: currentUser.id, createdAt: Date.now() };
 
   const task = tasks[detailTaskId];
   if (task) {
     const recipient = currentUser.id === task.assignedTo ? task.createdBy : task.assignedTo;
-    const preview   = text.length > 80 ? text.slice(0, 80) + '…' : text;
-    if (recipient) await notify(recipient, `${currentUser.name} commented on "${task.title}": "${preview}"`, detailTaskId);
+    if (recipient && recipient !== currentUser.id) {
+      const preview   = text.length > 80 ? text.slice(0, 80) + '…' : text;
+      const notifRef  = push(wsRef('notifications', recipient), {
+        message: `${currentUser.name} commented on "${task.title}": "${preview}"`,
+        taskId: detailTaskId, read: false, createdAt: Date.now(),
+      });
+      commentData.notifId = notifRef.key;
+      commentData.notifTo = recipient;
+    }
   }
+
+  await push(wsRef('comments', detailTaskId), commentData);
+  input.value = '';
 }
 
 document.getElementById('postCommentBtn').addEventListener('click', postComment);
 document.getElementById('commentInput').addEventListener('keydown', e => { if (e.key === 'Enter') postComment(); });
+
+// ─── COMMENT EDITING ──────────────────────────────────────────────────────────
+function startEditComment(cid, comment) {
+  const commentEl = document.querySelector(`.comment[data-cid="${cid}"]`);
+  if (!commentEl) return;
+  const textEl = commentEl.querySelector('.comment-text');
+  if (!textEl) return;
+  const origText = comment.text;
+  textEl.outerHTML = `<div class="comment-edit-area">
+    <textarea class="comment-edit-input" id="editCommentInput_${cid}" rows="2">${escHtml(origText)}</textarea>
+    <div class="comment-edit-actions">
+      <button class="btn-sm btn-primary" id="saveEdit_${cid}">Save</button>
+      <button class="btn-sm btn-secondary" id="cancelEdit_${cid}">Cancel</button>
+    </div>
+  </div>`;
+  const inp = document.getElementById(`editCommentInput_${cid}`);
+  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  document.getElementById(`saveEdit_${cid}`)?.addEventListener('click', () => saveCommentEdit(cid, comment));
+  document.getElementById(`cancelEdit_${cid}`)?.addEventListener('click', () => {
+    const editArea = document.querySelector(`.comment[data-cid="${cid}"] .comment-edit-area`);
+    if (editArea) editArea.outerHTML = `<p class="comment-text" data-cid="${cid}">${escHtml(origText)}</p>`;
+  });
+}
+
+async function saveCommentEdit(cid, originalComment) {
+  const input = document.getElementById(`editCommentInput_${cid}`);
+  if (!input) return;
+  const newText = input.value.trim();
+  if (!newText) return;
+
+  await update(wsRef('comments', detailTaskId, cid), { text: newText, editedAt: Date.now() });
+
+  if (originalComment.notifTo && originalComment.notifId) {
+    const task = tasks[detailTaskId];
+    if (task) {
+      const preview = newText.length > 80 ? newText.slice(0, 80) + '…' : newText;
+      await update(wsRef('notifications', originalComment.notifTo, originalComment.notifId), {
+        message: `${currentUser.name} commented on "${task.title}": "${preview}" (edited)`,
+      });
+    }
+  }
+}
 
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 async function notify(toUserId, message, taskId) {
@@ -1674,18 +1738,57 @@ function renderAdminSection() {
     </div>`).join('');
 
   document.getElementById('membersList').querySelectorAll('.remove-member-btn').forEach(btn => {
-    btn.addEventListener('click', () => removeMember(btn.dataset.uid));
+    btn.addEventListener('click', () => openDeleteMemberModal(btn.dataset.uid));
   });
 }
 
-async function removeMember(uid) {
-  if (!currentUser || currentUser.role !== 'admin' || uid === currentUser.id) return;
+// ─── DELETE MEMBER MODAL ──────────────────────────────────────────────────────
+let pendingDeleteUid = null;
+
+function openDeleteMemberModal(uid) {
+  if (!currentUser || currentUser.role !== 'admin') return;
   const u = users[uid];
-  if (!u) return;
-  if (!confirm(`Remove "${u.name}" from the workspace?\n\nThey will lose access, but their tasks will remain.`)) return;
+  if (!u || uid === currentUser.id) return;
+  pendingDeleteUid = uid;
+  document.getElementById('deleteMemberMsg').textContent =
+    `You are about to remove "${u.name}" from this workspace. They will lose access immediately, but their tasks will remain. Enter your admin password to confirm.`;
+  document.getElementById('deleteMemberPassword').value = '';
+  document.getElementById('deleteMemberError').textContent = '';
+  document.getElementById('deleteMemberOverlay').classList.add('open');
+  document.getElementById('deleteMemberPassword').focus();
+}
+
+function closeDeleteMemberModal() {
+  pendingDeleteUid = null;
+  document.getElementById('deleteMemberOverlay')?.classList.remove('open');
+}
+
+async function confirmDeleteMember() {
+  const errEl = document.getElementById('deleteMemberError');
+  const pwd   = document.getElementById('deleteMemberPassword').value;
+  errEl.textContent = '';
+  if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
+
+  const adminUser = users[currentUser.id];
+  const hash = await hashPassword(pwd);
+  if (hash !== adminUser.passwordHash) {
+    errEl.textContent = 'Incorrect password. Please try again.';
+    return;
+  }
+
+  const uid  = pendingDeleteUid;
+  const name = users[uid]?.name || 'Member';
+  closeDeleteMemberModal();
   await remove(wsRef('users', uid));
   await remove(wsRef('notifications', uid));
+  showToast(`${name} has been removed from the workspace.`);
 }
+
+document.getElementById('deleteMemberConfirmBtn')?.addEventListener('click', confirmDeleteMember);
+document.getElementById('deleteMemberCloseBtn')?.addEventListener('click', closeDeleteMemberModal);
+document.getElementById('deleteMemberCancelBtn')?.addEventListener('click', closeDeleteMemberModal);
+document.getElementById('deleteMemberOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteMemberModal(); });
+document.getElementById('deleteMemberPassword')?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmDeleteMember(); });
 
 function openAddMemberModal() {
   document.getElementById('memberName').value          = '';
