@@ -391,11 +391,8 @@ function renderBoard() {
   const demo = !currentSpace && demoTasks !== null;
   const src  = demo ? demoTasks : tasks;
 
-  // Show/hide demo banner and board-level note
-  const banner = document.getElementById('demoBanner');
-  if (banner) banner.style.display = demo ? '' : 'none';
-  const boardNote = document.getElementById('demoBoardNote');
-  if (boardNote) boardNote.style.display = demo ? 'flex' : 'none';
+  // Show/hide demo banner and board-level note via body class
+  document.body.classList.toggle('demo-active', demo);
 
   const dateSel = document.getElementById('dateFilter');
   if (dateSel) { dateSel.value = currentFilter; dateSel.classList.toggle('active', currentFilter !== 'all'); }
