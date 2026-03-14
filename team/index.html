@@ -375,7 +375,6 @@
     <aside class="notif-sidebar">
       <div class="sidebar-tabs">
         <button class="sidebar-tab active" data-tab="activity">Activity</button>
-        <button class="sidebar-tab" data-tab="chat">Chat</button>
         <button class="sidebar-tab" data-tab="announcements">Announce</button>
       </div>
 
@@ -383,19 +382,6 @@
       <div class="sidebar-panel" id="panelActivity">
         <div class="notif-sidebar-body" id="notifSidebarBody">
           <div class="sidebar-empty">Loading…</div>
-        </div>
-      </div>
-
-      <!-- Chat Panel -->
-      <div class="sidebar-panel" id="panelChat" style="display:none">
-        <div class="chat-messages" id="chatMessages">
-          <div class="sidebar-empty">No messages yet</div>
-        </div>
-        <div class="chat-input-row">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Message everyone…" maxlength="500">
-          <button class="chat-send-btn" id="chatSendBtn" title="Send">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
         </div>
       </div>
 
@@ -811,6 +797,40 @@
     </div>
   </div>
 
+  <!-- ── DM Chat Widget ── -->
+  <div class="dm-widget" id="dmWidget">
+    <div class="dm-popup" id="dmPopup" style="display:none">
+      <div class="dm-popup-header">
+        <button class="dm-back-btn" id="dmBackBtn" style="display:none" title="Back to contacts">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="dm-popup-title" id="dmPopupTitle">Messages</span>
+        <button class="btn-close dm-popup-close" id="dmPopupClose">&times;</button>
+      </div>
+      <!-- Contacts view -->
+      <div class="dm-contacts-view" id="dmContactsView">
+        <div class="dm-contacts-list" id="dmContactsList">
+          <div class="sidebar-empty">Sign in to message teammates</div>
+        </div>
+      </div>
+      <!-- Chat view -->
+      <div class="dm-chat-view" id="dmChatView" style="display:none">
+        <div class="dm-chat-messages" id="dmChatMessages"></div>
+        <div class="dm-chat-input-row">
+          <input type="text" class="chat-input" id="dmInput" placeholder="Type a message…" maxlength="500">
+          <button class="chat-send-btn" id="dmSendBtn" title="Send">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- FAB button -->
+    <button class="dm-fab" id="dmFab" title="Team Messages" aria-label="Open team messages">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="dm-fab-badge" id="dmFabBadge" style="display:none">0</span>
+    </button>
+  </div>
+
   <!-- ── Announcement Modal ── -->
   <div class="modal-overlay" id="annoModalOverlay">
     <div class="modal modal-sm">
@@ -830,6 +850,6 @@
     </div>
   </div>
 
-  <script type="module" src="../app.js?v=31"></script>
+  <script type="module" src="../app.js?v=32"></script>
 </body>
 </html>

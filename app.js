@@ -54,14 +54,20 @@ let wsCommentsUnsub    = null;
 let wsNotifsAllUnsub   = null;
 let notifBadgeUnsub    = null;
 let commentsUnsub      = null;
-let chatUnsub          = null;
 let annoUnsub          = null;
+let dmUnreadUnsub      = null;
+let dmMsgUnsub         = null;
 
-// Chat & Announcements state
-let chatMsgs          = {};
+// Announcements state
 let announcements     = {};
 let activeSidebarTab  = 'activity';
 let editingAnnoId     = null;
+
+// DM widget state
+let dmUnreadCounts    = {};  // { dmKey: count }
+let dmActivePeerId    = null;
+let dmActivePeerName  = null;
+let dmCurrentMsgs     = {};
 
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
@@ -240,6 +246,9 @@ function logout() {
   closeProfile();
   stopWorkspaceListeners();
   clearCurrentUser();
+  const dmPopup = document.getElementById('dmPopup');
+  if (dmPopup) dmPopup.style.display = 'none';
+  updateDmFabBadge();
   const guestBanner  = document.getElementById('guestBanner');
   const boardWrapper = document.querySelector('.board-wrapper');
   if (guestBanner)  guestBanner.style.display  = '';
@@ -791,9 +800,12 @@ function startWorkspaceListeners() {
     renderNotifSidebar();
   });
 
-  chatUnsub = onValue(ref(db, `workspaces/${wsId}/chat`), snap => {
-    chatMsgs = snap.val() || {};
-    renderChat();
+  dmUnreadUnsub = onValue(ref(db, `workspaces/${wsId}/dmUnread/${currentUser.id}`), snap => {
+    dmUnreadCounts = snap.val() || {};
+    updateDmFabBadge();
+    if (document.getElementById('dmPopup')?.style.display !== 'none' && !dmActivePeerId) {
+      renderDmContacts();
+    }
   });
 
   annoUnsub = onValue(ref(db, `workspaces/${wsId}/announcements`), snap => {
@@ -803,10 +815,11 @@ function startWorkspaceListeners() {
 }
 
 function stopWorkspaceListeners() {
-  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub, chatUnsub, annoUnsub]
+  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub, annoUnsub, dmUnreadUnsub, dmMsgUnsub]
     .forEach(u => { if (u) u(); });
-  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = chatUnsub = annoUnsub = null;
-  users = {}; tasks = {}; commentCounts = {}; allNotifications = {}; chatMsgs = {}; announcements = {};
+  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = annoUnsub = dmUnreadUnsub = dmMsgUnsub = null;
+  users = {}; tasks = {}; commentCounts = {}; allNotifications = {}; announcements = {};
+  dmUnreadCounts = {}; dmActivePeerId = null; dmCurrentMsgs = {};
   currentWorkspaceMeta = null;
 }
 
@@ -1582,55 +1595,122 @@ function renderNotifSidebar() {
   if (showMoreBtn) showMoreBtn.addEventListener('click', () => { sidebarLimit += 10; renderNotifSidebar(); });
 }
 
-// ─── TEAM CHAT ────────────────────────────────────────────────────────────────
-function renderChat() {
-  const container = document.getElementById('chatMessages');
-  if (!container) return;
+// ─── DM WIDGET ────────────────────────────────────────────────────────────────
+function getDmKey(id1, id2) { return [id1, id2].sort().join('__'); }
 
-  const msgs = Object.entries(chatMsgs)
-    .map(([id, m]) => ({ id, ...m }))
-    .sort((a, b) => a.createdAt - b.createdAt);
+function updateDmFabBadge() {
+  const total = Object.values(dmUnreadCounts).reduce((s, n) => s + (n || 0), 0);
+  const badge = document.getElementById('dmFabBadge');
+  if (!badge) return;
+  badge.textContent = total > 9 ? '9+' : String(total);
+  badge.style.display = total > 0 ? 'flex' : 'none';
+}
 
-  if (!msgs.length) {
-    container.innerHTML = '<div class="sidebar-empty">No messages yet</div>';
+function renderDmContacts() {
+  const list = document.getElementById('dmContactsList');
+  if (!list) return;
+  if (!currentUser) {
+    list.innerHTML = '<div class="sidebar-empty">Sign in to message teammates</div>';
     return;
   }
-
-  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
-
-  container.innerHTML = msgs.map(m => {
-    const isMe = currentUser && m.authorId === currentUser.id;
-    const time = new Date(m.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    return `<div class="chat-msg">
-      ${avatarHtml(m.authorName)}
-      <div class="chat-msg-body">
-        <div class="chat-msg-author${isMe ? ' is-me' : ''}">${escHtml(m.authorName)}</div>
-        <div class="chat-msg-text">${escHtml(m.text)}</div>
-        <div class="chat-msg-time">${time}</div>
-      </div>
+  const peers = Object.entries(users)
+    .filter(([id]) => id !== currentUser.id)
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+  if (!peers.length) {
+    list.innerHTML = '<div class="sidebar-empty">No other team members yet</div>';
+    return;
+  }
+  list.innerHTML = peers.map(([id, u]) => {
+    const dmKey = getDmKey(currentUser.id, id);
+    const unread = dmUnreadCounts[dmKey] || 0;
+    return `<div class="dm-contact-item" data-id="${id}" data-name="${escHtml(u.name)}">
+      ${avatarHtml(u.name)}
+      <span class="dm-contact-name">${escHtml(u.name)}</span>
+      ${unread > 0 ? `<span class="dm-contact-unread">${unread > 9 ? '9+' : unread}</span>` : ''}
     </div>`;
   }).join('');
+  list.querySelectorAll('.dm-contact-item').forEach(item => {
+    item.addEventListener('click', () => openDmChat(item.dataset.id, item.dataset.name));
+  });
+}
 
+function openDmChat(peerId, peerName) {
+  if (!currentUser) return;
+  dmActivePeerId   = peerId;
+  dmActivePeerName = peerName;
+  document.getElementById('dmContactsView').style.display = 'none';
+  document.getElementById('dmChatView').style.display     = '';
+  document.getElementById('dmPopupTitle').textContent     = peerName;
+  document.getElementById('dmBackBtn').style.display      = '';
+
+  // Mark as read
+  const dmKey = getDmKey(currentUser.id, peerId);
+  set(wsRef('dmUnread', currentUser.id, dmKey), 0);
+  dmUnreadCounts[dmKey] = 0;
+  updateDmFabBadge();
+
+  // Subscribe to messages
+  if (dmMsgUnsub) { dmMsgUnsub(); dmMsgUnsub = null; }
+  dmMsgUnsub = onValue(wsRef('dms', dmKey), snap => {
+    dmCurrentMsgs = snap.val() || {};
+    renderDmMessages();
+  });
+
+  document.getElementById('dmInput')?.focus();
+}
+
+function closeDmChat() {
+  if (dmMsgUnsub) { dmMsgUnsub(); dmMsgUnsub = null; }
+  dmActivePeerId = null; dmActivePeerName = null; dmCurrentMsgs = {};
+  const cv = document.getElementById('dmContactsView');
+  const chv = document.getElementById('dmChatView');
+  const bb  = document.getElementById('dmBackBtn');
+  const tt  = document.getElementById('dmPopupTitle');
+  if (cv)  cv.style.display  = '';
+  if (chv) chv.style.display = 'none';
+  if (bb)  bb.style.display  = 'none';
+  if (tt)  tt.textContent    = 'Messages';
+  renderDmContacts();
+}
+
+function renderDmMessages() {
+  const container = document.getElementById('dmChatMessages');
+  if (!container) return;
+  const msgs = Object.entries(dmCurrentMsgs)
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => a.createdAt - b.createdAt);
+  if (!msgs.length) {
+    container.innerHTML = '<div class="sidebar-empty">No messages yet — say hi!</div>';
+    return;
+  }
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+  container.innerHTML = msgs.map(m => {
+    const isMe = currentUser && m.senderId === currentUser.id;
+    const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div class="dm-msg${isMe ? ' dm-msg-me' : ''}">
+      <div class="dm-msg-bubble">${escHtml(m.text)}</div>
+      <div class="dm-msg-time">${time}</div>
+    </div>`;
+  }).join('');
   if (wasAtBottom) container.scrollTop = container.scrollHeight;
 }
 
-async function sendChatMessage() {
-  if (!currentUser) {
-    pendingAfterLogin = () => document.getElementById('chatInput')?.focus();
-    showUserOverlay();
-    return;
-  }
-  const input = document.getElementById('chatInput');
-  if (!input) return;
-  const text = input.value.trim();
+async function sendDmMessage() {
+  if (!currentUser || !dmActivePeerId) return;
+  const input = document.getElementById('dmInput');
+  const text  = input?.value.trim();
   if (!text) return;
   input.value = '';
-  await push(wsRef('chat'), {
+  const dmKey = getDmKey(currentUser.id, dmActivePeerId);
+  await push(wsRef('dms', dmKey), {
     text,
-    authorId:   currentUser.id,
-    authorName: currentUser.name,
+    senderId:   currentUser.id,
+    senderName: currentUser.name,
     createdAt:  Date.now(),
   });
+  // Increment recipient unread count
+  const snap = await get(wsRef('dmUnread', dmActivePeerId, dmKey));
+  await set(wsRef('dmUnread', dmActivePeerId, dmKey), (snap.val() || 0) + 1);
 }
 
 // ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
@@ -2240,21 +2320,40 @@ document.querySelectorAll('.sidebar-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     activeSidebarTab = tab.dataset.tab;
     document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeSidebarTab));
-    const panelMap = { activity: 'panelActivity', chat: 'panelChat', announcements: 'panelAnnouncements' };
+    const panelMap = { activity: 'panelActivity', announcements: 'panelAnnouncements' };
     Object.entries(panelMap).forEach(([key, id]) => {
       const el = document.getElementById(id);
       if (el) el.style.display = key === activeSidebarTab ? '' : 'none';
     });
-    if (activeSidebarTab === 'chat') {
-      const msgs = document.getElementById('chatMessages');
-      if (msgs) msgs.scrollTop = msgs.scrollHeight;
-    }
   });
 });
 
-// ─── CHAT HANDLERS ────────────────────────────────────────────────────────────
-document.getElementById('chatSendBtn')?.addEventListener('click', sendChatMessage);
-document.getElementById('chatInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+// ─── DM WIDGET HANDLERS ───────────────────────────────────────────────────────
+document.getElementById('dmFab')?.addEventListener('click', () => {
+  const popup = document.getElementById('dmPopup');
+  if (!popup) return;
+  const opening = popup.style.display === 'none';
+  if (opening) {
+    if (!currentUser) {
+      pendingAfterLogin = () => { popup.style.display = ''; renderDmContacts(); };
+      showUserOverlay();
+      return;
+    }
+    popup.style.display = '';
+    renderDmContacts();
+  } else {
+    popup.style.display = 'none';
+    closeDmChat();
+  }
+});
+
+document.getElementById('dmPopupClose')?.addEventListener('click', () => {
+  document.getElementById('dmPopup').style.display = 'none';
+  closeDmChat();
+});
+document.getElementById('dmBackBtn')?.addEventListener('click', closeDmChat);
+document.getElementById('dmSendBtn')?.addEventListener('click', sendDmMessage);
+document.getElementById('dmInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendDmMessage(); });
 
 // ─── ANNOUNCEMENT HANDLERS ────────────────────────────────────────────────────
 document.getElementById('annoNewBtn')?.addEventListener('click', () => openAnnoModal());
