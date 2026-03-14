@@ -395,7 +395,7 @@ function renderBoard() {
   const banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = demo ? '' : 'none';
   const boardNote = document.getElementById('demoBoardNote');
-  if (boardNote) boardNote.style.display = demo ? '' : 'none';
+  if (boardNote) boardNote.style.display = demo ? 'flex' : 'none';
 
   const dateSel = document.getElementById('dateFilter');
   if (dateSel) { dateSel.value = currentFilter; dateSel.classList.toggle('active', currentFilter !== 'all'); }

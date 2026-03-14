@@ -1437,7 +1437,6 @@ h1 {
 
 /* ─── Demo board-level note (above all columns) ─── */
 .demo-board-note {
-  display: flex;
   align-items: center;
   gap: 7px;
   font-size: .78rem;
@@ -1446,8 +1445,10 @@ h1 {
   background: rgba(99,102,241,.07);
   border: 1px dashed rgba(99,102,241,.30);
   border-radius: 8px;
-  padding: 7px 14px;
-  margin: 10px 16px 4px;
+  padding: 7px 16px;
+  margin: 0 24px 0;
+  max-width: 1440px;
+  box-sizing: border-box;
 }
 .demo-board-note svg { flex-shrink: 0; }
 [data-theme="dark"] .demo-board-note {
