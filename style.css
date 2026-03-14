@@ -1114,6 +1114,22 @@ h1 {
 }
 .sidebar-tab:hover { color: var(--primary); }
 .sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.sidebar-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--high);
+  color: #fff;
+  border-radius: 999px;
+  font-size: .55rem;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  margin-left: 3px;
+  vertical-align: 1px;
+  line-height: 1;
+}
 .sidebar-panel {
   display: flex;
   flex-direction: column;

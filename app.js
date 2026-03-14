@@ -62,6 +62,7 @@ let dmMsgUnsub         = null;
 let announcements     = {};
 let activeSidebarTab  = 'activity';
 let editingAnnoId     = null;
+let annoLastReadAt    = {};  // { wsId: timestamp } — persisted in localStorage
 
 // DM widget state
 let dmUnreadCounts    = {};  // { dmKey: count }
@@ -1714,6 +1715,22 @@ async function sendDmMessage() {
 }
 
 // ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+function loadAnnoLastRead() {
+  try { annoLastReadAt = JSON.parse(localStorage.getItem('achieverboard-anno-read') || '{}'); } catch { annoLastReadAt = {}; }
+}
+function saveAnnoLastRead() {
+  localStorage.setItem('achieverboard-anno-read', JSON.stringify(annoLastReadAt));
+}
+function updateAnnoTabBadge() {
+  const badge = document.getElementById('annoTabBadge');
+  if (!badge) return;
+  if (!currentUser) { badge.style.display = 'none'; return; }
+  const lastRead = annoLastReadAt[currentUser.workspaceId] || 0;
+  const count = Object.values(announcements).filter(a => a.createdAt > lastRead && a.authorId !== currentUser.id).length;
+  badge.textContent  = count > 9 ? '9+' : String(count);
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
 function renderAnnouncements() {
   const container = document.getElementById('annoList');
   if (!container) return;
@@ -1750,6 +1767,7 @@ function renderAnnouncements() {
   container.querySelectorAll('.anno-del-btn').forEach(btn => {
     btn.addEventListener('click', () => deleteAnnouncement(btn.dataset.id));
   });
+  updateAnnoTabBadge();
 }
 
 function openAnnoModal(annoId = null) {
@@ -2325,6 +2343,11 @@ document.querySelectorAll('.sidebar-tab').forEach(tab => {
       const el = document.getElementById(id);
       if (el) el.style.display = key === activeSidebarTab ? '' : 'none';
     });
+    if (activeSidebarTab === 'announcements' && currentUser) {
+      annoLastReadAt[currentUser.workspaceId] = Date.now();
+      saveAnnoLastRead();
+      updateAnnoTabBadge();
+    }
   });
 });
 
@@ -2380,6 +2403,7 @@ function showToast(msg) {
 
 // ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
 loadCurrentUser();
+loadAnnoLastRead();
 const _guestBanner  = document.getElementById('guestBanner');
 const _boardWrapper = document.querySelector('.board-wrapper');
 
