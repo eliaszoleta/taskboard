@@ -634,17 +634,35 @@ document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
   setActiveStep('stepCreate');
 });
 
-// Pricing table CTA buttons → open the user overlay (payment gate handles the rest)
-document.querySelectorAll('.pricing-cta-btn[data-plan]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    showUserOverlay();
-    const plan = btn.dataset.plan;
-    if (plan && plan !== '2') {
-      // Pre-select the matching plan in the dropdown once the create step is reached
-      const sel = document.getElementById('teamSizeSelect');
-      if (sel) { sel.value = plan; updatePlanInfo(); }
-    }
-  });
+// ─── SINGLE PRICING CARD — dynamic update from dropdown ───────────────────────
+const PRICING_CARD_DATA = {
+  '2':  { name: 'Free',     tagline: 'For small teams just getting started', amount: '$0',  seats: 'Up to 2 users · forever free',       cta: 'Get Started Free' },
+  '5':  { name: 'Starter',  tagline: 'For small teams ready to grow',        amount: '$15', seats: 'Up to 5 users · flat team rate',       cta: 'Get Starter'      },
+  '10': { name: 'Growth',   tagline: 'Best value for most teams',            amount: '$30', seats: 'Up to 10 users · flat team rate',      cta: 'Get Growth'       },
+  '15': { name: 'Team',     tagline: 'For established, larger teams',        amount: '$50', seats: 'Up to 15 users · flat team rate',      cta: 'Get Team'         },
+  '20': { name: 'Business', tagline: 'For large, high-output teams',         amount: '$70', seats: 'Up to 20 users · flat team rate',      cta: 'Get Business'     },
+};
+function updatePricingCard() {
+  const sel = document.getElementById('pricingPlanSelect');
+  if (!sel) return;
+  const d = PRICING_CARD_DATA[sel.value] || PRICING_CARD_DATA['2'];
+  document.getElementById('pricingPlanName').textContent    = d.name;
+  document.getElementById('pricingPlanTagline').textContent = d.tagline;
+  document.getElementById('pricingPriceAmount').textContent = d.amount;
+  document.getElementById('pricingPlanSeats').textContent   = d.seats;
+  const btn = document.getElementById('pricingCtaBtn');
+  if (btn) { btn.textContent = d.cta; btn.dataset.plan = sel.value; }
+}
+document.getElementById('pricingPlanSelect')?.addEventListener('change', updatePricingCard);
+
+// Pricing CTA button → open the user overlay (payment gate handles the rest)
+document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
+  showUserOverlay();
+  const plan = document.getElementById('pricingCtaBtn')?.dataset.plan;
+  if (plan && plan !== '2') {
+    const sel = document.getElementById('teamSizeSelect');
+    if (sel) { sel.value = plan; updatePlanInfo(); }
+  }
 });
 
 // ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────

@@ -475,17 +475,30 @@
       <div class="seo-compare">
         <h2>Simple, Transparent Pricing</h2>
         <p>All features included on every plan. The only difference is how many seats your workspace holds. Start free — upgrade only when your team grows.</p>
-        <div class="pricing-grid">
 
-          <!-- Free -->
-          <div class="pricing-card">
-            <div class="pricing-plan-name">Free</div>
-            <div class="pricing-plan-tagline">For small teams just getting started</div>
+        <div class="pricing-single-wrap">
+
+          <!-- User count selector -->
+          <div class="pricing-selector">
+            <label class="pricing-selector-label" for="pricingPlanSelect">How many users do you need?</label>
+            <select id="pricingPlanSelect">
+              <option value="2" selected>Free — 2 users (you + 1 member)</option>
+              <option value="5">Starter — Up to 5 users · $15/month</option>
+              <option value="10">Growth — Up to 10 users · $30/month</option>
+              <option value="15">Team — Up to 15 users · $50/month</option>
+              <option value="20">Business — Up to 20 users · $70/month</option>
+            </select>
+          </div>
+
+          <!-- Single dynamic pricing card -->
+          <div class="pricing-card pricing-single-card">
+            <div class="pricing-plan-name" id="pricingPlanName">Free</div>
+            <div class="pricing-plan-tagline" id="pricingPlanTagline">For small teams just getting started</div>
             <div class="pricing-price-block">
-              <span class="pricing-price-amount">$0</span><span class="pricing-price-period">/month</span>
+              <span class="pricing-price-amount" id="pricingPriceAmount">$0</span><span class="pricing-price-period">/month</span>
             </div>
-            <div class="pricing-plan-seats">Up to 2 users · forever free</div>
-            <button class="pricing-cta-btn" data-plan="2">Get Started Free</button>
+            <div class="pricing-plan-seats" id="pricingPlanSeats">Up to 2 users · forever free</div>
+            <button class="pricing-cta-btn pricing-cta-btn--popular" id="pricingCtaBtn" data-plan="2">Get Started Free</button>
             <div class="pricing-divider"></div>
             <p class="pricing-what-label">Everything included:</p>
             <ul class="pricing-feat-list">
@@ -499,82 +512,9 @@
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Personal activity &amp; notification feed</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Date filters — Today, This Week, This Month</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Real-time sync across all devices</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>No credit card required</li>
-            </ul>
-          </div>
-
-          <!-- Starter -->
-          <div class="pricing-card">
-            <div class="pricing-plan-name">Starter</div>
-            <div class="pricing-plan-tagline">For small teams ready to grow</div>
-            <div class="pricing-price-block">
-              <span class="pricing-price-amount">$15</span><span class="pricing-price-period">/month</span>
-            </div>
-            <div class="pricing-plan-seats">Up to 5 users · flat team rate</div>
-            <button class="pricing-cta-btn" data-plan="5">Get Starter</button>
-            <div class="pricing-divider"></div>
-            <p class="pricing-what-label">All Free features, plus:</p>
-            <ul class="pricing-feat-list">
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 5 team members</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>User-based task filtering</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Admin controls — add &amp; remove members</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat rate — not $15 per person</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancel anytime</li>
-            </ul>
-          </div>
-
-          <!-- Growth — Most Popular -->
-          <div class="pricing-card pricing-card--popular">
-            <div class="pricing-popular-banner">Most Popular</div>
-            <div class="pricing-plan-name">Growth</div>
-            <div class="pricing-plan-tagline">Best value for most teams</div>
-            <div class="pricing-price-block">
-              <span class="pricing-price-amount">$30</span><span class="pricing-price-period">/month</span>
-            </div>
-            <div class="pricing-plan-seats">Up to 10 users · flat team rate</div>
-            <button class="pricing-cta-btn pricing-cta-btn--popular" data-plan="10">Get Growth</button>
-            <div class="pricing-divider"></div>
-            <p class="pricing-what-label">Everything in Starter, plus:</p>
-            <ul class="pricing-feat-list">
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 10 team members</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Double the seats at only 2× the price</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat rate — not $30 per person</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancel anytime</li>
-            </ul>
-          </div>
-
-          <!-- Team -->
-          <div class="pricing-card">
-            <div class="pricing-plan-name">Team</div>
-            <div class="pricing-plan-tagline">For established, larger teams</div>
-            <div class="pricing-price-block">
-              <span class="pricing-price-amount">$50</span><span class="pricing-price-period">/month</span>
-            </div>
-            <div class="pricing-plan-seats">Up to 15 users · flat team rate</div>
-            <button class="pricing-cta-btn" data-plan="15">Get Team</button>
-            <div class="pricing-divider"></div>
-            <p class="pricing-what-label">Everything in Growth, plus:</p>
-            <ul class="pricing-feat-list">
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 15 team members</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat rate — not $50 per person</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancel anytime</li>
-            </ul>
-          </div>
-
-          <!-- Business -->
-          <div class="pricing-card">
-            <div class="pricing-plan-name">Business</div>
-            <div class="pricing-plan-tagline">For large, high-output teams</div>
-            <div class="pricing-price-block">
-              <span class="pricing-price-amount">$70</span><span class="pricing-price-period">/month</span>
-            </div>
-            <div class="pricing-plan-seats">Up to 20 users · flat team rate</div>
-            <button class="pricing-cta-btn" data-plan="20">Get Business</button>
-            <div class="pricing-divider"></div>
-            <p class="pricing-what-label">Everything in Team, plus:</p>
-            <ul class="pricing-feat-list">
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Up to 20 team members</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat rate — not $70 per person</li>
+              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>User-based task filtering</li>
+              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat team rate — not per person</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancel anytime</li>
             </ul>
           </div>
