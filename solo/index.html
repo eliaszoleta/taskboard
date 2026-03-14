@@ -219,6 +219,13 @@
 
   <!-- ── Board ── -->
   <div class="board-wrapper">
+
+    <!-- Demo board-level note (shown above all columns in demo mode) -->
+    <div class="demo-board-note" id="demoBoardNote" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      These are example tasks for demo purposes only — they are not saved anywhere.
+    </div>
+
     <main class="board">
 
       <div class="column" id="col-todo">
@@ -226,7 +233,6 @@
           <span class="column-title">To Do</span>
           <span class="task-count" id="count-todo">0</span>
         </div>
-        <div class="demo-col-note" id="demo-note-todo" style="display:none">Example tasks — for preview only</div>
         <select class="col-priority-filter" id="pf-todo">
           <option value="all">Priorities</option>
           <option value="high">High</option>
@@ -241,7 +247,6 @@
           <span class="column-title">In Progress</span>
           <span class="task-count" id="count-inprogress">0</span>
         </div>
-        <div class="demo-col-note" id="demo-note-inprogress" style="display:none">Example tasks — for preview only</div>
         <select class="col-priority-filter" id="pf-inprogress">
           <option value="all">Priorities</option>
           <option value="high">High</option>
@@ -256,7 +261,6 @@
           <span class="column-title">Pending</span>
           <span class="task-count" id="count-pending">0</span>
         </div>
-        <div class="demo-col-note" id="demo-note-pending" style="display:none">Example tasks — for preview only</div>
         <select class="col-priority-filter" id="pf-pending">
           <option value="all">Priorities</option>
           <option value="high">High</option>
@@ -271,7 +275,6 @@
           <span class="column-title">Done</span>
           <span class="task-count" id="count-done">0</span>
         </div>
-        <div class="demo-col-note" id="demo-note-done" style="display:none">Example tasks — for preview only</div>
         <select class="col-priority-filter" id="pf-done">
           <option value="all">Priorities</option>
           <option value="high">High</option>
@@ -286,7 +289,6 @@
           <span class="column-title">Overdue</span>
           <span class="task-count" id="count-overdue">0</span>
         </div>
-        <div class="demo-col-note" id="demo-note-overdue" style="display:none">Example tasks — for preview only</div>
         <select class="col-priority-filter" id="pf-overdue">
           <option value="all">Priorities</option>
           <option value="high">High</option>

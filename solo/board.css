@@ -1435,21 +1435,23 @@ h1 {
 }
 .demo-banner-cta:hover { background: var(--primary-dark); }
 
-/* ─── Demo column note ─── */
-.demo-col-note {
-  font-size: .7rem;
-  font-weight: 600;
+/* ─── Demo board-level note (above all columns) ─── */
+.demo-board-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .78rem;
+  font-weight: 500;
   color: var(--primary);
-  background: rgba(99,102,241,.08);
+  background: rgba(99,102,241,.07);
   border: 1px dashed rgba(99,102,241,.30);
-  border-radius: 6px;
-  padding: 4px 10px;
-  text-align: center;
-  margin-bottom: 6px;
-  letter-spacing: .01em;
+  border-radius: 8px;
+  padding: 7px 14px;
+  margin: 10px 16px 4px;
 }
-[data-theme="dark"] .demo-col-note {
-  background: rgba(99,102,241,.15);
+.demo-board-note svg { flex-shrink: 0; }
+[data-theme="dark"] .demo-board-note {
+  background: rgba(99,102,241,.14);
   border-color: rgba(99,102,241,.40);
 }
 

@@ -391,10 +391,11 @@ function renderBoard() {
   const demo = !currentSpace && demoTasks !== null;
   const src  = demo ? demoTasks : tasks;
 
-  // Show/hide demo banner and per-column notes
+  // Show/hide demo banner and board-level note
   const banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = demo ? '' : 'none';
-  document.querySelectorAll('.demo-col-note').forEach(el => { el.style.display = demo ? '' : 'none'; });
+  const boardNote = document.getElementById('demoBoardNote');
+  if (boardNote) boardNote.style.display = demo ? '' : 'none';
 
   const dateSel = document.getElementById('dateFilter');
   if (dateSel) { dateSel.value = currentFilter; dateSel.classList.toggle('active', currentFilter !== 'all'); }
