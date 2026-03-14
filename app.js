@@ -54,6 +54,14 @@ let wsCommentsUnsub    = null;
 let wsNotifsAllUnsub   = null;
 let notifBadgeUnsub    = null;
 let commentsUnsub      = null;
+let chatUnsub          = null;
+let annoUnsub          = null;
+
+// Chat & Announcements state
+let chatMsgs          = {};
+let announcements     = {};
+let activeSidebarTab  = 'activity';
+let editingAnnoId     = null;
 
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
@@ -782,13 +790,23 @@ function startWorkspaceListeners() {
     allNotifications = snap.val() || {};
     renderNotifSidebar();
   });
+
+  chatUnsub = onValue(ref(db, `workspaces/${wsId}/chat`), snap => {
+    chatMsgs = snap.val() || {};
+    renderChat();
+  });
+
+  annoUnsub = onValue(ref(db, `workspaces/${wsId}/announcements`), snap => {
+    announcements = snap.val() || {};
+    renderAnnouncements();
+  });
 }
 
 function stopWorkspaceListeners() {
-  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub]
+  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub, chatUnsub, annoUnsub]
     .forEach(u => { if (u) u(); });
-  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = null;
-  users = {}; tasks = {}; commentCounts = {}; allNotifications = {};
+  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = chatUnsub = annoUnsub = null;
+  users = {}; tasks = {}; commentCounts = {}; allNotifications = {}; chatMsgs = {}; announcements = {};
   currentWorkspaceMeta = null;
 }
 
@@ -1564,6 +1582,157 @@ function renderNotifSidebar() {
   if (showMoreBtn) showMoreBtn.addEventListener('click', () => { sidebarLimit += 10; renderNotifSidebar(); });
 }
 
+// ─── TEAM CHAT ────────────────────────────────────────────────────────────────
+function renderChat() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+
+  const msgs = Object.entries(chatMsgs)
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => a.createdAt - b.createdAt);
+
+  if (!msgs.length) {
+    container.innerHTML = '<div class="sidebar-empty">No messages yet</div>';
+    return;
+  }
+
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+
+  container.innerHTML = msgs.map(m => {
+    const isMe = currentUser && m.authorId === currentUser.id;
+    const time = new Date(m.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `<div class="chat-msg">
+      ${avatarHtml(m.authorName)}
+      <div class="chat-msg-body">
+        <div class="chat-msg-author${isMe ? ' is-me' : ''}">${escHtml(m.authorName)}</div>
+        <div class="chat-msg-text">${escHtml(m.text)}</div>
+        <div class="chat-msg-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMessage() {
+  if (!currentUser) {
+    pendingAfterLogin = () => document.getElementById('chatInput')?.focus();
+    showUserOverlay();
+    return;
+  }
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  await push(wsRef('chat'), {
+    text,
+    authorId:   currentUser.id,
+    authorName: currentUser.name,
+    createdAt:  Date.now(),
+  });
+}
+
+// ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+function renderAnnouncements() {
+  const container = document.getElementById('annoList');
+  if (!container) return;
+
+  const annos = Object.entries(announcements)
+    .map(([id, a]) => ({ id, ...a }))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  if (!annos.length) {
+    container.innerHTML = '<div class="sidebar-empty">No announcements yet</div>';
+    return;
+  }
+
+  container.innerHTML = annos.map(a => {
+    const time = new Date(a.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const canModify = currentUser && (a.authorId === currentUser.id || currentUser.role === 'admin');
+    const editedTag = a.editedAt ? '<span class="anno-edited-tag">(edited)</span>' : '';
+    return `<div class="anno-item" data-id="${a.id}">
+      <div class="anno-item-header">
+        <span class="anno-item-author">${escHtml(a.authorName)}</span>
+        <span class="anno-item-time">${time}</span>
+        ${canModify ? `<div class="anno-item-actions">
+          <button class="btn-icon anno-edit-btn" data-id="${a.id}" title="Edit">${ICONS.edit}</button>
+          <button class="btn-icon delete anno-del-btn" data-id="${a.id}" title="Delete">${ICONS.trash}</button>
+        </div>` : ''}
+      </div>
+      <div class="anno-item-text">${escHtml(a.content)}${editedTag}</div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.anno-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openAnnoModal(btn.dataset.id));
+  });
+  container.querySelectorAll('.anno-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteAnnouncement(btn.dataset.id));
+  });
+}
+
+function openAnnoModal(annoId = null) {
+  if (!currentUser) {
+    pendingAfterLogin = () => openAnnoModal(annoId);
+    showUserOverlay();
+    return;
+  }
+  editingAnnoId = annoId;
+  const titleEl  = document.getElementById('annoModalTitle');
+  const textEl   = document.getElementById('annoModalText');
+  const saveBtn  = document.getElementById('annoModalSave');
+  document.getElementById('annoModalErr').textContent = '';
+
+  if (annoId) {
+    const a = announcements[annoId];
+    titleEl.textContent  = 'Edit Announcement';
+    textEl.value         = a?.content || '';
+    saveBtn.textContent  = 'Save';
+  } else {
+    titleEl.textContent  = 'New Announcement';
+    textEl.value         = '';
+    saveBtn.textContent  = 'Post';
+  }
+  document.getElementById('annoModalOverlay').classList.add('open');
+  textEl.focus();
+}
+
+function closeAnnoModal() {
+  editingAnnoId = null;
+  document.getElementById('annoModalOverlay')?.classList.remove('open');
+}
+
+async function saveAnnouncement() {
+  if (!currentUser) return;
+  const content = document.getElementById('annoModalText').value.trim();
+  const errEl   = document.getElementById('annoModalErr');
+  if (!content) { errEl.textContent = 'Please enter an announcement.'; return; }
+
+  if (editingAnnoId) {
+    const a = announcements[editingAnnoId];
+    if (!a) { closeAnnoModal(); return; }
+    if (a.authorId !== currentUser.id && currentUser.role !== 'admin') { closeAnnoModal(); return; }
+    await update(wsRef('announcements', editingAnnoId), { content, editedAt: Date.now() });
+  } else {
+    await push(wsRef('announcements'), {
+      content,
+      authorId:   currentUser.id,
+      authorName: currentUser.name,
+      createdAt:  Date.now(),
+    });
+  }
+  closeAnnoModal();
+}
+
+async function deleteAnnouncement(annoId) {
+  if (!currentUser) return;
+  const a = announcements[annoId];
+  if (!a) return;
+  if (a.authorId !== currentUser.id && currentUser.role !== 'admin') return;
+  await remove(wsRef('announcements', annoId));
+}
+
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
 let audioCtx          = null;
 let pendingSound      = false;
@@ -2062,9 +2231,37 @@ document.getElementById('filePreviewOverlay').addEventListener('click', e => { i
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm();
-    closeDeleteAccountOverlay(); closeFilePreview(); closeAddMemberModal();
+    closeDeleteAccountOverlay(); closeFilePreview(); closeAddMemberModal(); closeAnnoModal();
   }
 });
+
+// ─── SIDEBAR TABS ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.sidebar-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    activeSidebarTab = tab.dataset.tab;
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeSidebarTab));
+    const panelMap = { activity: 'panelActivity', chat: 'panelChat', announcements: 'panelAnnouncements' };
+    Object.entries(panelMap).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = key === activeSidebarTab ? '' : 'none';
+    });
+    if (activeSidebarTab === 'chat') {
+      const msgs = document.getElementById('chatMessages');
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+});
+
+// ─── CHAT HANDLERS ────────────────────────────────────────────────────────────
+document.getElementById('chatSendBtn')?.addEventListener('click', sendChatMessage);
+document.getElementById('chatInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+
+// ─── ANNOUNCEMENT HANDLERS ────────────────────────────────────────────────────
+document.getElementById('annoNewBtn')?.addEventListener('click', () => openAnnoModal());
+document.getElementById('annoModalClose')?.addEventListener('click', closeAnnoModal);
+document.getElementById('annoModalCancel')?.addEventListener('click', closeAnnoModal);
+document.getElementById('annoModalOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeAnnoModal(); });
+document.getElementById('annoModalSave')?.addEventListener('click', saveAnnouncement);
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
 let toastTimer = null;

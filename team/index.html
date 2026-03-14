@@ -373,9 +373,40 @@
   <div class="board-wrapper">
 
     <aside class="notif-sidebar">
-      <div class="notif-sidebar-header">My Activity</div>
-      <div class="notif-sidebar-body" id="notifSidebarBody">
-        <div class="sidebar-empty">Loading…</div>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="activity">Activity</button>
+        <button class="sidebar-tab" data-tab="chat">Chat</button>
+        <button class="sidebar-tab" data-tab="announcements">Announce</button>
+      </div>
+
+      <!-- Activity Panel -->
+      <div class="sidebar-panel" id="panelActivity">
+        <div class="notif-sidebar-body" id="notifSidebarBody">
+          <div class="sidebar-empty">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="sidebar-panel" id="panelChat" style="display:none">
+        <div class="chat-messages" id="chatMessages">
+          <div class="sidebar-empty">No messages yet</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Message everyone…" maxlength="500">
+          <button class="chat-send-btn" id="chatSendBtn" title="Send">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Announcements Panel -->
+      <div class="sidebar-panel" id="panelAnnouncements" style="display:none">
+        <div class="anno-list" id="annoList">
+          <div class="sidebar-empty">No announcements yet</div>
+        </div>
+        <div class="anno-footer">
+          <button class="btn-primary btn-sm anno-new-btn" id="annoNewBtn">+ Post Announcement</button>
+        </div>
       </div>
     </aside>
 
@@ -780,6 +811,25 @@
     </div>
   </div>
 
-  <script type="module" src="../app.js?v=30"></script>
+  <!-- ── Announcement Modal ── -->
+  <div class="modal-overlay" id="annoModalOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="annoModalTitle">New Announcement</h2>
+        <button class="btn-close" id="annoModalClose">&times;</button>
+      </div>
+      <div class="form-group">
+        <label for="annoModalText">Announcement</label>
+        <textarea id="annoModalText" rows="4" placeholder="Write your announcement…" maxlength="1000"></textarea>
+        <p class="anno-modal-err" id="annoModalErr"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="annoModalCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="annoModalSave">Post</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../app.js?v=31"></script>
 </body>
 </html>

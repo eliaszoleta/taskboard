@@ -1437,28 +1437,6 @@ body.demo-active .demo-banner {
 }
 .demo-banner-cta:hover { background: var(--primary-dark); }
 
-/* ─── Demo board-level note (above all columns) ─── */
-.demo-board-note { display: none; }
-body.demo-active .demo-board-note {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: .78rem;
-  font-weight: 500;
-  color: var(--primary);
-  background: rgba(99,102,241,.07);
-  border: 1px dashed rgba(99,102,241,.30);
-  border-radius: 8px;
-  padding: 7px 16px;
-  margin: 8px 24px 0;
-  max-width: 1440px;
-  box-sizing: border-box;
-}
-body.demo-active .demo-board-note svg { flex-shrink: 0; }
-[data-theme="dark"] body.demo-active .demo-board-note {
-  background: rgba(99,102,241,.14);
-  border-color: rgba(99,102,241,.40);
-}
 [data-theme="dark"] body.demo-active .demo-banner {
   background: linear-gradient(90deg, rgba(99,102,241,.18) 0%, rgba(99,102,241,.10) 100%);
   border-bottom-color: rgba(99,102,241,.30);
