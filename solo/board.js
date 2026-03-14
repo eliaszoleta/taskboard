@@ -74,7 +74,7 @@ const DEMO_TASKS_TEMPLATE = {
       { type: 'link', url: 'https://mailchimp.com', name: 'Mailchimp campaign' },
       { type: 'file', url: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=600&q=80', name: 'email-template.jpg', mime: 'image/jpeg' },
     ],
-    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=25' },
+    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=52' },
   },
   'demo-5': {
     isDemo: true,
@@ -96,7 +96,7 @@ const DEMO_TASKS_TEMPLATE = {
     resources: [
       { type: 'link', url: 'https://notion.so', name: 'Article drafts in Notion' },
     ],
-    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=25' },
+    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=52' },
   },
 };
 
@@ -391,9 +391,10 @@ function renderBoard() {
   const demo = !currentSpace && demoTasks !== null;
   const src  = demo ? demoTasks : tasks;
 
-  // Show/hide demo banner
+  // Show/hide demo banner and per-column notes
   const banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = demo ? '' : 'none';
+  document.querySelectorAll('.demo-col-note').forEach(el => { el.style.display = demo ? '' : 'none'; });
 
   const dateSel = document.getElementById('dateFilter');
   if (dateSel) { dateSel.value = currentFilter; dateSel.classList.toggle('active', currentFilter !== 'all'); }
