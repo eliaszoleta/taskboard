@@ -1022,7 +1022,6 @@ h1 {
   width: 250px;
   flex-shrink: 0;
   background: var(--white);
-  border-radius: 14px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   position: sticky;
