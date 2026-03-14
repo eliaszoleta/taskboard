@@ -27,9 +27,83 @@ const ICONS = {
   eye:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
+// ─── DEMO TASKS ────────────────────────────────────────────────────────────────
+const _D = Date.now();
+const DEMO_TASKS_TEMPLATE = {
+  'demo-1': {
+    isDemo: true,
+    title: 'Redesign landing page hero section',
+    desc: 'Update the hero copy, add a new CTA button, and replace the stock photo with the brand illustration. Coordinate with design on final approved copy.',
+    priority: 'high', status: 'inprogress', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 2,
+    resources: [
+      { type: 'link', url: 'https://figma.com', name: 'Figma design file' },
+      { type: 'file', url: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=600&q=80', name: 'hero-mockup.jpg', mime: 'image/jpeg' },
+    ],
+    createdBy: { name: 'Alex Kim', photoURL: 'https://i.pravatar.cc/40?img=3' },
+  },
+  'demo-2': {
+    isDemo: true,
+    title: 'Fix checkout form validation bug',
+    desc: 'Users on mobile Safari can submit the checkout form without a valid email. Reproduce, patch the validation logic, and run cross-browser regression tests.',
+    priority: 'high', status: 'todo', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 3,
+    resources: [
+      { type: 'file', url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=80', name: 'bug-screenshot.jpg', mime: 'image/jpeg' },
+    ],
+    createdBy: { name: 'Alex Kim', photoURL: 'https://i.pravatar.cc/40?img=3' },
+  },
+  'demo-3': {
+    isDemo: true,
+    title: 'Write Q2 product roadmap',
+    desc: 'Draft the roadmap for Q2 covering the three core feature pillars. Share with the team for async review and sign-off by end of the week.',
+    priority: 'medium', status: 'todo', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 1,
+    resources: [
+      { type: 'link', url: 'https://docs.google.com', name: 'Google Docs draft' },
+    ],
+    createdBy: { name: 'Jordan Lee', photoURL: 'https://i.pravatar.cc/40?img=12' },
+  },
+  'demo-4': {
+    isDemo: true,
+    title: 'Set up onboarding email sequences',
+    desc: 'Configure a 3-part drip campaign in Mailchimp: welcome email, day-3 tips, and day-7 check-in. Use the approved brand templates.',
+    priority: 'medium', status: 'inprogress', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 4,
+    resources: [
+      { type: 'link', url: 'https://mailchimp.com', name: 'Mailchimp campaign' },
+      { type: 'file', url: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=600&q=80', name: 'email-template.jpg', mime: 'image/jpeg' },
+    ],
+    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=25' },
+  },
+  'demo-5': {
+    isDemo: true,
+    title: 'Waiting on legal review of updated ToS',
+    desc: 'Legal team is reviewing the revised terms of service document. No action needed until their feedback is received.',
+    priority: 'low', status: 'pending', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 5,
+    resources: [
+      { type: 'link', url: 'https://docs.google.com', name: 'ToS draft document' },
+    ],
+    createdBy: { name: 'Jordan Lee', photoURL: 'https://i.pravatar.cc/40?img=12' },
+  },
+  'demo-6': {
+    isDemo: true,
+    title: 'Publish help center articles',
+    desc: 'Wrote and published 5 how-to articles covering the most common support questions. All published to the knowledge base.',
+    priority: 'medium', status: 'done', scheduledFor: null, due: null,
+    createdAt: _D - 86400000 * 7,
+    resources: [
+      { type: 'link', url: 'https://notion.so', name: 'Article drafts in Notion' },
+    ],
+    createdBy: { name: 'Sam Rivera', photoURL: 'https://i.pravatar.cc/40?img=25' },
+  },
+};
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let currentSpace       = null;   // { key, name }
 let tasks              = {};
+let demoTasks          = null;   // populated when no space is loaded
 let commentCounts      = {};
 let allNotifications   = {};
 let knownNotifIds      = null;
@@ -49,6 +123,10 @@ let pendingResourceFiles = [];
 let pendingResourceLinks = [''];
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
+
+function isDemoTask(id) {
+  return demoTasks !== null && id in demoTasks;
+}
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const escHtml = str =>
@@ -310,16 +388,23 @@ const FILTER_LABELS = {
 
 // ─── BOARD RENDERING ──────────────────────────────────────────────────────────
 function renderBoard() {
+  const demo = !currentSpace && demoTasks !== null;
+  const src  = demo ? demoTasks : tasks;
+
+  // Show/hide demo banner
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = demo ? '' : 'none';
+
   const dateSel = document.getElementById('dateFilter');
   if (dateSel) { dateSel.value = currentFilter; dateSel.classList.toggle('active', currentFilter !== 'all'); }
 
   const bar   = document.getElementById('filterBar');
   const label = document.getElementById('filterBarLabel');
   let part = '';
-  if (currentFilter === 'custom') {
+  if (!demo && currentFilter === 'custom') {
     const fmt = s => s ? new Date(s + 'T00:00:00').toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }) : '…';
     part = `${fmt(customDateStart)} – ${fmt(customDateEnd)}`;
-  } else if (currentFilter !== 'all') {
+  } else if (!demo && currentFilter !== 'all') {
     part = FILTER_LABELS[currentFilter] || currentFilter;
   }
   bar.classList.toggle('visible', !!part);
@@ -334,10 +419,10 @@ function renderBoard() {
   ['todo', 'inprogress', 'pending'].forEach(status => {
     const list  = document.getElementById('list-'  + status);
     const count = document.getElementById('count-' + status);
-    const items = Object.entries(tasks)
+    const items = Object.entries(src)
       .filter(([, t]) => t.status === status && !isOverdue(t.due))
       .map(([id, t]) => ({ id, ...t }))
-      .filter(t => taskMatchesFilter(t))
+      .filter(t => demo || taskMatchesFilter(t))
       .filter(t => colPriorityFilter[status] === 'all' || t.priority === colPriorityFilter[status])
       .sort(byNewest);
 
@@ -355,10 +440,10 @@ function renderBoard() {
   // Done column
   const doneList  = document.getElementById('list-done');
   const doneCount = document.getElementById('count-done');
-  const doneItems = Object.entries(tasks)
+  const doneItems = Object.entries(src)
     .filter(([, t]) => t.status === 'done')
     .map(([id, t]) => ({ id, ...t }))
-    .filter(t => taskMatchesFilter(t))
+    .filter(t => demo || taskMatchesFilter(t))
     .filter(t => colPriorityFilter.done === 'all' || t.priority === colPriorityFilter.done)
     .sort(byNewest);
   doneCount.textContent = doneItems.length;
@@ -374,7 +459,7 @@ function renderBoard() {
   // Overdue column — tasks past due and not done
   const overdueList  = document.getElementById('list-overdue');
   const overdueCount = document.getElementById('count-overdue');
-  const overdueItems = Object.entries(tasks)
+  const overdueItems = Object.entries(src)
     .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
     .map(([id, t]) => ({ id, ...t }))
     .filter(t => colPriorityFilter.overdue === 'all' || t.priority === colPriorityFilter.overdue)
@@ -397,6 +482,7 @@ function buildCard(task) {
 
   const card = document.createElement('div');
   card.className  = 'task-card';
+  if (task.isDemo) card.classList.add('task-card--demo');
   card.dataset.id = task.id;
   card.draggable  = true;
   card.style.cursor = 'grab';
@@ -404,10 +490,10 @@ function buildCard(task) {
   card.innerHTML = `
     <div class="task-card-header">
       <span class="task-title">${escHtml(task.title)}</span>
-      <div class="card-actions">
+      ${!task.isDemo ? `<div class="card-actions">
         <button class="btn-icon edit"   title="Edit"   data-id="${task.id}">${ICONS.edit}</button>
         <button class="btn-icon delete" title="Delete" data-id="${task.id}">${ICONS.trash}</button>
-      </div>
+      </div>` : ''}
     </div>
     ${task.desc ? `<div class="task-desc">${escHtml(task.desc)}</div>` : ''}
     <div class="task-card-footer">
@@ -415,13 +501,16 @@ function buildCard(task) {
       <div class="card-meta">
         ${task.due ? `<span class="due-date ${overdue?'overdue':''}">${ICONS.calendar} ${formatDate(task.due)}</span>` : ''}
         ${task.createdAt ? `<span class="created-date">${ICONS.clock} ${fmtTimestamp(task.createdAt)}</span>` : ''}
-        <span class="comment-count" title="${cCount} note${cCount === 1 ? '' : 's'}">${ICONS.comment} ${cCount}</span>
+        ${!task.isDemo ? `<span class="comment-count" title="${cCount} note${cCount === 1 ? '' : 's'}">${ICONS.comment} ${cCount}</span>` : ''}
         ${hasRes ? `<span class="resource-indicator" title="Has attachment">${ICONS.clip}</span>` : ''}
+        ${task.createdBy ? `<img class="demo-avatar-img-sm" src="${escHtml(task.createdBy.photoURL)}" alt="${escHtml(task.createdBy.name)}" title="${escHtml(task.createdBy.name)}">` : ''}
       </div>
     </div>`;
 
-  card.querySelector('.btn-icon.edit').addEventListener('click',   e => { e.stopPropagation(); openEdit(task.id); });
-  card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
+  if (!task.isDemo) {
+    card.querySelector('.btn-icon.edit').addEventListener('click',   e => { e.stopPropagation(); openEdit(task.id); });
+    card.querySelector('.btn-icon.delete').addEventListener('click', e => { e.stopPropagation(); deleteTask(task.id); });
+  }
 
   card.addEventListener('dragstart', e => {
     draggedId = task.id;
@@ -442,9 +531,17 @@ document.querySelectorAll('.task-list').forEach(list => {
     e.preventDefault();
     list.classList.remove('drag-over');
     const id = draggedId; draggedId = null;
-    if (!id || !currentSpace) return;
+    if (!id) return;
     const newStatus = list.id.replace('list-', '');
     if (newStatus === 'overdue') return;
+    // Demo mode: move in-memory only
+    if (!currentSpace) {
+      if (isDemoTask(id) && demoTasks[id] && demoTasks[id].status !== newStatus) {
+        demoTasks[id] = { ...demoTasks[id], status: newStatus };
+        renderBoard();
+      }
+      return;
+    }
     const task = tasks[id];
     if (!task || task.status === newStatus) return;
     tasks[id] = { ...task, status: newStatus };
@@ -685,6 +782,7 @@ function openNew(defaultStatus = 'todo') {
 }
 
 function openEdit(id) {
+  if (isDemoTask(id)) { showToast('This is a demo task — create your free board to add and edit tasks.'); showSpaceOverlay(); return; }
   const task = tasks[id]; if (!task) return;
   editingTaskId = id;
   document.getElementById('modalTitle').textContent = 'Edit Task';
@@ -757,6 +855,7 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
 
 // ─── DELETE TASK ──────────────────────────────────────────────────────────────
 function deleteTask(id) {
+  if (isDemoTask(id)) { showToast('Create your free board to manage your own tasks.'); return; }
   const task = tasks[id]; if (!task) return;
   pendingDeleteId = id;
   document.getElementById('deleteConfirmTitle').textContent = task.title;
@@ -789,8 +888,9 @@ function openFilePreview(resource) {
   dlBtn.href         = resource.url;
   dlBtn.download     = resource.name || 'download';
 
-  const mime = resource.url.match(/^data:([^;]+);/)?.[1] || '';
-  if (mime.startsWith('image/')) {
+  const mime = resource.url.match(/^data:([^;]+);/)?.[1] || resource.mime || '';
+  const isExtImg = !mime && /^https?:\/\//i.test(resource.url) && /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(resource.url);
+  if (mime.startsWith('image/') || isExtImg) {
     bodyEl.innerHTML = `<img class="fp-image" src="${resource.url}" alt="${escHtml(resource.name || 'File')}">`;
   } else if (mime === 'application/pdf') {
     bodyEl.innerHTML = `<iframe class="fp-embed" src="${resource.url}" title="${escHtml(resource.name || 'File')}"></iframe>`;
@@ -817,12 +917,95 @@ function closeFilePreview() {
   document.getElementById('filePreviewBody').innerHTML = '';
 }
 
+// ─── DEMO TASK DETAIL ─────────────────────────────────────────────────────────
+function openDemoDetail(id) {
+  const task = demoTasks?.[id];
+  if (!task) return false;
+
+  detailTaskId = id;
+  const taskResources = getTaskResources(task);
+
+  let resourceHtml = '';
+  if (taskResources.length) {
+    const hasFiles = taskResources.some(r => r.type === 'file');
+    const hasLinks = taskResources.some(r => r.type !== 'file');
+    const label    = hasFiles && hasLinks ? 'Resources' : hasFiles ? 'Attachments' : 'Links';
+    resourceHtml = `<div class="detail-row">
+      <span class="detail-label">${label}</span>
+      <div class="detail-resources-list">
+        ${taskResources.map((r, i) => r.type === 'file'
+          ? `<button class="resource-link resource-preview-btn" type="button" data-res-idx="${i}">${ICONS.eye} ${escHtml(r.name || 'File')}</button>`
+          : `<a class="resource-link" href="${escHtml(r.url)}" target="_blank" rel="noopener noreferrer">${ICONS.clip} ${escHtml(r.name || r.url)}</a>`
+        ).join('')}
+      </div>
+    </div>`;
+  }
+
+  const STATUS_LABELS = { todo: 'To Do', inprogress: 'In Progress', pending: 'Pending', done: 'Done' };
+  const cb = task.createdBy;
+  const createdByHtml = cb ? `<div class="detail-row">
+    <span class="detail-label">Created by</span>
+    <span class="demo-created-by-chip">
+      <img class="demo-avatar-img" src="${escHtml(cb.photoURL)}" alt="${escHtml(cb.name)}"
+           onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+      <span class="demo-avatar-fallback" style="display:none">${escHtml(cb.name.slice(0,2).toUpperCase())}</span>
+      <span>${escHtml(cb.name)}</span>
+    </span>
+  </div>` : '';
+
+  document.getElementById('detailTitle').textContent = task.title;
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-meta">
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="demo-status-text">${STATUS_LABELS[task.status] || task.status}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Priority</span>
+        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+      </div>
+      ${createdByHtml}
+      ${task.createdAt ? `<div class="detail-row">
+        <span class="detail-label">Created</span>
+        <span class="detail-created">${fmtTimestamp(task.createdAt)}</span>
+      </div>` : ''}
+      ${resourceHtml}
+    </div>
+    ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
+
+  // Wire file preview buttons
+  document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
+    const idx = parseInt(btn.dataset.resIdx, 10);
+    if (!isNaN(idx) && taskResources[idx]) {
+      btn.addEventListener('click', () => openFilePreview(taskResources[idx]));
+    }
+  });
+
+  // Hide edit button, swap comments section with demo CTA
+  const overlay = document.getElementById('detailOverlay');
+  overlay.classList.add('is-demo');
+
+  const commentsList = document.getElementById('commentsList');
+  if (commentsList) commentsList.innerHTML = `<div class="demo-comments-cta">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <p>Notes &amp; comments are saved on your personal board.</p>
+    <button class="btn-primary btn-sm" id="demoDetailCreateBtn">Create Your Free Board</button>
+  </div>`;
+  document.getElementById('demoDetailCreateBtn')?.addEventListener('click', () => {
+    closeDetail(); showSpaceOverlay();
+  });
+
+  overlay.classList.add('open');
+  return true;
+}
+
 // ─── TASK DETAIL ──────────────────────────────────────────────────────────────
 async function openDetail(id) {
   if (!id || id === 'undefined' || id === 'null') {
     showToast('Notification is not linked to a task.');
     return false;
   }
+  if (isDemoTask(id)) return openDemoDetail(id);
   await tasksLoaded;
   let task = tasks[id];
   if (!task && currentSpace) {
@@ -943,9 +1126,16 @@ async function openDetail(id) {
 }
 
 function closeDetail() {
-  document.getElementById('detailOverlay').classList.remove('open');
+  const overlay = document.getElementById('detailOverlay');
+  overlay.classList.remove('open');
+  overlay.classList.remove('is-demo');
   detailTaskId = null;
   if (commentsUnsub) { commentsUnsub(); commentsUnsub = null; }
+  // Restore comments section if it was replaced by demo CTA
+  const commentsList = document.getElementById('commentsList');
+  if (commentsList && commentsList.querySelector('.demo-comments-cta')) {
+    commentsList.innerHTML = '<div class="no-comments">No notes yet. Add one below!</div>';
+  }
 }
 
 // ─── NOTES (COMMENTS) ─────────────────────────────────────────────────────────
@@ -1117,20 +1307,29 @@ document.getElementById('spaceOverlayClose').addEventListener('click', hideSpace
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
+  // Always boot demo tasks for immediate visual — hidden once real space loads
+  demoTasks = Object.fromEntries(
+    Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }])
+  );
+  renderBoard();
+
   const savedKey = localStorage.getItem('tb-space');
   if (savedKey) {
     try {
       const snap = await get(ref(db, `spaces/${savedKey}/meta`));
       if (snap.exists()) {
+        demoTasks = null; // clear demo before entering real board
         currentSpace = { key: savedKey, name: snap.val().displayName || savedKey };
         enterBoard();
         return;
       }
     } catch {}
-    // Space no longer exists, clear storage and leave board empty
     localStorage.removeItem('tb-space');
   }
-  // Don't auto-show overlay — user will trigger it via New Task
+  // New visitor — stay in demo mode, show the space overlay
+  showSpaceOverlay();
 }
+
+document.getElementById('demoBannerCreateBtn')?.addEventListener('click', showSpaceOverlay);
 
 init();

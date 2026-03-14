@@ -1401,3 +1401,98 @@ h1 {
 .theme-btn .icon-sun { display: none; }
 [data-theme="dark"] .theme-btn .icon-moon { display: none; }
 [data-theme="dark"] .theme-btn .icon-sun  { display: block; }
+
+/* ─── Demo Banner ─── */
+.demo-banner {
+  background: linear-gradient(90deg, rgba(99,102,241,.10) 0%, rgba(99,102,241,.06) 100%);
+  border-bottom: 1px solid rgba(99,102,241,.20);
+  padding: 9px 16px;
+}
+.demo-banner-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .8rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.demo-banner-inner > svg { flex-shrink: 0; color: var(--primary); }
+.demo-banner-inner > span { flex: 1; min-width: 0; }
+.demo-banner-cta {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: .78rem;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.demo-banner-cta:hover { background: var(--primary-dark); }
+
+/* ─── Demo task card tweaks ─── */
+.task-card--demo { opacity: .95; }
+.demo-avatar-img-sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* ─── Demo detail view ─── */
+.is-demo .detail-header-actions .btn-secondary { display: none; }
+.is-demo .comment-input-row { display: none; }
+.is-demo .comments-heading::after { content: ' (demo)'; font-size: .7rem; color: var(--muted); font-weight: 400; }
+.demo-comments-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .83rem;
+}
+.demo-comments-cta svg { opacity: .45; }
+.demo-comments-cta p { line-height: 1.5; }
+.demo-created-by-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.demo-avatar-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.demo-avatar-fallback {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.demo-status-text {
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--text);
+}
+[data-theme="dark"] .demo-banner {
+  background: linear-gradient(90deg, rgba(99,102,241,.18) 0%, rgba(99,102,241,.10) 100%);
+  border-bottom-color: rgba(99,102,241,.30);
+}
