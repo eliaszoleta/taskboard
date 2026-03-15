@@ -825,8 +825,8 @@ async function openDetail(id) {
     const hasFiles = taskResources.some(r => r.type === 'file');
     const hasLinks = taskResources.some(r => r.type !== 'file');
     const label    = hasFiles && hasLinks ? 'Resources' : hasFiles ? 'Attachments' : 'Links';
-    resourceHtml = `<div class="detail-row">
-      <span class="detail-label">${label}</span>
+    resourceHtml = `<div class="detail-resources-section">
+      <span class="detail-resources-label">${label}</span>
       <div class="detail-resources-list">
         ${taskResources.map((r, i) => r.type === 'file'
           ? `<button class="resource-link resource-preview-btn" type="button" data-res-idx="${i}">${ICONS.eye} ${escHtml(r.name || 'File')}</button>`
@@ -838,10 +838,10 @@ async function openDetail(id) {
 
   document.getElementById('detailTitle').textContent = task.title;
   document.getElementById('detailBody').innerHTML = `
-    <div class="detail-meta">
-      <div class="detail-row">
-        <span class="detail-label">Status</span>
-        <select class="detail-status-sel" id="detailStatusSel">
+    <div class="detail-chips">
+      <div class="detail-chip">
+        <span class="detail-chip-label">Status</span>
+        <select class="detail-status-sel" id="detailStatusSel" data-status="${task.status}">
           <option value="todo"       ${task.status==='todo'       ?'selected':''}>To Do</option>
           <option value="inprogress" ${task.status==='inprogress' ?'selected':''}>In Progress</option>
           <option value="pending"    ${task.status==='pending'    ?'selected':''}>Pending</option>
@@ -849,21 +849,21 @@ async function openDetail(id) {
         </select>
         <button class="btn-sm btn-primary save-status-btn" id="saveStatusBtn" style="display:none">Save</button>
       </div>
-      <div class="detail-row">
-        <span class="detail-label">Priority</span>
+      <div class="detail-chip">
+        <span class="detail-chip-label">Priority</span>
         <span class="priority-badge priority-${task.priority}">${task.priority}</span>
       </div>
-      ${task.due ? `<div class="detail-row">
-        <span class="detail-label">Due date</span>
+      ${task.due ? `<div class="detail-chip">
+        <span class="detail-chip-label">Due date</span>
         <span class="detail-due ${overdue?'overdue':''}">${formatDate(task.due)}${overdue?' · overdue':''}</span>
       </div>` : ''}
-      ${task.createdAt ? `<div class="detail-row">
-        <span class="detail-label">Created</span>
+      ${task.createdAt ? `<div class="detail-chip">
+        <span class="detail-chip-label">Created</span>
         <span class="detail-created">${fmtTimestamp(task.createdAt)}</span>
       </div>` : ''}
-      ${resourceHtml}
     </div>
-    ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}`;
+    ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}
+    ${resourceHtml}`;
 
   // File preview buttons
   document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
@@ -878,6 +878,7 @@ async function openDetail(id) {
   const saveBtn = document.getElementById('saveStatusBtn');
   const origSt  = task.status;
   sel.addEventListener('change', () => {
+    sel.dataset.status = sel.value;
     saveBtn.style.display = sel.value !== origSt ? '' : 'none';
   });
   saveBtn.addEventListener('click', async () => {

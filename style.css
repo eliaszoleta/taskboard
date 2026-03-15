@@ -704,11 +704,12 @@ h1 {
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 22px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
 }
 .modal-header h2 { font-size: 1.1rem; font-weight: 700; }
-.detail-header-actions { display: flex; align-items: center; gap: 8px; }
+.detail-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 /* ─── Form ─── */
 .form-group { margin-bottom: 16px; }
@@ -750,62 +751,94 @@ h1 {
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 
 /* ─── Detail View (Premium) ─── */
-#detailTitle { font-size: 1.2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; }
-.detail-meta {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
+#detailTitle {
+  font-size: 1.22rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.3;
+  flex: 1;
+  padding-right: 10px;
+  color: var(--text);
+}
+.detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 18px;
-  padding: 10px 16px;
+}
+.detail-chip {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.detail-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 3px 0;
-}
-.detail-row:last-child { border-bottom: none; }
-.detail-label {
-  font-size: .75rem;
+.detail-chip-label {
+  font-size: .67rem;
   font-weight: 600;
-  text-transform: capitalize;
-  letter-spacing: 0;
+  text-transform: uppercase;
+  letter-spacing: .07em;
   color: var(--muted);
-  width: 96px;
-  flex-shrink: 0;
 }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: .79rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-todo       { background: #e0e7ff; color: #3730a3; }
+.status-inprogress { background: #fef3c7; color: #92400e; }
+.status-pending    { background: #ede9fe; color: #6d28d9; }
+.status-done       { background: #d1fae5; color: #065f46; }
 .detail-status-sel {
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  font-size: .84rem;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: .79rem;
+  font-weight: 600;
   font-family: 'Poppins', sans-serif;
-  outline: none;
   cursor: pointer;
-  background: var(--white);
-  color: var(--text);
-  transition: border-color .15s;
+  border: none;
+  outline: none;
+  transition: box-shadow .15s;
+  background: #e0e7ff;
+  color: #3730a3;
 }
-.detail-status-sel:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
-.detail-due { font-size: .88rem; }
-.detail-due.overdue { color: var(--col-overdue); font-weight: 600; }
-.detail-created { font-size: .88rem; color: var(--muted); }
+.detail-status-sel[data-status="inprogress"] { background: #fef3c7; color: #92400e; }
+.detail-status-sel[data-status="pending"]    { background: #ede9fe; color: #6d28d9; }
+.detail-status-sel[data-status="done"]       { background: #d1fae5; color: #065f46; }
+.detail-status-sel:focus { box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+.detail-due { font-size: .875rem; color: var(--col-overdue, #ef4444); font-weight: 600; }
+.detail-due.overdue { text-decoration: underline; }
+.detail-created { font-size: .875rem; color: var(--text); font-weight: 600; }
 .detail-desc {
   font-size: .88rem;
-  line-height: 1.65;
-  color: var(--text);
+  line-height: 1.7;
+  color: var(--muted);
   margin-bottom: 18px;
   white-space: pre-wrap;
-  padding: 13px 16px;
+  padding: 14px 16px;
   background: var(--bg);
   border-radius: 10px;
   border: 1px solid var(--border);
   border-left: 3px solid var(--primary);
 }
+.detail-resources-section { margin-bottom: 18px; }
+.detail-resources-label {
+  font-size: .67rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.save-status-btn { margin-top: 5px; align-self: flex-start; }
 
 /* ─── Comments (Premium) ─── */
 .comments-section { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 20px; }
@@ -891,7 +924,10 @@ h1 {
 /* Smaller avatars inside the detail modal */
 .detail-meta .avatar,
 .detail-meta .avatar-lg,
-.detail-meta .avatar-photo { width: 20px; height: 20px; font-size: .58rem; }
+.detail-meta .avatar-photo,
+.detail-chips .avatar,
+.detail-chips .avatar-lg,
+.detail-chips .avatar-photo { width: 20px; height: 20px; font-size: .58rem; }
 .comment .avatar,
 .comment .avatar-lg,
 .comment .avatar-photo { width: 24px; height: 24px; font-size: .62rem; }
@@ -1846,18 +1882,29 @@ h1 {
 }
 
 /* ─── Resource link in detail view ─── */
-.detail-resources-list { display: flex; flex-direction: column; gap: 4px; }
+.detail-resources-list { display: flex; flex-direction: column; gap: 8px; }
 .resource-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: .875rem;
-  color: var(--primary);
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color .15s, box-shadow .15s, color .15s;
+  font-size: .84rem;
+  color: var(--text);
   text-decoration: none;
   font-weight: 500;
-  word-break: break-all;
+  word-break: break-word;
+  cursor: pointer;
 }
-.resource-link:hover { text-decoration: underline; }
+.resource-link:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.08);
+  color: var(--primary);
+  text-decoration: none;
+}
 
 /* ─── Toast notification ─── */
 .toast {
@@ -2007,9 +2054,9 @@ h1 {
 
 /* Preview button in detail view (replaces direct download link for files) */
 .resource-preview-btn {
-  background: none;
-  border: none;
-  padding: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   font: inherit;
   cursor: pointer;
   text-align: left;
