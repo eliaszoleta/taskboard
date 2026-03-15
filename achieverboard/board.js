@@ -1094,4 +1094,104 @@ async function init() {
   // Don't auto-show overlay — user will trigger it via New Task
 }
 
+// ─── CUSTOM DATE PICKER ────────────────────────────────────────────────────────
+(function initCustomDatePickers() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOWS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const CAL_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  const p2 = n => String(n).padStart(2, '0');
+  const fmtDisp = v => { if (!v) return null; const [y,m,d] = v.split('-'); return `${p2(d)}/${p2(m)}/${y}`; };
+
+  function wire(input) {
+    if (input._cdpDone) return;
+    input._cdpDone = true;
+    input.style.display = 'none';
+    const wrap = document.createElement('div');
+    wrap.className = 'cdp-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement('div');
+    btn.className = 'cdp-btn empty';
+    btn.setAttribute('tabindex', '0');
+    btn.setAttribute('role', 'button');
+    btn.innerHTML = `<span class="cdp-display">dd/mm/yyyy</span><span class="cdp-btn-icon">${CAL_SVG}</span>`;
+    wrap.appendChild(btn);
+    const popup = document.createElement('div');
+    popup.className = 'cdp-popup';
+    wrap.appendChild(popup);
+    let viewY = 0, viewM = 0;
+
+    function syncDisplay() {
+      const v = input.value, disp = btn.querySelector('.cdp-display');
+      if (v) { disp.textContent = fmtDisp(v); btn.classList.remove('empty'); }
+      else   { disp.textContent = 'dd/mm/yyyy'; btn.classList.add('empty'); }
+    }
+
+    const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    Object.defineProperty(input, 'value', {
+      get: () => proto.get.call(input),
+      set: v  => { proto.set.call(input, v); syncDisplay(); },
+      configurable: true,
+    });
+
+    function buildPopup() {
+      const today = new Date(), sel = input.value;
+      const first = new Date(viewY, viewM, 1).getDay();
+      const last  = new Date(viewY, viewM + 1, 0).getDate();
+      const prev  = new Date(viewY, viewM, 0).getDate();
+      let cells = '';
+      for (let i = first - 1; i >= 0; i--) cells += `<div class="cdp-day cdp-other">${prev - i}</div>`;
+      for (let d = 1; d <= last; d++) {
+        const ds = `${viewY}-${p2(viewM+1)}-${p2(d)}`;
+        const isT = today.getFullYear()===viewY && today.getMonth()===viewM && today.getDate()===d;
+        const isS = sel === ds;
+        cells += `<div class="cdp-day${isT?' cdp-today':''}${isS?' cdp-sel':''}" data-d="${ds}">${d}</div>`;
+      }
+      const fill = 42 - first - last;
+      for (let d = 1; d <= fill; d++) cells += `<div class="cdp-day cdp-other">${d}</div>`;
+      popup.innerHTML = `
+        <div class="cdp-hdr">
+          <button class="cdp-nav cdp-p" type="button">↑</button>
+          <span class="cdp-mth">${MONTHS[viewM]} ${viewY}</span>
+          <button class="cdp-nav cdp-n" type="button">↓</button>
+        </div>
+        <div class="cdp-grid">
+          ${DOWS.map(d => `<div class="cdp-dow">${d}</div>`).join('')}
+          ${cells}
+        </div>
+        <div class="cdp-ftr">
+          <button class="cdp-ftr-btn cdp-clr" type="button">Clear</button>
+          <button class="cdp-ftr-btn cdp-tdy" type="button">Today</button>
+        </div>`;
+      popup.querySelector('.cdp-p').onclick = e => { e.stopPropagation(); viewM--; if (viewM < 0) { viewM = 11; viewY--; } buildPopup(); };
+      popup.querySelector('.cdp-n').onclick = e => { e.stopPropagation(); viewM++; if (viewM > 11) { viewM = 0; viewY++; } buildPopup(); };
+      popup.querySelectorAll('[data-d]').forEach(el => {
+        el.onclick = e => { e.stopPropagation(); input.value = el.dataset.d; input.dispatchEvent(new Event('change', {bubbles:true})); popup.classList.remove('open'); };
+      });
+      popup.querySelector('.cdp-clr').onclick = e => { e.stopPropagation(); input.value = ''; input.dispatchEvent(new Event('change', {bubbles:true})); popup.classList.remove('open'); };
+      popup.querySelector('.cdp-tdy').onclick = e => {
+        e.stopPropagation();
+        const t = new Date();
+        input.value = `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`;
+        input.dispatchEvent(new Event('change', {bubbles:true})); popup.classList.remove('open');
+      };
+    }
+
+    function openPicker() {
+      document.querySelectorAll('.cdp-popup.open').forEach(p => p.classList.remove('open'));
+      if (input.value) { const [y,m] = input.value.split('-'); viewY = +y; viewM = +m - 1; }
+      else { const n = new Date(); viewY = n.getFullYear(); viewM = n.getMonth(); }
+      buildPopup();
+      popup.classList.add('open');
+    }
+
+    btn.addEventListener('click', openPicker);
+    btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) popup.classList.remove('open'); });
+    syncDisplay();
+  }
+
+  ['taskScheduled', 'taskDue'].forEach(id => { const el = document.getElementById(id); if (el) wire(el); });
+})();
+
 init();
