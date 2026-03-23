@@ -1854,7 +1854,7 @@ async function deleteAnnouncement(annoId) {
 let audioCtx          = null;
 let pendingSound      = false;
 let pendingNotifCount = 0;
-const BASE_TITLE      = 'AchieverBoard';
+const BASE_TITLE      = 'Achiever Board';
 
 function setTabNotifTitle(count) {
   document.title = count > 0 ? `(${count}) New notification! — ${BASE_TITLE}` : BASE_TITLE;

@@ -208,7 +208,7 @@ async function handleCreateSpace() {
   const errEl = document.getElementById('createErr');
   errEl.textContent = '';
 
-  if (!raw) { errEl.textContent = 'Please enter a name for your AchieverBoard.'; return; }
+  if (!raw) { errEl.textContent = 'Please enter a name for your Achiever Board.'; return; }
   const key = toSpaceKey(raw);
   if (!key) { errEl.textContent = 'Please use letters, numbers, or spaces.'; return; }
 
@@ -241,7 +241,7 @@ async function handleOpenSpace() {
   const errEl = document.getElementById('openErr');
   errEl.textContent = '';
 
-  if (!raw) { errEl.textContent = 'Please enter your AchieverBoard name.'; return; }
+  if (!raw) { errEl.textContent = 'Please enter your Achiever Board name.'; return; }
   const key = toSpaceKey(raw);
   if (!key) { errEl.textContent = 'Please use letters, numbers, or spaces.'; return; }
 
@@ -252,7 +252,7 @@ async function handleOpenSpace() {
   try {
     const snap = await get(ref(db, `spaces/${key}/meta`));
     if (!snap.exists()) {
-      errEl.textContent = 'No AchieverBoard found with that name. Check the spelling.';
+      errEl.textContent = 'No Achiever Board found with that name. Check the spelling.';
       btn.disabled = false;
       btn.textContent = 'Open Taskboard';
       return;

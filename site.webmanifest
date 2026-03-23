@@ -1,6 +1,6 @@
 {
-  "name": "AchieverBoard",
-  "short_name": "AchieverBoard",
+  "name": "Achiever Board",
+  "short_name": "Achiever Board",
   "description": "Free task management board — no sign-up required",
   "start_url": "/",
   "display": "standalone",
