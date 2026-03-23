@@ -162,6 +162,7 @@
     .sidebar-toc li { margin-bottom: 6px; }
     .sidebar-toc a { font-size: .78rem; color: var(--muted); text-decoration: none; transition: color .15s; display: block; padding-left: 10px; border-left: 2px solid transparent; line-height: 1.5; }
     .sidebar-toc a:hover { color: var(--primary); border-left-color: var(--primary); }
+    .sidebar-toc a.active { color: var(--primary); font-weight: 600; border-left-color: var(--primary); }
     .sidebar-cta { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 14px; padding: 22px; text-align: center; color: #fff; }
     .sidebar-cta p { font-size: .8rem; color: rgba(255,255,255,.85); margin-bottom: 12px; }
     .sidebar-cta a { display: block; background: #fff; color: var(--primary); font-weight: 700; font-size: .82rem; padding: 10px 14px; border-radius: 8px; text-decoration: none; margin-bottom: 8px; }
@@ -234,20 +235,6 @@
 
       <article class="article-body">
 
-        <nav class="toc" aria-label="Table of contents">
-          <div class="toc-label">In this article</div>
-          <ol>
-            <li><a href="#why-simple">Why simple tools often win</a></li>
-            <li><a href="#what-to-look-for">What to look for in a simple task tool</a></li>
-            <li><a href="#comparison-table">Quick comparison table</a></li>
-            <li><a href="#tools">The tools — honest reviews</a></li>
-            <li><a href="#decision-guide">How to pick the right one</a></li>
-            <li><a href="#small-teams">Simple tools for small teams</a></li>
-            <li><a href="#faq">Frequently asked questions</a></li>
-            <li><a href="#conclusion">Conclusion</a></li>
-          </ol>
-        </nav>
-
         <h2 id="why-simple">Why Simple Tools Often Win</h2>
         <p>If you search for "best task management tools," most results will show you ClickUp, Asana, Notion, and Monday.com — platforms built for teams of 20, 50, or 200. But most people looking for a task manager aren't running a 50-person team. They're a student tracking assignments, a freelancer managing client deliverables, a remote worker trying to stay on top of their week, or a small business owner who just wants a clear view of what needs to happen today.</p>
         <p>For these users, the most common experience with complex productivity tools goes like this: sign up, feel excited about the possibilities, spend an evening setting things up, use it for a week, then gradually stop because maintaining the system takes more effort than just doing the work. Eventually they find something simpler — and actually use it.</p>
@@ -276,19 +263,6 @@
             <tr><td>Any.do</td><td>List-based</td><td>Basic only</td><td>Yes</td><td>~5 minutes</td></tr>
           </tbody>
         </table>
-
-        <div class="worth-box">
-          <h3>A kanban board you can open right now — no account, no setup</h3>
-          <p>Every tool in the comparison above requires creating an account before you can add your first task. <a href="../../index.html">Achiever Board</a> is the exception: open it in a browser, type a board name, and you have a working kanban board in under a minute. No registration, no onboarding flow, no configuration.</p>
-          <p>The board includes everything an individual needs: drag-and-drop task cards, three priority levels, due dates with overdue flagging, task notes, and real-time cloud sync across devices. The free tier has no task limits, no board count limits, and no expiry.</p>
-          <ul>
-            <li>Kanban board ready in under 60 seconds — zero friction</li>
-            <li>Priority levels and due dates visible on every card</li>
-            <li>Cloud sync — same board on every device, automatically</li>
-            <li>Unlimited tasks and boards, free forever</li>
-            <li>No account required for solo use</li>
-          </ul>
-        </div>
 
         <h2 id="tools">The Tools — Honest Reviews</h2>
 
@@ -415,19 +389,6 @@
           <li><strong>Achiever Board Team paid:</strong> Flat-rate pricing starting at $15/month for up to 5 users (not per-user pricing). For a 5-person team that's $3/user/month — significantly cheaper than per-seat tools.</li>
         </ul>
 
-        <div class="worth-box">
-          <h3>Full team features, flat-rate pricing — $15/month for 5 people</h3>
-          <p>The tools reviewed above are mostly built for individuals. When you add a second person, the experience often changes — suddenly you need task assignment, shared visibility, and some way to communicate about work without drowning in Slack messages.</p>
-          <p><a href="../../team/index.html">Achiever Board Team</a> is built for this moment. Free for 2 users with all features unlocked: a shared kanban board, task assignment, threaded comments on every task, and real-time notifications. When you grow beyond 2, pricing stays simple and affordable with flat monthly rates.</p>
-          <ul>
-            <li>Free for 2 users — complete team features, no trial, no credit card</li>
-            <li>Task assignment — unambiguous ownership on every task</li>
-            <li>Threaded comments — discussion lives on the task where it belongs</li>
-            <li>Notifications — teammates stay in sync automatically</li>
-            <li>$15/month flat for up to 5 people · $30/month for 10 · $50/month for 15</li>
-          </ul>
-        </div>
-
         <h2 id="faq">Frequently Asked Questions</h2>
 
         <div class="faq-item">
@@ -467,15 +428,6 @@
 
       </article>
 
-      <div class="cta-box">
-        <h2>Ready to Get Organized? Start in 60 Seconds.</h2>
-        <p>Achiever Board is a free kanban board for individuals who want clarity without complexity. No account needed. Team board is free for 2 users with everything included.</p>
-        <div class="cta-btns">
-          <a class="cta-btn" href="../../index.html">Open Solo Board Free →</a>
-          <a class="cta-btn outline" href="../../team/index.html">Team Board (2 users free)</a>
-        </div>
-      </div>
-
     </div>
 
     <aside class="sidebar">
@@ -512,5 +464,28 @@
     <a href="../../privacy-policy.html">Privacy</a>
   </footer>
 
+
+  <script>
+  (function() {
+    var headings = Array.from(document.querySelectorAll('.article-body h2[id]'));
+    var tocLinks = Array.from(document.querySelectorAll('.sidebar-toc a'));
+    if (!headings.length || !tocLinks.length) return;
+    function activate(id) {
+      tocLinks.forEach(function(a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    }
+    function onScroll() {
+      var offset = 140;
+      var active = headings[0];
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].getBoundingClientRect().top <= offset) active = headings[i];
+      }
+      if (active) activate(active.id);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+  </script>
 </body>
 </html>

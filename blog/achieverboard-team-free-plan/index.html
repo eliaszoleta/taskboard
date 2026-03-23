@@ -217,6 +217,7 @@
     .sidebar-toc li { margin-bottom: 8px; }
     .sidebar-toc a { font-size: .8rem; color: var(--muted); text-decoration: none; transition: color .15s; line-height: 1.4; display: block; padding-left: 10px; border-left: 2px solid transparent; }
     .sidebar-toc a:hover { color: var(--primary); border-left-color: var(--primary); }
+    .sidebar-toc a.active { color: var(--primary); font-weight: 600; border-left-color: var(--primary); }
     .sidebar-cta { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 14px; padding: 24px; text-align: center; color: #fff; }
     .sidebar-cta p { font-size: .82rem; color: rgba(255,255,255,.85); margin-bottom: 14px; }
     .sidebar-cta a { display: block; background: #fff; color: var(--primary); font-weight: 700; font-size: .85rem; padding: 11px 16px; border-radius: 8px; text-decoration: none; margin-bottom: 8px; }
@@ -297,20 +298,6 @@
       </div>
 
       <div class="article-body">
-
-        <div class="toc">
-          <div class="toc-label">In this article</div>
-          <ol>
-            <li><a href="#what-is-achieverboard-team">What is Achiever Board Team?</a></li>
-            <li><a href="#free-plan-features">Every feature on the free plan</a></li>
-            <li><a href="#where-it-costs-money">Where it costs money</a></li>
-            <li><a href="#pricing-tiers">Pricing tiers at a glance</a></li>
-            <li><a href="#free-vs-competitors">Free plan vs competitors</a></li>
-            <li><a href="#solo-vs-team">Solo board vs Team board: which one?</a></li>
-            <li><a href="#who-is-it-for">Who the free plan is actually for</a></li>
-            <li><a href="#faq">Frequently asked questions</a></li>
-          </ol>
-        </div>
 
         <!-- 1. What is Achiever Board Team -->
         <h2 id="what-is-achieverboard-team">What Is Achiever Board Team?</h2>
@@ -578,15 +565,6 @@
 
       </div><!-- /.article-body -->
 
-      <div class="cta-box">
-        <h2>Try Achiever Board Team Free</h2>
-        <p>Free for 2 users, all features included, no credit card required. See if it fits how your team works before ever paying anything.</p>
-        <div class="cta-btns">
-          <a class="cta-btn" href="../../team/index.html">Start Free with Your Team →</a>
-          <a class="cta-btn outline" href="../../index.html">Solo board (no sign-up)</a>
-        </div>
-      </div>
-
     </div><!-- /main column -->
 
     <!-- Sidebar -->
@@ -624,5 +602,28 @@
     <a href="../../privacy-policy.html">Privacy</a>
   </footer>
 
+
+  <script>
+  (function() {
+    var headings = Array.from(document.querySelectorAll('.article-body h2[id]'));
+    var tocLinks = Array.from(document.querySelectorAll('.sidebar-toc a'));
+    if (!headings.length || !tocLinks.length) return;
+    function activate(id) {
+      tocLinks.forEach(function(a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    }
+    function onScroll() {
+      var offset = 140;
+      var active = headings[0];
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].getBoundingClientRect().top <= offset) active = headings[i];
+      }
+      if (active) activate(active.id);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+  </script>
 </body>
 </html>

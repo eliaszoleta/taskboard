@@ -165,6 +165,7 @@
     .sidebar-toc li { margin-bottom: 6px; }
     .sidebar-toc a { font-size: .78rem; color: var(--muted); text-decoration: none; transition: color .15s; display: block; padding-left: 10px; border-left: 2px solid transparent; line-height: 1.5; }
     .sidebar-toc a:hover { color: var(--primary); border-left-color: var(--primary); }
+    .sidebar-toc a.active { color: var(--primary); font-weight: 600; border-left-color: var(--primary); }
     .sidebar-cta { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 14px; padding: 22px; text-align: center; color: #fff; }
     .sidebar-cta p { font-size: .8rem; color: rgba(255,255,255,.85); margin-bottom: 12px; }
     .sidebar-cta a { display: block; background: #fff; color: var(--primary); font-weight: 700; font-size: .82rem; padding: 10px 14px; border-radius: 8px; text-decoration: none; margin-bottom: 8px; }
@@ -237,19 +238,6 @@
 
       <article class="article-body">
 
-        <nav class="toc" aria-label="Table of contents">
-          <div class="toc-label">In this article</div>
-          <ol>
-            <li><a href="#free-plan-truth">The truth about free task management plans</a></li>
-            <li><a href="#overview-table">Free plan overview: quick comparison</a></li>
-            <li><a href="#rankings">The rankings</a></li>
-            <li><a href="#how-to-choose">How to choose the right tool</a></li>
-            <li><a href="#team-options">Free options for small teams</a></li>
-            <li><a href="#faq">Frequently asked questions</a></li>
-            <li><a href="#conclusion">Conclusion</a></li>
-          </ol>
-        </nav>
-
         <h2 id="free-plan-truth">The Truth About "Free" Task Management Plans</h2>
         <p>Most task management tools offer a free tier. Most of those free tiers are designed primarily as conversion tools — they let you experience enough of the product to want the full version, then put the features you actually need behind a paywall. That's not inherently dishonest, but it does mean you need to understand what "free" really means for each tool before building a workflow around it.</p>
         <p>This guide ranks the best free task management apps based on three criteria:</p>
@@ -274,17 +262,6 @@
             <tr><td><strong>Asana</strong></td><td class="no">Key features removed</td><td class="yes">Yes</td><td>Yes</td></tr>
           </tbody>
         </table>
-
-        <div class="worth-box">
-          <h3>No account. No limits. No catch.</h3>
-          <p>Most "free" task tools require an account and then limit what you can do. <a href="../../index.html">Achiever Board's solo board</a> is genuinely different: open it in a browser, enter a board name, and you have a working kanban board with unlimited tasks, priority levels, due dates, and real-time cloud sync — all without creating an account.</p>
-          <p>For teams, <a href="../../team/index.html">Achiever Board Team</a> is free for 2 users with all features included: task assignment, threaded comments, real-time notifications, and a shared kanban board. The free tier doesn't expire and doesn't require a credit card.</p>
-          <ul>
-            <li>Solo board: free forever, no sign-up, no storage limits, no board caps</li>
-            <li>Team board: free for 2 users — full features, nothing locked away</li>
-            <li>Team paid: $15/month flat for 5 users · $30/month for 10 · $50/month for 15</li>
-          </ul>
-        </div>
 
         <h2 id="rankings">The Rankings</h2>
 
@@ -411,19 +388,6 @@
         <h3>Do you need team collaboration?</h3>
         <p>For team use, the options change. Trello (unlimited users, 10-board limit), Asana (10 users, feature-limited), and ClickUp (unlimited users, storage-limited) are the main free-tier team options from the established tools. Achiever Board Team has a different approach — see the section below.</p>
 
-        <div class="worth-box">
-          <h3>Real team collaboration. One flat monthly rate.</h3>
-          <p>Other tools in this list charge per user — so costs grow as your team grows. <a href="../../team/index.html">Achiever Board Team</a> uses flat-rate pricing: one monthly fee covers the whole team, not per head. A 5-person team pays $15/month total, not $35–55/month like per-seat tools at that size.</p>
-          <p>The team features are built for actual collaboration: each task can be assigned to a specific person, comments are threaded directly on the task so nothing gets lost in Slack, and notifications alert teammates when tasks are updated or assigned to them. The shared kanban board gives everyone real-time visibility into what's in progress and what's waiting.</p>
-          <ul>
-            <li>Task assignment — every task has a clear, named owner</li>
-            <li>Threaded comments — keep discussion on the task, not scattered in chat</li>
-            <li>Real-time notifications — no more "did you see my message?"</li>
-            <li>Shared kanban board — full team visibility at a glance</li>
-            <li>Flat-rate pricing: $15/mo for 5 · $30/mo for 10 · $50/mo for 15 users</li>
-          </ul>
-        </div>
-
         <h2 id="team-options">Free Options for Small Teams</h2>
         <p>Most free team plans in this category make a trade-off: either they allow more users but restrict features, or they offer full features but limit user count. Here's the honest picture:</p>
         <ul>
@@ -473,15 +437,6 @@
 
       </article>
 
-      <div class="cta-box">
-        <h2>Try Achiever Board — Free, No Account, No Limits</h2>
-        <p>Solo board: open it, name your board, start adding tasks. No sign-up. Team board: free for 2 users with all features. Paid plans start at $15/month flat rate for 5 users.</p>
-        <div class="cta-btns">
-          <a class="cta-btn" href="../../index.html">Open Solo Board Free →</a>
-          <a class="cta-btn outline" href="../../team/index.html">Team Board (2 users free)</a>
-        </div>
-      </div>
-
     </div>
 
     <aside class="sidebar">
@@ -517,5 +472,28 @@
     <a href="../../privacy-policy.html">Privacy</a>
   </footer>
 
+
+  <script>
+  (function() {
+    var headings = Array.from(document.querySelectorAll('.article-body h2[id]'));
+    var tocLinks = Array.from(document.querySelectorAll('.sidebar-toc a'));
+    if (!headings.length || !tocLinks.length) return;
+    function activate(id) {
+      tocLinks.forEach(function(a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    }
+    function onScroll() {
+      var offset = 140;
+      var active = headings[0];
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].getBoundingClientRect().top <= offset) active = headings[i];
+      }
+      if (active) activate(active.id);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+  </script>
 </body>
 </html>
