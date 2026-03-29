@@ -59,39 +59,34 @@
 
   <link rel="stylesheet" href="marketing.css">
   <style>
-    body { font-family: 'Poppins', -apple-system, sans-serif; }
     /* Page-specific layout */
-    .hero {
-      padding: 56px 52px 48px;
-      margin-bottom: 20px;
-    }
+    .hero { padding: 56px 52px 48px; margin-bottom: 20px; }
     h1 { margin-bottom: 18px; }
     .lead { margin-bottom: 0; }
-    .card {
-      padding: 44px 52px;
-      margin-bottom: 20px;
-    }
+    .card { padding: 44px 52px; margin-bottom: 20px; }
+
     /* Values grid */
     .values-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
       margin-top: 20px;
     }
     .value-item {
       background: var(--surface-2);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 22px 24px;
-      transition: border-color .2s, box-shadow .2s;
+      border-radius: 16px;
+      padding: 24px;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
     }
     .value-item:hover {
-      border-color: rgba(80,70,229,.3);
-      box-shadow: 0 4px 16px rgba(80,70,229,.07);
+      border-color: rgba(80,70,229,.25);
+      box-shadow: 0 8px 24px rgba(80,70,229,.08);
+      transform: translateY(-2px);
     }
-    .value-icon { font-size: 1.6rem; margin-bottom: 10px; display: block; }
     .value-title { font-size: .9rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
     .value-desc { font-size: .83rem; color: var(--muted); margin: 0; line-height: 1.6; }
+
     /* Contact box */
     .contact-box {
       background: var(--surface-2);
@@ -101,7 +96,10 @@
       margin-top: 16px;
     }
     .contact-box p { margin: 0; font-size: .93rem; }
-    /* Responsive */
+
+    /* CTA section */
+    .cta-wrap { margin-bottom: 0; }
+
     @media (max-width: 640px) {
       .hero, .card { padding: 32px 24px; }
       .values-grid { grid-template-columns: 1fr; }
@@ -134,7 +132,7 @@
 
     <div class="hero">
       <span class="badge">About</span>
-      <h1>Task management that<br>gets out of your way</h1>
+      <h1>Task management that<br><span class="gradient-text">gets out of your way</span></h1>
       <p class="lead">Achiever Board is a free, browser-based kanban tool built for people who want to stay organized without learning a new system or paying a monthly subscription.</p>
     </div>
 
@@ -155,22 +153,30 @@
       <h2>Our values</h2>
       <div class="values-grid">
         <div class="value-item">
-          <span class="value-icon">⚡</span>
+          <span class="icon-box icon-box-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </span>
           <div class="value-title">Speed first</div>
           <p class="value-desc">The app loads fast and responds instantly. No spinners, no waiting.</p>
         </div>
         <div class="value-item">
-          <span class="value-icon">🔒</span>
+          <span class="icon-box icon-box-indigo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
           <div class="value-title">Privacy by default</div>
           <p class="value-desc">Your data is yours. We don't sell it or share it with advertisers.</p>
         </div>
         <div class="value-item">
-          <span class="value-icon">🧹</span>
+          <span class="icon-box icon-box-green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
           <div class="value-title">No clutter</div>
           <p class="value-desc">Only the features you actually need. Nothing hidden behind upgrade prompts.</p>
         </div>
         <div class="value-item">
-          <span class="value-icon">☁️</span>
+          <span class="icon-box icon-box-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z"/></svg>
+          </span>
           <div class="value-title">Cloud-backed</div>
           <p class="value-desc">Your tasks are saved to the cloud in real time — nothing lost if you close the tab.</p>
         </div>
@@ -195,6 +201,15 @@
         <p><strong>Achiever Board</strong><br>
         Email: <a href="mailto:contact@achieverboard.com">contact@achieverboard.com</a><br>
         Website: <a href="https://achieverboard.com/">https://achieverboard.com/</a></p>
+      </div>
+    </div>
+
+    <div class="cta-box cta-wrap">
+      <h2>Ready to get organized?</h2>
+      <p>Start your free board in seconds — no account required. Just open, name your board, and go.</p>
+      <div class="cta-btns">
+        <a href="index.html" class="btn-white">Open Solo Board — Free</a>
+        <a href="team/" class="btn-outline-white">Team Board (2 users free)</a>
       </div>
     </div>
 
