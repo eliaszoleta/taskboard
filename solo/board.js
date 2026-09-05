@@ -1,20 +1,23 @@
-import { initializeApp }                                    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getDatabase, ref, push, set, update, remove,
-         onValue, get }                                      from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey:            "AIzaSyCT2yccAHsvB6_NvLL1if7V1FxzYK6tRE0",
-  authDomain:        "taskboard-d91be.firebaseapp.com",
-  databaseURL:       "https://taskboard-d91be-default-rtdb.firebaseio.com",
-  projectId:         "taskboard-d91be",
-  storageBucket:     "taskboard-d91be.firebasestorage.app",
-  messagingSenderId: "34815479362",
-  appId:             "1:34815479362:web:25069a6f086ecfcb17e7db",
-};
+// ─── SUPABASE CONFIG ────────────────────────────────────────────────────────
+// Get these two values from: Supabase Dashboard → Project Settings → API.
+// The anon key is safe to expose in client code — it has no power on its own;
+// every table is protected by Row Level Security (see supabase/migrations/0001_init.sql),
+// so a request can only ever touch the signed-in user's own rows.
+const SUPABASE_URL      = 'YOUR_SUPABASE_PROJECT_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db          = getDatabase(firebaseApp);
+if (SUPABASE_URL.startsWith('YOUR_') || SUPABASE_ANON_KEY.startsWith('YOUR_')) {
+  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:24px">
+    <div><h2 style="color:#4f46e5">Supabase setup required</h2>
+    <p style="color:#64748b;max-width:420px">Open <strong>solo/board.js</strong> and replace <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> with your Supabase project's values (Project Settings → API).</p></div>
+  </div>`;
+  throw new Error('Supabase config not set up.');
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ATTACHMENTS_BUCKET = 'task-attachments';
 
 // ─── SVG ICONS ─────────────────────────────────────────────────────────────────
 const ICONS = {
@@ -27,7 +30,7 @@ const ICONS = {
   eye:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
-// ─── DEMO TASKS ────────────────────────────────────────────────────────────────
+// ─── DEMO TASKS (shown to signed-out visitors) ─────────────────────────────────
 const _D = Date.now();
 const DEMO_TASKS_TEMPLATE = {
   'demo-1': {
@@ -101,25 +104,26 @@ const DEMO_TASKS_TEMPLATE = {
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let currentSpace       = null;   // { key, name }
+let currentUser        = null;   // Supabase auth user, or null
+let currentBoard       = null;   // { id, name }
 let tasks              = {};
-let demoTasks          = null;   // populated when no space is loaded
+let demoTasks          = null;   // populated when signed out
 let commentCounts      = {};
 let allNotifications   = {};
 let knownNotifIds      = null;
 let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
-let commentsUnsub      = null;
-let tasksUnsub         = null;
-let commentsGlobalUnsub = null;
-let notifUnsub         = null;
+let tasksChannel        = null;
+let commentsChannel     = null;   // board-wide, for comment counts
+let taskCommentsChannel = null;   // scoped to the open task's detail view
+let notifChannel        = null;
 let currentFilter      = 'all';
 let customDateStart    = null;
 let customDateEnd      = null;
 let colPriorityFilter  = { todo: 'all', inprogress: 'all', pending: 'all', done: 'all', overdue: 'all' };
 let pendingDeleteId    = null;
-let pendingResourceFiles = [];
+let pendingResourceFiles = [];   // [{ url, path, name, size }]
 let pendingResourceLinks = [''];
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
@@ -158,17 +162,7 @@ function formatSize(bytes) {
 
 function getTaskResources(task) {
   if (task.resources && task.resources.length) return task.resources;
-  if (task.resourceUrl) return [{ type: task.resourceType || 'link', url: task.resourceUrl, name: task.resourceName || task.resourceUrl }];
   return [];
-}
-
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function showToast(msg, duration = 3000) {
@@ -180,132 +174,190 @@ function showToast(msg, duration = 3000) {
 
 const byNewest = (a, b) => b.createdAt - a.createdAt;
 
-// ─── SPACE KEY UTILS ──────────────────────────────────────────────────────────
-/** Turn a human-readable name into a safe Firebase key */
-function toSpaceKey(name) {
-  return name.trim().toLowerCase()
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') || null;
+// Map a Postgres task row to the in-memory shape the renderer expects.
+function rowToTask(row) {
+  return {
+    title:              row.title,
+    desc:               row.description || '',
+    priority:           row.priority,
+    status:             row.status,
+    scheduledFor:       row.scheduled_for,
+    due:                row.due_date,
+    resources:          row.resources || [],
+    createdAt:          new Date(row.created_at).getTime(),
+    overdueNotifiedAt:  row.overdue_notified_at ? new Date(row.overdue_notified_at).getTime() : null,
+  };
 }
 
-// ─── SPACE OVERLAY ────────────────────────────────────────────────────────────
-function showSpaceOverlay() {
-  document.getElementById('spaceOverlay').classList.add('open');
-  document.getElementById('createSpaceInput').value = '';
-  document.getElementById('openSpaceInput').value   = '';
-  document.getElementById('createErr').textContent  = '';
-  document.getElementById('openErr').textContent    = '';
-  document.getElementById('createSpaceInput').focus();
+// Extract the storage object path from a public attachment URL, e.g.
+// ".../storage/v1/object/public/task-attachments/<uid>/<file>" → "<uid>/<file>"
+function storagePathFromUrl(url) {
+  const marker = `/object/public/${ATTACHMENTS_BUCKET}/`;
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length);
 }
 
-function hideSpaceOverlay() {
-  document.getElementById('spaceOverlay').classList.remove('open');
-}
-
-async function handleCreateSpace() {
-  const raw = document.getElementById('createSpaceInput').value.trim();
-  const errEl = document.getElementById('createErr');
-  errEl.textContent = '';
-
-  if (!raw) { errEl.textContent = 'Please enter a name for your Achiever Board.'; return; }
-  const key = toSpaceKey(raw);
-  if (!key) { errEl.textContent = 'Please use letters, numbers, or spaces.'; return; }
-
-  const btn = document.getElementById('createSpaceBtn');
-  btn.disabled = true;
-  btn.textContent = 'Creating…';
-
-  try {
-    const snap = await get(ref(db, `spaces/${key}/meta`));
-    if (snap.exists()) {
-      errEl.textContent = 'That name is already taken. Please choose a different one.';
-      btn.disabled = false;
-      btn.textContent = 'Create Taskboard';
-      return;
-    }
-    await set(ref(db, `spaces/${key}/meta`), { displayName: raw, createdAt: Date.now() });
-    localStorage.setItem('tb-space', key);
-    currentSpace = { key, name: raw };
-    hideSpaceOverlay();
-    enterBoard();
-  } catch (e) {
-    errEl.textContent = 'Something went wrong. Please try again.';
-    btn.disabled = false;
-    btn.textContent = 'Create Taskboard';
+async function deleteResourceFiles(resources) {
+  const paths = (resources || [])
+    .filter(r => r.type === 'file')
+    .map(r => storagePathFromUrl(r.url))
+    .filter(Boolean);
+  if (paths.length) {
+    try { await supabase.storage.from(ATTACHMENTS_BUCKET).remove(paths); } catch {}
   }
 }
 
-async function handleOpenSpace() {
-  const raw = document.getElementById('openSpaceInput').value.trim();
-  const errEl = document.getElementById('openErr');
+// ─── AUTH OVERLAY ─────────────────────────────────────────────────────────────
+function showAuthOverlay(tab = 'login') {
+  document.getElementById('authOverlay').classList.add('open');
+  setAuthTab(tab);
+  document.getElementById('loginErr').textContent  = '';
+  document.getElementById('signupErr').textContent = '';
+}
+
+function hideAuthOverlay() {
+  document.getElementById('authOverlay').classList.remove('open');
+}
+
+function setAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('authTabLogin').classList.toggle('active', isLogin);
+  document.getElementById('authTabSignup').classList.toggle('active', !isLogin);
+  document.getElementById('loginSection').style.display  = isLogin ? '' : 'none';
+  document.getElementById('signupSection').style.display = isLogin ? 'none' : '';
+  (isLogin ? document.getElementById('loginEmail') : document.getElementById('signupEmail')).focus();
+}
+
+document.getElementById('authTabLogin').addEventListener('click', () => setAuthTab('login'));
+document.getElementById('authTabSignup').addEventListener('click', () => setAuthTab('signup'));
+
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginErr');
   errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
 
-  if (!raw) { errEl.textContent = 'Please enter your Achiever Board name.'; return; }
-  const key = toSpaceKey(raw);
-  if (!key) { errEl.textContent = 'Please use letters, numbers, or spaces.'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Log In';
+  if (error) { errEl.textContent = error.message; return; }
+  hideAuthOverlay();
+}
 
-  const btn = document.getElementById('openSpaceBtn');
-  btn.disabled = true;
-  btn.textContent = 'Opening…';
+async function handleSignup() {
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const errEl    = document.getElementById('signupErr');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter an email and password.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
 
-  try {
-    const snap = await get(ref(db, `spaces/${key}/meta`));
-    if (!snap.exists()) {
-      errEl.textContent = 'No Achiever Board found with that name. Check the spelling.';
-      btn.disabled = false;
-      btn.textContent = 'Open Taskboard';
-      return;
-    }
-    const displayName = snap.val().displayName || raw;
-    localStorage.setItem('tb-space', key);
-    currentSpace = { key, name: displayName };
-    hideSpaceOverlay();
-    enterBoard();
-  } catch (e) {
-    errEl.textContent = 'Something went wrong. Please try again.';
-    btn.disabled = false;
-    btn.textContent = 'Open Taskboard';
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  const { data, error } = await supabase.auth.signUp({
+    email, password,
+    options: { emailRedirectTo: window.location.origin },
+  });
+  btn.disabled = false; btn.textContent = 'Create Free Account';
+  if (error) { errEl.textContent = error.message; return; }
+
+  if (data.session) {
+    hideAuthOverlay();
+  } else {
+    errEl.style.color = '#16a34a';
+    errEl.textContent = 'Account created! Check your email to confirm it, then log in.';
+    setAuthTab('login');
   }
 }
 
-// ─── ENTER BOARD ──────────────────────────────────────────────────────────────
-function enterBoard() {
+async function handleForgotPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const errEl = document.getElementById('loginErr');
+  if (!email) { errEl.textContent = 'Enter your email above first, then click "Forgot password?".'; return; }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  errEl.style.color = error ? '' : '#16a34a';
+  errEl.textContent = error ? error.message : 'Password reset email sent — check your inbox.';
+}
+
+document.getElementById('loginBtn').addEventListener('click', handleLogin);
+document.getElementById('signupBtn').addEventListener('click', handleSignup);
+document.getElementById('forgotPasswordBtn').addEventListener('click', handleForgotPassword);
+[['loginEmail','loginPassword'], ['signupEmail','signupPassword']].flat().forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (id.startsWith('login')) handleLogin(); else handleSignup();
+  });
+});
+document.getElementById('authOverlayClose').addEventListener('click', hideAuthOverlay);
+
+// ─── ENTER / EXIT BOARD ───────────────────────────────────────────────────────
+async function ensureBoard() {
+  const { data: existing, error: selErr } = await supabase
+    .from('boards').select('id,name').eq('owner_id', currentUser.id).limit(1).maybeSingle();
+  if (selErr) throw selErr;
+  if (existing) return existing;
+
+  // Defensive fallback — normally the signup trigger already created one.
+  const { data: created, error: insErr } = await supabase
+    .from('boards').insert({ name: 'My Board' }).select('id,name').single();
+  if (insErr) throw insErr;
+  return created;
+}
+
+async function enterBoard() {
+  currentBoard = await ensureBoard();
+  demoTasks = null;
   const nameEl = document.getElementById('spaceNameDisplay');
-  nameEl.textContent = currentSpace.name;
+  nameEl.textContent = currentUser.email;
   document.getElementById('spaceDisplay').classList.add('visible');
   document.getElementById('boardSettingsWrapper').style.display = '';
-  subscribeToSpace();
+  await subscribeToBoard();
 }
 
-function subscribeToSpace() {
-  // Unsubscribe from any previous space
-  if (tasksUnsub)          tasksUnsub();
-  if (commentsGlobalUnsub) commentsGlobalUnsub();
-  if (notifUnsub)          notifUnsub();
+async function subscribeToBoard() {
+  if (tasksChannel)        supabase.removeChannel(tasksChannel);
+  if (commentsChannel)     supabase.removeChannel(commentsChannel);
+  if (notifChannel)        supabase.removeChannel(notifChannel);
+  const boardId = currentBoard.id;
 
-  const spaceRef = `spaces/${currentSpace.key}`;
+  // ── Tasks: initial load + realtime ──
+  const { data: taskRows } = await supabase.from('tasks').select('*').eq('board_id', boardId);
+  tasks = {};
+  (taskRows || []).forEach(row => { tasks[row.id] = rowToTask(row); });
+  _resolveTasksLoaded();
+  renderBoard();
+  checkAndNotifyOverdue();
 
-  // Tasks
-  tasksUnsub = onValue(ref(db, `${spaceRef}/tasks`), snap => {
-    tasks = snap.val() || {};
-    _resolveTasksLoaded();
-    renderBoard();
-    checkAndNotifyOverdue();
-  });
+  tasksChannel = supabase.channel(`tasks-${boardId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete tasks[payload.old.id]; }
+      else { tasks[payload.new.id] = rowToTask(payload.new); }
+      renderBoard();
+    })
+    .subscribe();
 
-  // Comment counts
-  commentsGlobalUnsub = onValue(ref(db, `${spaceRef}/comments`), snap => {
-    const data = snap.val() || {};
-    commentCounts = {};
-    for (const [taskId, cmts] of Object.entries(data)) {
-      commentCounts[taskId] = Object.keys(cmts).length;
-    }
-    renderBoard();
-  });
+  // ── Comment counts: initial load + realtime ──
+  const { data: commentRows } = await supabase.from('comments').select('task_id').eq('board_id', boardId);
+  commentCounts = {};
+  (commentRows || []).forEach(c => { commentCounts[c.task_id] = (commentCounts[c.task_id] || 0) + 1; });
+  renderBoard();
 
-  // Notifications
-  setupNotifListener();
+  commentsChannel = supabase.channel(`comments-${boardId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `board_id=eq.${boardId}` }, payload => {
+      const tid = payload.new.task_id;
+      commentCounts[tid] = (commentCounts[tid] || 0) + 1;
+      renderBoard();
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'comments', filter: `board_id=eq.${boardId}` }, payload => {
+      const tid = payload.old.task_id;
+      if (commentCounts[tid]) commentCounts[tid]--;
+      renderBoard();
+    })
+    .subscribe();
+
+  await setupNotifListener();
 }
 
 // ─── DATE FILTER LOGIC ────────────────────────────────────────────────────────
@@ -336,7 +388,6 @@ function taskMatchesFilter(task) {
     return task.due && new Date(task.due + 'T00:00:00') < today;
   }
 
-  // Date-based filters use scheduledFor date, or fall back to createdAt
   const d = task.scheduledFor
     ? new Date(task.scheduledFor + 'T00:00:00')
     : (() => { const t = new Date(Number(task.createdAt) || Date.now()); t.setHours(0,0,0,0); return t; })();
@@ -388,10 +439,9 @@ const FILTER_LABELS = {
 
 // ─── BOARD RENDERING ──────────────────────────────────────────────────────────
 function renderBoard() {
-  const demo = !currentSpace && demoTasks !== null;
+  const demo = !currentBoard && demoTasks !== null;
   const src  = demo ? demoTasks : tasks;
 
-  // Show/hide demo banner and board-level note via body class
   document.body.classList.toggle('demo-active', demo);
 
   const dateSel = document.getElementById('dateFilter');
@@ -414,7 +464,6 @@ function renderBoard() {
     if (sel) sel.classList.toggle('active', colPriorityFilter[col] !== 'all');
   });
 
-  // Normal status columns: todo, inprogress, pending
   ['todo', 'inprogress', 'pending'].forEach(status => {
     const list  = document.getElementById('list-'  + status);
     const count = document.getElementById('count-' + status);
@@ -436,7 +485,6 @@ function renderBoard() {
     }
   });
 
-  // Done column
   const doneList  = document.getElementById('list-done');
   const doneCount = document.getElementById('count-done');
   const doneItems = Object.entries(src)
@@ -455,7 +503,6 @@ function renderBoard() {
     doneItems.forEach(t => doneList.appendChild(buildCard(t)));
   }
 
-  // Overdue column — tasks past due and not done
   const overdueList  = document.getElementById('list-overdue');
   const overdueCount = document.getElementById('count-overdue');
   const overdueItems = Object.entries(src)
@@ -477,7 +524,7 @@ function renderBoard() {
 function buildCard(task) {
   const overdue = isOverdue(task.due);
   const cCount  = commentCounts[task.id] || 0;
-  const hasRes  = !!(task.resourceUrl || (task.resources && task.resources.length));
+  const hasRes  = !!(task.resources && task.resources.length);
 
   const card = document.createElement('div');
   card.className  = 'task-card';
@@ -533,8 +580,7 @@ document.querySelectorAll('.task-list').forEach(list => {
     if (!id) return;
     const newStatus = list.id.replace('list-', '');
     if (newStatus === 'overdue') return;
-    // Demo mode: move in-memory only
-    if (!currentSpace) {
+    if (!currentBoard) {
       if (isDemoTask(id) && demoTasks[id] && demoTasks[id].status !== newStatus) {
         demoTasks[id] = { ...demoTasks[id], status: newStatus };
         renderBoard();
@@ -543,10 +589,11 @@ document.querySelectorAll('.task-list').forEach(list => {
     }
     const task = tasks[id];
     if (!task || task.status === newStatus) return;
+    const oldStatus = task.status;
     tasks[id] = { ...task, status: newStatus };
     renderBoard();
-    await update(ref(db, `spaces/${currentSpace.key}/tasks/${id}`), { status: newStatus });
-    if (newStatus === 'done' && task.status !== 'done') {
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
+    if (newStatus === 'done' && oldStatus !== 'done') {
       await pushNotif(`"${task.title}" marked as Done!`, id);
     }
   });
@@ -554,48 +601,64 @@ document.querySelectorAll('.task-list').forEach(list => {
 
 // ─── OVERDUE NOTIFICATIONS ───────────────────────────────────────────────────
 async function checkAndNotifyOverdue() {
-  if (!currentSpace) return;
+  if (!currentBoard) return;
   const now = Date.now();
   for (const [id, task] of Object.entries(tasks)) {
     if (task.status === 'done')  continue;
     if (task.overdueNotifiedAt)  continue;
     if (!isOverdue(task.due))    continue;
     await pushNotif(`Task "${task.title}" is now overdue!`, id);
-    await update(ref(db, `spaces/${currentSpace.key}/tasks/${id}`), { overdueNotifiedAt: now });
+    await supabase.from('tasks').update({ overdue_notified_at: new Date(now).toISOString() }).eq('id', id);
     tasks[id] = { ...tasks[id], overdueNotifiedAt: now };
   }
 }
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
 async function pushNotif(message, taskId) {
-  if (!currentSpace) return;
-  await push(ref(db, `spaces/${currentSpace.key}/notifications`), {
-    message, taskId: taskId || null, read: false, createdAt: Date.now(),
+  if (!currentBoard) return;
+  await supabase.from('notifications').insert({
+    board_id: currentBoard.id, message, task_id: taskId || null, read: false,
   });
 }
 
-function setupNotifListener() {
-  if (notifUnsub) notifUnsub();
-  if (!currentSpace) return;
+async function setupNotifListener() {
+  if (notifChannel) supabase.removeChannel(notifChannel);
+  if (!currentBoard) return;
+  const boardId = currentBoard.id;
 
-  notifUnsub = onValue(ref(db, `spaces/${currentSpace.key}/notifications`), snap => {
-    allNotifications = snap.val() || {};
-    const entries   = Object.entries(allNotifications).map(([id, n]) => ({ id, ...n }));
-    const unread    = entries.filter(n => !n.read);
-    const badge     = document.getElementById('notifBadge');
-    const count     = unread.length;
-    badge.textContent = count > 9 ? '9+' : count;
-    badge.classList.toggle('visible', count > 0);
+  const { data: rows } = await supabase.from('notifications').select('*').eq('board_id', boardId);
+  allNotifications = {};
+  (rows || []).forEach(r => { allNotifications[r.id] = notifRowToObj(r); });
+  refreshNotifUI();
 
-    // Sound on new unread notifications (skip first load)
-    if (knownNotifIds !== null) {
-      const newOnes = entries.filter(n => !n.read && !knownNotifIds.has(n.id));
-      if (newOnes.length) tryPlaySound();
-    }
-    knownNotifIds = new Set(entries.map(n => n.id));
+  notifChannel = supabase.channel(`notifications-${boardId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `board_id=eq.${boardId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete allNotifications[payload.old.id]; }
+      else { allNotifications[payload.new.id] = notifRowToObj(payload.new); }
+      refreshNotifUI();
+    })
+    .subscribe();
+}
 
-    renderNotifPanel(entries);
-  });
+function notifRowToObj(row) {
+  return { message: row.message, taskId: row.task_id, read: row.read, createdAt: new Date(row.created_at).getTime() };
+}
+
+function refreshNotifUI() {
+  const entries = Object.entries(allNotifications).map(([id, n]) => ({ id, ...n }));
+  const unread  = entries.filter(n => !n.read);
+  const badge   = document.getElementById('notifBadge');
+  const count   = unread.length;
+  badge.textContent = count > 9 ? '9+' : count;
+  badge.classList.toggle('visible', count > 0);
+
+  if (knownNotifIds !== null) {
+    const newOnes = entries.filter(n => !n.read && !knownNotifIds.has(n.id));
+    if (newOnes.length) tryPlaySound();
+  }
+  knownNotifIds = new Set(entries.map(n => n.id));
+
+  renderNotifPanel(entries);
 }
 
 function renderNotifPanel(entries) {
@@ -618,7 +681,7 @@ function renderNotifPanel(entries) {
       const nid = item.dataset.id;
       const tid = item.dataset.task;
       if (nid && allNotifications[nid] && !allNotifications[nid].read) {
-        await update(ref(db, `spaces/${currentSpace.key}/notifications/${nid}`), { read: true });
+        await supabase.from('notifications').update({ read: true }).eq('id', nid);
       }
       if (tid) openDetail(tid);
       document.getElementById('notifPanel').classList.remove('open');
@@ -639,7 +702,6 @@ function tryPlaySound() {
   } catch {}
 }
 
-// Notification panel toggle
 document.getElementById('notifBtn').addEventListener('click', e => {
   e.stopPropagation();
   const panel = document.getElementById('notifPanel');
@@ -651,12 +713,9 @@ document.getElementById('notifBtn').addEventListener('click', e => {
 });
 
 document.getElementById('markAllRead').addEventListener('click', async () => {
-  if (!currentSpace) return;
-  const updates = {};
-  for (const [id, n] of Object.entries(allNotifications)) {
-    if (!n.read) updates[`spaces/${currentSpace.key}/notifications/${id}/read`] = true;
-  }
-  if (Object.keys(updates).length) await update(ref(db), updates);
+  if (!currentBoard) return;
+  const unreadIds = Object.entries(allNotifications).filter(([, n]) => !n.read).map(([id]) => id);
+  if (unreadIds.length) await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
 });
 
 document.addEventListener('click', e => {
@@ -716,9 +775,11 @@ function renderFileList() {
       </div>`).join('') +
     (totalSize ? `<div class="resource-file-total">${formatSize(totalSize)} / 10 MB</div>` : '');
   container.querySelectorAll('.resource-link-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      pendingResourceFiles.splice(+btn.dataset.idx, 1);
+    btn.addEventListener('click', async () => {
+      const idx = +btn.dataset.idx;
+      const [removed] = pendingResourceFiles.splice(idx, 1);
       renderFileList();
+      if (removed?.path) { try { await supabase.storage.from(ATTACHMENTS_BUCKET).remove([removed.path]); } catch {} }
     });
   });
 }
@@ -738,7 +799,10 @@ function populateResourceFields(task) {
   const linkResources = resources.filter(r => r.type !== 'file');
   const fileResources = resources.filter(r => r.type === 'file');
   if (linkResources.length) { pendingResourceLinks = linkResources.map(r => r.url); renderLinkRows(); }
-  if (fileResources.length) { pendingResourceFiles = fileResources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 })); renderFileList(); }
+  if (fileResources.length) {
+    pendingResourceFiles = fileResources.map(r => ({ url: r.url, path: storagePathFromUrl(r.url), name: r.name, size: 0 }));
+    renderFileList();
+  }
 }
 
 document.getElementById('resourceLinkAdd').addEventListener('click', () => {
@@ -755,17 +819,23 @@ document.getElementById('resourceFileBtn').addEventListener('click', () => {
 document.getElementById('resourceFile').addEventListener('change', async e => {
   const files = Array.from(e.target.files);
   e.target.value = '';
-  if (!files.length) return;
+  if (!files.length || !currentUser) return;
   const MAX_TOTAL = 10 * 1024 * 1024;
-  const newEntries = [];
-  for (const file of files) {
-    const dataUrl = await readFileAsDataURL(file);
-    newEntries.push({ dataUrl, name: file.name, size: file.size });
+  const existingSize = pendingResourceFiles.reduce((s, f) => s + (f.size || 0), 0);
+  const newSize = files.reduce((s, f) => s + f.size, 0);
+  if (existingSize + newSize > MAX_TOTAL) {
+    showToast(`Combined size exceeds the 10 MB limit.`);
+    return;
   }
-  const combined  = [...pendingResourceFiles, ...newEntries];
-  const totalSize = combined.reduce((s, f) => s + (f.size || 0), 0);
-  if (totalSize > MAX_TOTAL) { showToast(`Combined size (${formatSize(totalSize)}) exceeds 10 MB limit.`); return; }
-  pendingResourceFiles = combined;
+
+  showToast('Uploading…', 1500);
+  for (const file of files) {
+    const path = `${currentUser.id}/${crypto.randomUUID()}-${file.name}`;
+    const { error } = await supabase.storage.from(ATTACHMENTS_BUCKET).upload(path, file);
+    if (error) { showToast(`Upload failed: ${error.message}`); continue; }
+    const { data } = supabase.storage.from(ATTACHMENTS_BUCKET).getPublicUrl(path);
+    pendingResourceFiles.push({ url: data.publicUrl, path, name: file.name, size: file.size });
+  }
   renderFileList();
 });
 
@@ -781,7 +851,7 @@ function openNew(defaultStatus = 'todo') {
 }
 
 function openEdit(id) {
-  if (isDemoTask(id)) { showToast('This is a demo task — create your free board to add and edit tasks.'); showSpaceOverlay(); return; }
+  if (isDemoTask(id)) { showToast('This is a demo task — sign up for your free board to add and edit tasks.'); showAuthOverlay('signup'); return; }
   const task = tasks[id]; if (!task) return;
   editingTaskId = id;
   document.getElementById('modalTitle').textContent = 'Edit Task';
@@ -803,7 +873,7 @@ function closeModal() {
 
 document.getElementById('taskForm').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!currentSpace) return;
+  if (!currentBoard) return;
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
@@ -812,49 +882,43 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
       const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
       return { type: 'link', url: normalized, name: url };
     });
-  const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
-  const allItems  = [...linkItems, ...fileItems];
-  const resources = allItems.length ? allItems : null;
+  const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.url, name: f.name }));
+  const resources = [...linkItems, ...fileItems];
 
-  const newStatus = document.getElementById('taskStatus').value;
-  const fields = {
-    title,
-    desc:         document.getElementById('taskDesc').value.trim(),
-    priority:     document.getElementById('taskPriority').value,
-    scheduledFor: document.getElementById('taskScheduled').value || null,
-    due:          document.getElementById('taskDue').value || null,
-    status:       newStatus,
-    resources:    resources,
-    resourceType: null,
-    resourceUrl:  null,
-    resourceName: null,
-  };
+  const desc         = document.getElementById('taskDesc').value.trim();
+  const priority     = document.getElementById('taskPriority').value;
+  const scheduledFor = document.getElementById('taskScheduled').value || null;
+  const due          = document.getElementById('taskDue').value || null;
+  const status       = document.getElementById('taskStatus').value;
 
-  const spaceTasksRef = `spaces/${currentSpace.key}/tasks`;
+  // `row` uses Postgres column names (sent to Supabase); `local` mirrors the
+  // in-memory task shape the renderer expects — kept separate so neither
+  // side has to know about the other's naming.
+  const row   = { title, description: desc, priority, scheduled_for: scheduledFor, due_date: due, status, resources };
+  const local = { title, desc, priority, scheduledFor, due, status, resources };
 
   if (editingTaskId) {
     const old = tasks[editingTaskId];
-    tasks[editingTaskId] = { ...old, ...fields };
+    tasks[editingTaskId] = { ...old, ...local };
     closeModal();
     renderBoard();
-    await update(ref(db, `${spaceTasksRef}/${editingTaskId}`), fields);
-    if (newStatus === 'done' && old.status !== 'done') {
+    await supabase.from('tasks').update(row).eq('id', editingTaskId);
+    if (status === 'done' && old.status !== 'done') {
       await pushNotif(`"${title}" is now Done!`, editingTaskId);
     }
   } else {
-    const newRef   = push(ref(db, spaceTasksRef));
-    const taskData = { ...fields, createdAt: Date.now() };
-    tasks[newRef.key] = taskData;
+    const newId = crypto.randomUUID();
+    tasks[newId] = { ...local, createdAt: Date.now() };
     closeModal();
     renderBoard();
-    await set(newRef, taskData);
-    if (newStatus === 'done') await pushNotif(`"${title}" created as Done!`, newRef.key);
+    await supabase.from('tasks').insert({ id: newId, board_id: currentBoard.id, ...row });
+    if (status === 'done') await pushNotif(`"${title}" created as Done!`, newId);
   }
 });
 
 // ─── DELETE TASK ──────────────────────────────────────────────────────────────
 function deleteTask(id) {
-  if (isDemoTask(id)) { showToast('Create your free board to manage your own tasks.'); return; }
+  if (isDemoTask(id)) { showToast('Sign up for your free board to manage your own tasks.'); return; }
   const task = tasks[id]; if (!task) return;
   pendingDeleteId = id;
   document.getElementById('deleteConfirmTitle').textContent = task.title;
@@ -869,11 +933,12 @@ function closeDeleteConfirm() {
 async function confirmDeleteTask() {
   const id = pendingDeleteId;
   closeDeleteConfirm();
-  if (!id || !currentSpace) return;
-  await remove(ref(db, `spaces/${currentSpace.key}/tasks/${id}`));
-  await remove(ref(db, `spaces/${currentSpace.key}/comments/${id}`));
+  if (!id || !currentBoard) return;
+  const task = tasks[id];
   delete tasks[id];
   renderBoard();
+  await supabase.from('tasks').delete().eq('id', id);
+  if (task) await deleteResourceFiles(task.resources);
 }
 
 // ─── FILE PREVIEW ─────────────────────────────────────────────────────────────
@@ -887,9 +952,15 @@ function openFilePreview(resource) {
   dlBtn.href         = resource.url;
   dlBtn.download     = resource.name || 'download';
 
-  const mime = resource.url.match(/^data:([^;]+);/)?.[1] || resource.mime || '';
-  const isExtImg = !mime && /^https?:\/\//i.test(resource.url) && /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(resource.url);
-  if (mime.startsWith('image/') || isExtImg) {
+  const extMatch = (resource.name || resource.url).match(/\.([a-z0-9]+)(?:\?.*)?$/i);
+  const ext = extMatch ? extMatch[1].toLowerCase() : '';
+  const mime = resource.mime || {
+    jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml',
+    pdf:'application/pdf', mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', wav:'audio/wav',
+    txt:'text/plain', json:'application/json',
+  }[ext] || '';
+
+  if (mime.startsWith('image/')) {
     bodyEl.innerHTML = `<img class="fp-image" src="${resource.url}" alt="${escHtml(resource.name || 'File')}">`;
   } else if (mime === 'application/pdf') {
     bodyEl.innerHTML = `<iframe class="fp-embed" src="${resource.url}" title="${escHtml(resource.name || 'File')}"></iframe>`;
@@ -897,13 +968,6 @@ function openFilePreview(resource) {
     bodyEl.innerHTML = `<video class="fp-video" src="${resource.url}" controls></video>`;
   } else if (mime.startsWith('audio/')) {
     bodyEl.innerHTML = `<audio class="fp-audio" src="${resource.url}" controls></audio>`;
-  } else if (mime.startsWith('text/') || mime === 'application/json') {
-    try {
-      const text = atob(resource.url.split(',')[1]);
-      bodyEl.innerHTML = `<pre class="fp-text">${escHtml(text)}</pre>`;
-    } catch {
-      bodyEl.innerHTML = `<div class="fp-unsupported"><p>Cannot preview this file.<br>Use the Download button above.</p></div>`;
-    }
   } else {
     bodyEl.innerHTML = `<div class="fp-unsupported"><p>Preview not available.<br>Use the Download button above.</p></div>`;
   }
@@ -972,7 +1036,6 @@ function openDemoDetail(id) {
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}
     ${resourceHtml}`;
 
-  // Wire file preview buttons
   document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
     const idx = parseInt(btn.dataset.resIdx, 10);
     if (!isNaN(idx) && taskResources[idx]) {
@@ -980,7 +1043,6 @@ function openDemoDetail(id) {
     }
   });
 
-  // Hide edit button, swap comments section with demo CTA
   const overlay = document.getElementById('detailOverlay');
   overlay.classList.add('is-demo');
 
@@ -988,10 +1050,10 @@ function openDemoDetail(id) {
   if (commentsList) commentsList.innerHTML = `<div class="demo-comments-cta">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <p>Notes &amp; comments are saved on your personal board.</p>
-    <button class="btn-primary btn-sm" id="demoDetailCreateBtn">Create Your Free Board</button>
+    <button class="btn-primary btn-sm" id="demoDetailCreateBtn">Sign Up Free</button>
   </div>`;
   document.getElementById('demoDetailCreateBtn')?.addEventListener('click', () => {
-    closeDetail(); showSpaceOverlay();
+    closeDetail(); showAuthOverlay('signup');
   });
 
   overlay.classList.add('open');
@@ -1007,10 +1069,10 @@ async function openDetail(id) {
   if (isDemoTask(id)) return openDemoDetail(id);
   await tasksLoaded;
   let task = tasks[id];
-  if (!task && currentSpace) {
+  if (!task && currentBoard) {
     try {
-      const snap = await get(ref(db, `spaces/${currentSpace.key}/tasks/${id}`));
-      if (snap.exists()) { task = snap.val(); tasks[id] = task; }
+      const { data: row } = await supabase.from('tasks').select('*').eq('id', id).maybeSingle();
+      if (row) { task = rowToTask(row); tasks[id] = task; }
     } catch {}
   }
   if (!task) { showToast('Task not found — it may have been deleted.'); return false; }
@@ -1064,7 +1126,6 @@ async function openDetail(id) {
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}
     ${resourceHtml}`;
 
-  // File preview buttons
   document.getElementById('detailBody').querySelectorAll('.resource-preview-btn').forEach(btn => {
     const idx = parseInt(btn.dataset.resIdx, 10);
     if (!isNaN(idx) && taskResources[idx]) {
@@ -1072,7 +1133,6 @@ async function openDetail(id) {
     }
   });
 
-  // Status save
   const sel     = document.getElementById('detailStatusSel');
   const saveBtn = document.getElementById('saveStatusBtn');
   const origSt  = task.status;
@@ -1084,7 +1144,7 @@ async function openDetail(id) {
     const newStatus = sel.value;
     const oldStatus = tasks[id]?.status;
     saveBtn.disabled = true;
-    await update(ref(db, `spaces/${currentSpace.key}/tasks/${id}`), { status: newStatus });
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
     tasks[id] = { ...tasks[id], status: newStatus };
     saveBtn.style.display = 'none';
     saveBtn.disabled = false;
@@ -1096,33 +1156,42 @@ async function openDetail(id) {
 
   document.getElementById('detailEditBtn').onclick = () => { closeDetail(); openEdit(id); };
 
-  // Real-time comments / notes
-  if (commentsUnsub) commentsUnsub();
-  commentsUnsub = onValue(ref(db, `spaces/${currentSpace.key}/comments/${id}`), snap => {
-    if (detailTaskId !== id) return;
-    const data     = snap.val() || {};
-    const comments = Object.entries(data).map(([cid, c]) => ({ id: cid, ...c })).sort((a,b) => a.createdAt - b.createdAt);
-    const list     = document.getElementById('commentsList');
-    if (!comments.length) {
-      list.innerHTML = '<div class="no-comments">No notes yet. Add one below!</div>';
-      return;
-    }
-    list.innerHTML = comments.map(c => {
-      const time = new Date(c.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-      return `<div class="comment">
-        <span class="avatar" style="font-size:.7rem">${escHtml(currentSpace?.name?.slice(0,2).toUpperCase() || '?')}</span>
-        <div class="comment-body">
-          <div class="comment-meta"><strong>${escHtml(currentSpace?.name || 'You')}</strong><span class="comment-time">${time}</span></div>
-          <p>${escHtml(c.text)}</p>
-        </div>
-      </div>`;
-    }).join('');
-    list.scrollTop = list.scrollHeight;
-  });
+  // Real-time comments / notes for this task
+  if (taskCommentsChannel) supabase.removeChannel(taskCommentsChannel);
+  const { data: commentRows } = await supabase.from('comments').select('*').eq('task_id', id).order('created_at', { ascending: true });
+  renderCommentsList(commentRows || []);
+
+  taskCommentsChannel = supabase.channel(`task-comments-${id}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `task_id=eq.${id}` }, async () => {
+      if (detailTaskId !== id) return;
+      const { data: rows } = await supabase.from('comments').select('*').eq('task_id', id).order('created_at', { ascending: true });
+      renderCommentsList(rows || []);
+    })
+    .subscribe();
 
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('commentInput').focus();
   return true;
+}
+
+function renderCommentsList(rows) {
+  const list = document.getElementById('commentsList');
+  if (!rows.length) {
+    list.innerHTML = '<div class="no-comments">No notes yet. Add one below!</div>';
+    return;
+  }
+  list.innerHTML = rows.map(c => {
+    const time   = new Date(c.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const author = c.author_email || currentUser?.email || 'You';
+    return `<div class="comment">
+      <span class="avatar" style="font-size:.7rem">${escHtml(author.slice(0,2).toUpperCase())}</span>
+      <div class="comment-body">
+        <div class="comment-meta"><strong>${escHtml(author)}</strong><span class="comment-time">${time}</span></div>
+        <p>${escHtml(c.text)}</p>
+      </div>
+    </div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
 }
 
 function closeDetail() {
@@ -1130,8 +1199,7 @@ function closeDetail() {
   overlay.classList.remove('open');
   overlay.classList.remove('is-demo');
   detailTaskId = null;
-  if (commentsUnsub) { commentsUnsub(); commentsUnsub = null; }
-  // Restore comments section if it was replaced by demo CTA
+  if (taskCommentsChannel) { supabase.removeChannel(taskCommentsChannel); taskCommentsChannel = null; }
   const commentsList = document.getElementById('commentsList');
   if (commentsList && commentsList.querySelector('.demo-comments-cta')) {
     commentsList.innerHTML = '<div class="no-comments">No notes yet. Add one below!</div>';
@@ -1140,16 +1208,14 @@ function closeDetail() {
 
 // ─── NOTES (COMMENTS) ─────────────────────────────────────────────────────────
 async function postComment() {
-  if (!currentSpace || !detailTaskId) return;
+  if (!currentBoard || !detailTaskId) return;
   const input = document.getElementById('commentInput');
   const text  = input.value.trim();
   if (!text) return;
-  await push(ref(db, `spaces/${currentSpace.key}/comments/${detailTaskId}`), {
-    text,
-    author: currentSpace.key,
-    createdAt: Date.now(),
-  });
   input.value = '';
+  await supabase.from('comments').insert({
+    task_id: detailTaskId, board_id: currentBoard.id, author_email: currentUser.email, text,
+  });
 }
 
 document.getElementById('postCommentBtn').addEventListener('click', postComment);
@@ -1207,7 +1273,7 @@ document.getElementById('filterBarClear').addEventListener('click', () => {
 
 // ─── MODAL CLOSE EVENTS ───────────────────────────────────────────────────────
 document.getElementById('addTaskBtn').addEventListener('click', () => {
-  if (!currentSpace) { showSpaceOverlay(); return; }
+  if (!currentBoard) { showAuthOverlay('signup'); return; }
   openNew();
 });
 
@@ -1219,7 +1285,6 @@ document.getElementById('deleteConfirmCancel').addEventListener('click', closeDe
 document.getElementById('deleteConfirmOk').addEventListener('click', confirmDeleteTask);
 document.getElementById('filePreviewClose').addEventListener('click', closeFilePreview);
 
-// Close modals on backdrop click
 ['modalOverlay','deleteConfirmOverlay','detailOverlay','filePreviewOverlay'].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener('click', e => {
@@ -1232,41 +1297,34 @@ document.getElementById('filePreviewClose').addEventListener('click', closeFileP
   });
 });
 
-// ─── SPACE EVENTS ─────────────────────────────────────────────────────────────
-document.getElementById('createSpaceBtn').addEventListener('click', handleCreateSpace);
-document.getElementById('openSpaceBtn').addEventListener('click', handleOpenSpace);
+// ─── LOG OUT ──────────────────────────────────────────────────────────────────
+function resetToSignedOutState() {
+  if (tasksChannel)        { supabase.removeChannel(tasksChannel);        tasksChannel = null; }
+  if (commentsChannel)     { supabase.removeChannel(commentsChannel);     commentsChannel = null; }
+  if (notifChannel)        { supabase.removeChannel(notifChannel);        notifChannel = null; }
+  if (taskCommentsChannel) { supabase.removeChannel(taskCommentsChannel); taskCommentsChannel = null; }
+  currentUser  = null;
+  currentBoard = null;
+  tasks = {};
+  allNotifications = {};
+  knownNotifIds = null;
+  document.getElementById('spaceDisplay').classList.remove('visible');
+  document.getElementById('boardSettingsWrapper').style.display = 'none';
+  document.getElementById('notifBadge').classList.remove('visible');
+  document.getElementById('notifList').innerHTML = '';
+  demoTasks = Object.fromEntries(Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }]));
+  renderBoard();
+}
 
-document.getElementById('createSpaceInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleCreateSpace();
-});
-document.getElementById('openSpaceInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleOpenSpace();
-});
-
-document.getElementById('changeSpaceBtn').addEventListener('click', () => {
-  showToast('All tasks saved. See you next time!', 2000);
-  setTimeout(() => {
-    // Unsubscribe current space listeners
-    if (tasksUnsub)          tasksUnsub();
-    if (commentsGlobalUnsub) commentsGlobalUnsub();
-    if (notifUnsub)          notifUnsub();
-    localStorage.removeItem('tb-space');
-    currentSpace = null;
-    tasks = {};
-    allNotifications = {};
-    knownNotifIds = null;
-    document.getElementById('spaceDisplay').classList.remove('visible');
-    document.getElementById('boardSettingsWrapper').style.display = 'none';
-    document.getElementById('notifBadge').classList.remove('visible');
-    document.getElementById('notifList').innerHTML = '';
-    renderBoard();
-  }, 1800);
+document.getElementById('changeSpaceBtn').addEventListener('click', async () => {
+  showToast('All tasks saved. Logging out…', 1500);
+  await supabase.auth.signOut();
 });
 
-// ─── DELETE BOARD ─────────────────────────────────────────────────────────────
+// ─── DELETE BOARD (wipes all tasks and starts fresh) ─────────────────────────
 document.getElementById('deleteSpaceBtn').addEventListener('click', () => {
-  if (!currentSpace) return;
-  document.getElementById('deleteSpaceName').textContent = currentSpace.name;
+  if (!currentBoard) return;
+  document.getElementById('deleteSpaceName').textContent = currentUser.email;
   document.getElementById('deleteSpaceOverlay').classList.add('open');
 });
 
@@ -1281,56 +1339,53 @@ document.getElementById('deleteSpaceOverlay').addEventListener('click', e => {
 });
 
 document.getElementById('deleteSpaceOk').addEventListener('click', async () => {
-  if (!currentSpace) return;
-  const key = currentSpace.key;
-  // Unsubscribe all listeners before deleting
-  if (tasksUnsub)          { tasksUnsub();          tasksUnsub = null; }
-  if (commentsGlobalUnsub) { commentsGlobalUnsub();  commentsGlobalUnsub = null; }
-  if (notifUnsub)          { notifUnsub();           notifUnsub = null; }
+  if (!currentBoard) return;
+  const oldBoardId = currentBoard.id;
   closeDeleteSpaceOverlay();
-  await remove(ref(db, `spaces/${key}`));
-  localStorage.removeItem('tb-space');
-  currentSpace = null;
+
+  if (tasksChannel)    { supabase.removeChannel(tasksChannel);    tasksChannel = null; }
+  if (commentsChannel) { supabase.removeChannel(commentsChannel); commentsChannel = null; }
+  if (notifChannel)    { supabase.removeChannel(notifChannel);    notifChannel = null; }
+
+  const allResources = Object.values(tasks).flatMap(t => t.resources || []);
+  await supabase.from('boards').delete().eq('id', oldBoardId); // cascades tasks/comments/notifications
+  await deleteResourceFiles(allResources);
+
   tasks = {};
   allNotifications = {};
   knownNotifIds = null;
-  document.getElementById('spaceDisplay').classList.remove('visible');
-  document.getElementById('boardSettingsWrapper').style.display = 'none';
   document.getElementById('notifBadge').classList.remove('visible');
   document.getElementById('notifList').innerHTML = '';
-  renderBoard();
-  showSpaceOverlay();
+
+  await enterBoard(); // recreates a fresh empty board for this account
+  showToast('Board deleted. Starting fresh!');
 });
 
-// ─── SPACE OVERLAY CLOSE ─────────────────────────────────────────────────────
-document.getElementById('spaceOverlayClose').addEventListener('click', hideSpaceOverlay);
+// ─── AUTH STATE / INIT ────────────────────────────────────────────────────────
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN') {
+    if (currentUser?.id === session.user.id) return; // already entered
+    currentUser = session.user;
+    hideAuthOverlay();
+    try { await enterBoard(); } catch (e) { showToast('Could not load your board. Please refresh.'); console.error(e); }
+  } else if (event === 'SIGNED_OUT') {
+    resetToSignedOutState();
+  }
+});
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
-  // Always boot demo tasks for immediate visual — hidden once real space loads
-  demoTasks = Object.fromEntries(
-    Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }])
-  );
+  demoTasks = Object.fromEntries(Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }]));
   renderBoard();
 
-  const savedKey = localStorage.getItem('tb-space');
-  if (savedKey) {
-    try {
-      const snap = await get(ref(db, `spaces/${savedKey}/meta`));
-      if (snap.exists()) {
-        demoTasks = null; // clear demo before entering real board
-        currentSpace = { key: savedKey, name: snap.val().displayName || savedKey };
-        enterBoard();
-        return;
-      }
-    } catch {}
-    localStorage.removeItem('tb-space');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    try { await enterBoard(); }
+    catch (e) { showToast('Could not load your board. Please refresh.'); console.error(e); }
   }
-  // New visitor — stay in demo mode, show the space overlay
-  showSpaceOverlay();
 }
 
-document.getElementById('demoBannerCreateBtn')?.addEventListener('click', showSpaceOverlay);
+document.getElementById('demoBannerCreateBtn')?.addEventListener('click', () => showAuthOverlay('signup'));
 
 // ─── CUSTOM DATE PICKER ────────────────────────────────────────────────────────
 (function initCustomDatePickers() {
@@ -1365,7 +1420,6 @@ document.getElementById('demoBannerCreateBtn')?.addEventListener('click', showSp
       else   { disp.textContent = 'dd/mm/yyyy'; btn.classList.add('empty'); }
     }
 
-    // Intercept programmatic .value = '...' so display stays in sync
     const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
     Object.defineProperty(input, 'value', {
       get: () => proto.get.call(input),
