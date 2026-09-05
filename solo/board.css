@@ -162,6 +162,44 @@ body {
 .space-divider::before { left: 0; }
 .space-divider::after  { right: 0; }
 
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 9px 0;
+  border-radius: 7px;
+  font-family: 'Poppins', sans-serif;
+  font-size: .86rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.auth-tab.active { background: var(--white); color: var(--primary); box-shadow: var(--shadow-sm); }
+
+.space-link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-family: 'Poppins', sans-serif;
+  font-size: .8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  text-decoration: underline;
+}
+.space-link-btn:hover { color: var(--primary-dark); }
+
 /* ─── Header ─── */
 header {
   background: var(--white);
@@ -1424,6 +1462,8 @@ h1 {
 [data-theme="dark"] .task-card { background: #1e293b; }
 [data-theme="dark"] .space-overlay { background: rgba(0,0,0,.7); }
 [data-theme="dark"] .space-card { background: #1e293b; }
+[data-theme="dark"] .auth-tabs { background: #0f172a; border-color: var(--border); }
+[data-theme="dark"] .auth-tab.active { background: #1e293b; }
 [data-theme="dark"] .modal-overlay { background: rgba(0,0,0,.7); }
 [data-theme="dark"] .modal-card { background: #1e293b; }
 [data-theme="dark"] .notif-panel { background: #1e293b; border-color: var(--border); }
@@ -1431,6 +1471,9 @@ h1 {
 [data-theme="dark"] select,
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="url"],
 [data-theme="dark"] textarea { background: #0f172a; color: var(--text); border-color: var(--border); }
 [data-theme="dark"] .date-filter {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
