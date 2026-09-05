@@ -1382,6 +1382,9 @@ async function init() {
     currentUser = session.user;
     try { await enterBoard(); }
     catch (e) { showToast('Could not load your board. Please refresh.'); console.error(e); }
+  } else {
+    // New or signed-out visitor — stay in demo mode, show the auth overlay.
+    showAuthOverlay();
   }
 }
 
