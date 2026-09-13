@@ -50,7 +50,10 @@ declare
   _code text;
   _team public.teams;
 begin
-  _code := encode(gen_random_bytes(6), 'hex');
+  -- md5()/random() are core Postgres builtins (no extension/search_path
+  -- dependency) — gen_random_bytes() lives in pgcrypto's `extensions` schema
+  -- on Supabase, which this function's search_path doesn't include.
+  _code := substr(md5(random()::text || clock_timestamp()::text), 1, 12);
   insert into public.teams (name, invite_code, max_users, created_by)
     values (_name, _code, _max_users, auth.uid())
     returning * into _team;
