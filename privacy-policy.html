@@ -53,36 +53,36 @@
     <div class="legal-card">
       <span class="legal-badge">Legal</span>
       <h1>Privacy Policy</h1>
-      <p class="legal-date">Effective date: March 3, 2026 &nbsp;·&nbsp; Last updated: March 3, 2026</p>
+      <p class="legal-date">Effective date: March 3, 2026 &nbsp;·&nbsp; Last updated: September 13, 2026</p>
 
       <p>Achiever Board ("we", "us", or "our") operates the website <a href="https://achieverboard.com/">https://achieverboard.com/</a> (the "Service"). This page explains what information we collect, how we use it, and what rights you have regarding your data.</p>
       <p>By using Achiever Board, you agree to the collection and use of information in accordance with this policy.</p>
 
       <h2>1. Information We Collect</h2>
-      <p>We collect the minimum information necessary to provide the Service. Depending on which version of Achiever Board you use, this may include:</p>
-
-      <p><strong>Team Board (achieverboard.com/team/)</strong></p>
+      <p>We collect the minimum information necessary to provide the Service. Both the Solo Board and the Team Board require a free account. Creating one collects:</p>
       <ul>
-        <li><strong>Account name</strong> — chosen by you when creating an account.</li>
-        <li><strong>Recovery email address</strong> — optionally provided for password recovery. Not required to use the Service.</li>
-        <li><strong>Password</strong> — stored in hashed form via Firebase Authentication. We never store plain-text passwords.</li>
-        <li><strong>Task data</strong> — titles, descriptions, due dates, priorities, statuses, comments, and file attachments you create.</li>
-        <li><strong>Profile photo</strong> — optionally uploaded by you, stored as a data URL.</li>
+        <li><strong>Email address</strong> — required to create an account, confirm it, and log in, via our authentication provider, Supabase Auth.</li>
+        <li><strong>Password</strong> — stored in hashed form by Supabase Auth. We never store or have access to your plain-text password.</li>
+        <li><strong>Task data</strong> — titles, descriptions, due dates, priorities, statuses, notes/comments, and file attachments you create.</li>
       </ul>
 
-      <p><strong>Solo Board (achieverboard.com/)</strong></p>
+      <p><strong>Team Board (achieverboard.com/team/)</strong> additionally collects:</p>
       <ul>
-        <li><strong>Board name</strong> — the name you choose for your task space. Your board name acts as your unique identifier. It is stored in your browser's <code>localStorage</code> as a convenience so you don't have to retype it on every visit — but your actual data is safely stored in Firebase (see Section 3), not in your browser. If you clear your browser data, simply use "Open Taskboard" and enter your board name to restore full access to all your tasks.</li>
-        <li><strong>Task data</strong> — titles, descriptions, due dates, priorities, statuses, notes, and file attachments you create, all stored in Firebase Realtime Database.</li>
-        <li>No account or email is required to use the Solo Board.</li>
+        <li><strong>Display name</strong> — chosen by you when you create or join a team.</li>
+        <li><strong>Team membership and role</strong> — which team(s) you belong to, and whether you're an admin or a member.</li>
+        <li><strong>Profile photo</strong> — optionally uploaded by you, stored via our file storage provider, Supabase Storage.</li>
+        <li><strong>Direct messages</strong> — 1-on-1 messages you send to teammates within a team.</li>
+        <li><strong>Announcements</strong> — team-wide announcement posts.</li>
+        <li><strong>Payment information</strong> — for paid team plans, payments are handled entirely by Stripe via Stripe's own hosted checkout page. We never receive, see, or store your card number or other payment details — see <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe Privacy Policy</a>.</li>
       </ul>
 
       <h2>2. How We Use Your Information</h2>
       <ul>
+        <li>To create and secure your account and let you log in.</li>
         <li>To create and maintain your task boards and task data.</li>
-        <li>To allow password recovery if you provide a recovery email.</li>
-        <li>To display your name and avatar within the app.</li>
-        <li>To provide notifications about task updates and deadlines.</li>
+        <li>To send you an email confirmation link when you sign up, and a password-reset email if you request one.</li>
+        <li>To display your name and avatar within the app, and let teammates message you and be notified about task updates.</li>
+        <li>To process payments for paid Team plans (handled by Stripe — see Section 3).</li>
         <li>To improve the reliability and performance of the Service.</li>
       </ul>
       <p>We do not sell, rent, or share your personal information with third parties for marketing purposes.</p>
@@ -90,13 +90,15 @@
       <h2>3. Data Storage and Third-Party Services</h2>
       <p>Achiever Board uses the following third-party services to operate:</p>
       <ul>
-        <li><strong>Google Firebase (Firestore &amp; Realtime Database)</strong> — stores your task data, account information, and notes. Data is hosted on Google's infrastructure. See <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy Policy</a>.</li>
+        <li><strong>Supabase</strong> (Authentication, Database &amp; Storage) — stores your account, task data, and any files or photos you upload, protected by row-level security so only you (or your teammates, for Team Board data) can access it. See <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase Privacy Policy</a>.</li>
+        <li><strong>Stripe</strong> — processes payments for paid Team plans via Stripe's own hosted checkout page. We never see or store your payment card details. See <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe Privacy Policy</a>.</li>
+        <li><strong>Vercel</strong> — hosts the Achiever Board website. See <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Vercel Privacy Policy</a>.</li>
         <li><strong>Google Fonts</strong> — loads the Poppins typeface from Google's CDN. Google may log font requests. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
-        <li><strong>GitHub Pages</strong> — hosts the Achiever Board website files. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>.</li>
+        <li><strong>Google Analytics</strong> — helps us understand how visitors use the site. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.</li>
       </ul>
 
       <h2>4. Cookies and Local Storage</h2>
-      <p>Achiever Board does not set cookies directly. We use the browser's <code>localStorage</code> to remember your active board name between sessions on the Solo Board, purely as a convenience. Your actual task data is stored in Firebase (cloud), not in your browser — so clearing browser data will not delete your tasks. You can always re-open your board by entering your board name in the "Open Taskboard" form.</p>
+      <p>Achiever Board does not set cookies directly, beyond what's needed to keep you logged in. Our authentication provider, Supabase, stores your login session in your browser's <code>localStorage</code> so you stay signed in between visits. Clearing your browser data will simply log you out — it will not delete any of your data, since your tasks, account, and (for Team Board) team data are all stored securely in our database, not in your browser.</p>
       <p>Third-party services integrated into Achiever Board (listed above) may set their own cookies or use similar tracking technologies, subject to their respective privacy policies.</p>
 
       <h2>5. Advertising</h2>
@@ -104,7 +106,7 @@
       <p>We do not control the data collected by advertising partners. Their use of your data is governed by their own privacy policies.</p>
 
       <h2>6. Data Retention</h2>
-      <p>Your task data is stored as long as your account exists or your board name is active. You may delete your account (and all associated data) at any time from the Profile Settings screen inside the app. For Solo Boards, data is stored in Firebase under your board name; you can delete individual tasks or clear your board at any time.</p>
+      <p>Your data is stored for as long as your account exists. On the Solo Board, you can delete individual tasks, or clear your entire board, at any time from the board settings menu. On the Team Board, you can leave a team at any time, and a team admin can remove members or regenerate the team's invite code. To request full deletion of your account and associated data, contact us using the information in Section 11.</p>
 
       <h2>7. Children's Privacy</h2>
       <p>Achiever Board is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, please contact us and we will take steps to delete that information.</p>
@@ -120,7 +122,7 @@
       <p>To exercise any of these rights, please contact us using the information below.</p>
 
       <h2>9. Security</h2>
-      <p>We take reasonable precautions to protect your data, including the use of Firebase's built-in security rules and password hashing. However, no method of transmission over the Internet or electronic storage is 100% secure. We cannot guarantee absolute security.</p>
+      <p>We take reasonable precautions to protect your data, including Supabase's row-level security policies (which restrict every piece of data to the account, or team, it belongs to), encrypted password hashing, and encrypted connections (HTTPS/TLS) for all data in transit. However, no method of transmission over the Internet or electronic storage is 100% secure. We cannot guarantee absolute security.</p>
 
       <h2>10. Changes to This Policy</h2>
       <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated effective date. We encourage you to review this page periodically. Continued use of the Service after any changes constitutes acceptance of the updated policy.</p>
