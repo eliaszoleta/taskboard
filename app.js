@@ -247,7 +247,28 @@ function showAuthOverlay() {
   setActiveStep('stepAuth');
   document.getElementById('loginErr').textContent  = '';
   document.getElementById('signupErr').textContent = '';
+  const pendingCode = localStorage.getItem('ab_pending_invite_code');
+  if (pendingCode) {
+    document.getElementById('preInviteSection').style.display = '';
+    document.getElementById('preInviteCode').value = pendingCode;
+  }
 }
+
+// "Have an invite code?" toggle on the login/signup screen — lets someone
+// stash a code *before* they even have an account, so once they're logged
+// in they land straight on the pre-filled Join step instead of a generic
+// "create or join a team" screen with no context.
+document.getElementById('haveInviteCodeToggle').addEventListener('click', () => {
+  const section = document.getElementById('preInviteSection');
+  const opening = section.style.display === 'none';
+  section.style.display = opening ? '' : 'none';
+  if (opening) document.getElementById('preInviteCode').focus();
+});
+document.getElementById('preInviteCode').addEventListener('input', e => {
+  const v = e.target.value.trim();
+  if (v) localStorage.setItem('ab_pending_invite_code', v);
+  else localStorage.removeItem('ab_pending_invite_code');
+});
 
 function hideAuthOverlay() {
   document.getElementById('userOverlay').classList.remove('open');
@@ -420,6 +441,7 @@ async function doCreateTeam({ teamName, displayName, teamSize }) {
     });
     if (error) throw error;
     localStorage.removeItem('ab_pending_team');
+    localStorage.removeItem('ab_pending_invite_code');
     localStorage.setItem('ab_last_team_id', team.id);
     await loadMyTeams();
     const entry = myTeams.find(t => t.id === team.id) || team;
@@ -449,6 +471,7 @@ async function handleJoinTeamSubmit() {
     });
     if (error) throw error;
     localStorage.setItem('ab_last_team_id', team.id);
+    localStorage.removeItem('ab_pending_invite_code');
     await loadMyTeams();
     const entry = myTeams.find(t => t.id === team.id) || team;
     await enterTeam(entry);
@@ -2006,6 +2029,15 @@ document.getElementById('changeUserBtn').addEventListener('click', async () => {
 // ─── AUTH STATE / BOOTSTRAP ───────────────────────────────────────────────────
 async function loadTeamsAndEnter() {
   await loadMyTeams();
+
+  const pendingCode = localStorage.getItem('ab_pending_invite_code');
+  if (pendingCode) {
+    showTeamSetupStep();
+    document.getElementById('joinInviteCode').value = pendingCode;
+    document.getElementById('joinDisplayName').focus();
+    return;
+  }
+
   if (!myTeams.length) { showTeamSetupStep(); return; }
   const preferredId = localStorage.getItem('ab_last_team_id');
   const team = myTeams.find(t => t.id === preferredId) || myTeams[0];

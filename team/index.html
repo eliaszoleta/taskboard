@@ -105,6 +105,12 @@
         </div>
         <p class="user-card-sub">Free for 2 users · Plans from $15/mo</p>
 
+        <button type="button" class="btn-text" id="haveInviteCodeToggle" style="width:100%;margin-bottom:10px">Have an invite code?</button>
+        <div class="ws-section-form" id="preInviteSection" style="display:none;margin-bottom:16px">
+          <input type="text" id="preInviteCode" placeholder="Paste your invite code…" maxlength="40" autocomplete="off">
+          <p class="ws-section-err" id="preInviteHint" style="color:var(--muted)">Log in or create an account below — we'll take you straight to the join step.</p>
+        </div>
+
         <p class="ws-section-label">Log In</p>
         <div class="ws-section-form" id="loginSection">
           <input type="email" id="loginEmail" placeholder="Email address" maxlength="120" autocomplete="email">
