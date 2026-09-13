@@ -48,7 +48,7 @@
         "name": "Do I need to create an account to use Achiever Board?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. The Solo Board requires no account at all. Just go to Achiever Board Solo, enter a board name of your choice, and your board is ready. Your data is saved to the cloud automatically. If you want to collaborate with a team, assign tasks to specific people, or get notifications, you will need to create a free account for the Team Board."
+          "text": "Yes. Both the Solo Board and the Team Board require a free account — just an email and password, no credit card. Signing up takes about a minute: go to Achiever Board Solo, create your account, confirm your email, and your board is ready. Your data is saved securely to your account and follows you across devices. If you want to collaborate with a team, assign tasks to specific people, or get notifications, you'll want the Team Board instead."
         }
       },
       {
@@ -56,7 +56,7 @@
         "name": "Is Achiever Board really free?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. The Solo Board is completely free. The Team Board is free forever for up to 2 users — no credit card required. Larger teams can upgrade to flat-rate plans starting at $15/month for up to 5 users. All features are included on every plan; you only pay for additional seats."
+          "text": "Yes. The Solo Board is completely free with a free account and no credit card required. The Team Board is free forever for up to 2 users — no credit card required. Larger teams can upgrade to flat-rate plans starting at $15/month for up to 5 users. All features are included on every plan; you only pay for additional seats."
         }
       },
       {
@@ -64,7 +64,7 @@
         "name": "What's the difference between the Solo Board and the Team Board?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "The Solo Board is designed for one person — no account, just a board name. The Team Board adds multi-user accounts and full collaboration: task assignment with instant notifications, comments with real-time reply threads, comment notifications, 1-on-1 direct messages, team announcement board with admin controls, personal activity and notification feed, date filters, real-time sync, admin controls to add and remove members, and user-based task filtering. Flat team rate, not per person. Free for up to 2 users; paid plans from $15/month for teams of 3 or more, cancel anytime."
+          "text": "The Solo Board is designed for one person — a free account, and you're managing your own board. The Team Board adds multi-user accounts and full collaboration: task assignment with instant notifications, comments with real-time reply threads, comment notifications, 1-on-1 direct messages, team announcement board with admin controls, personal activity and notification feed, date filters, real-time sync, admin controls to add and remove members, and user-based task filtering. Flat team rate, not per person. Free for up to 2 users; paid plans from $15/month for teams of 3 or more, cancel anytime."
         }
       },
       {
@@ -72,7 +72,7 @@
         "name": "Where is my data stored?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "All task data is stored securely in Google Firebase — a cloud database hosted on Google's infrastructure. Your data is not stored in your browser's local storage (though your board name is cached there as a convenience). This means your tasks are safe even if you clear your browser cache or switch devices."
+          "text": "All task data is stored securely in Supabase — a cloud database with real-time sync. Your data is tied to your account rather than stored in your browser's local storage. This means your tasks are safe even if you clear your browser cache or switch devices — just log in and everything is there."
         }
       },
       {
@@ -80,7 +80,7 @@
         "name": "I cleared my browser data and now my board is empty. Did I lose my tasks?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No — your tasks are safe. Clearing your browser data removes the cached board name, which is why the board appears empty. To get back in, simply go to Achiever Board Solo, enter your board name again, and all your tasks will load from the cloud."
+          "text": "No — your tasks are safe. Clearing your browser data only signs you out; it doesn't touch your data. To get back in, simply go to Achiever Board Solo, log in with your email and password again, and all your tasks will load from your account."
         }
       },
       {
@@ -88,7 +88,7 @@
         "name": "Can I access my board from a different computer or phone?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Since your data is in the cloud, you can open your board from any browser on any device. For the Solo Board, just enter your board name. For the Team Board, log in with your account credentials."
+          "text": "Yes. Since your data is tied to your account and stored in the cloud, you can log in from any browser on any device — for both the Solo Board and the Team Board — and your board will be exactly as you left it."
         }
       },
       {
@@ -120,7 +120,7 @@
         "name": "Is my board private?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "For the Solo Board: your board is identified by the name you choose. Anyone who knows your exact board name can access it, so treat your board name like a password. We recommend using a board name that isn't easy to guess. For the Team Board: your account is protected by a password. Only users you invite can access your workspace."
+          "text": "Yes. Both the Solo Board and the Team Board are protected by your account — a password-protected email login, not a guessable name. Only you can access your Solo Board, and only people you invite can access your Team Board workspace."
         }
       },
       {
@@ -226,8 +226,8 @@
               <span class="faq-q-mark">Q</span>
               Do I need to create an account to use Achiever Board?
             </div>
-            <p>No. The <strong>Solo Board</strong> requires no account at all. Just go to <a href="../board.html">Achiever Board Solo</a>, enter a board name of your choice, and your board is ready. Your data is saved to the cloud automatically.</p>
-            <p>If you want to collaborate with a team, assign tasks to specific people, or get notifications, you'll need to create a free account for the <a href="../team/"><strong>Team Board</strong></a>.</p>
+            <p>Yes. Both the <strong>Solo Board</strong> and the <strong>Team Board</strong> require a free account — just an email and password, no credit card. Go to <a href="../board.html">Achiever Board Solo</a>, sign up, confirm your email, and your board is ready in about a minute. Your data is saved securely to your account and follows you to any device.</p>
+            <p>If you want to collaborate with a team, assign tasks to specific people, or get notifications, you'll want the <a href="../team/"><strong>Team Board</strong></a>.</p>
           </div>
 
           <div class="faq-item">
@@ -235,7 +235,7 @@
               <span class="faq-q-mark">Q</span>
               Is Achiever Board really free?
             </div>
-            <p>Yes. The <strong>Solo Board</strong> is completely free with no limits on tasks, no ads, and no credit card required. The <a href="../team/"><strong>Team Board</strong></a> is free forever for workspaces with up to 2 users. Larger teams can upgrade to flat-rate paid plans starting at $15/month for up to 5 users — far cheaper than per-seat alternatives like Asana or Monday.com. All features are included on every plan; you only pay for additional seats.</p>
+            <p>Yes. The <strong>Solo Board</strong> is completely free with no limits on tasks, no ads, and no credit card required — just a free account. The <a href="../team/"><strong>Team Board</strong></a> is free forever for workspaces with up to 2 users. Larger teams can upgrade to flat-rate paid plans starting at $15/month for up to 5 users — far cheaper than per-seat alternatives like Asana or Monday.com. All features are included on every plan; you only pay for additional seats.</p>
           </div>
 
           <div class="faq-item">
@@ -243,7 +243,7 @@
               <span class="faq-q-mark">Q</span>
               What's the difference between the Solo Board and the Team Board?
             </div>
-            <p>The <strong>Solo Board</strong> is designed for one person. It requires no account — just a board name — and is the fastest way to get started. It's great for personal task tracking, freelance work, or any situation where you're the only one managing the tasks.</p>
+            <p>The <strong>Solo Board</strong> is designed for one person. You create a free account and get straight to managing your own tasks. It's great for personal task tracking, freelance work, or any situation where you're the only one managing the tasks.</p>
             <p>The <a href="../team/"><strong>Team Board</strong></a> adds multi-user accounts and a full suite of collaboration features: task assignment with instant notifications, comments with real-time reply threads, comment notifications on your tasks, 1-on-1 direct messages, a team announcement board with admin controls, personal activity and notification feed, date filters (Today, This Week, This Month), real-time sync across all devices, admin controls to add and remove members, and user-based task filtering. All features are included on every plan — flat team rate, not per person, and cancel anytime. Free for up to 2 users; paid plans from $15/month for larger teams.</p>
           </div>
 
@@ -259,7 +259,7 @@
               <span class="faq-q-mark">Q</span>
               Where is my data stored?
             </div>
-            <p>All task data is stored securely in <strong>Google Firebase</strong> — a cloud database hosted on Google's infrastructure. Your data is not stored in your browser's local storage (though your board name is cached there as a convenience). This means your tasks are safe even if you clear your browser cache or switch devices.</p>
+            <p>All task data is stored securely in <strong>Supabase</strong> — a cloud database with real-time sync. Your data is tied to your account rather than stored in your browser's local storage. This means your tasks are safe even if you clear your browser cache or switch devices — just log back in and everything is there.</p>
           </div>
 
           <div class="faq-item">
@@ -267,7 +267,7 @@
               <span class="faq-q-mark">Q</span>
               I cleared my browser data and now my board is empty. Did I lose my tasks?
             </div>
-            <p>No — your tasks are safe. Clearing your browser data removes the cached board name, which is why the board appears empty. To get back in, simply go to <a href="../board.html">Achiever Board Solo</a>, enter your board name again, and all your tasks will load from the cloud.</p>
+            <p>No — your tasks are safe. Clearing your browser data just signs you out; it doesn't touch your account or your data. To get back in, simply go to <a href="../board.html">Achiever Board Solo</a>, log in with your email and password again, and all your tasks will load from your account.</p>
           </div>
 
           <div class="faq-item">
@@ -275,7 +275,7 @@
               <span class="faq-q-mark">Q</span>
               Can I access my board from a different computer or phone?
             </div>
-            <p>Yes. Since your data is in the cloud, you can open your board from any browser on any device. For the Solo Board, just enter your board name. For the <a href="../team/">Team Board</a>, log in with your account credentials.</p>
+            <p>Yes. Since your data is tied to your account and stored in the cloud, you can log in from any browser on any device. This works the same way for the Solo Board and the <a href="../team/">Team Board</a> — just enter your account credentials.</p>
           </div>
 
           <div class="faq-item">
@@ -283,7 +283,7 @@
               <span class="faq-q-mark">Q</span>
               How do I delete my data?
             </div>
-            <p>For the Solo Board, you can delete individual tasks using the delete button inside each task. For the <a href="../team/">Team Board</a>, you can delete your account — and all associated data — from the Profile Settings screen inside the app. If you need help, contact us at <a href="mailto:contact@achieverboard.com">contact@achieverboard.com</a>.</p>
+            <p>For the Solo Board, you can clear all your tasks from the board settings menu at any time. For the <a href="../team/">Team Board</a>, you can delete individual tasks directly, or remove your account and its associated data from the Profile Settings screen inside the app. Full account deletion isn't yet a self-service button on either product — if you'd like your account and all data permanently removed, contact us at <a href="mailto:contact@achieverboard.com">contact@achieverboard.com</a> and we'll take care of it.</p>
           </div>
 
         </div>
@@ -340,8 +340,7 @@
               <span class="faq-q-mark">Q</span>
               Is my board private?
             </div>
-            <p>For the Solo Board: your board is identified by the name you choose. Anyone who knows your exact board name can access it, so treat your board name like a password — don't share it publicly. We recommend using a board name that isn't easy to guess.</p>
-            <p>For the <a href="../team/">Team Board</a>: your account is protected by a password. Only users you invite can access your workspace.</p>
+            <p>Yes. Both the Solo Board and the <a href="../team/">Team Board</a> are protected by your account — a password-protected email login, not a name someone could guess. Only you can access your Solo Board, and only people you explicitly invite can access your Team Board workspace.</p>
           </div>
 
           <div class="faq-item">
