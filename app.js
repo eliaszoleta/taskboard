@@ -359,18 +359,45 @@ async function handleSignup() {
   }
 }
 
-async function handleForgotPassword() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const errEl = document.getElementById('loginErr');
-  if (!email) { errEl.textContent = 'Enter your email above first, then click "Forgot password?".'; return; }
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
-  errEl.style.color = error ? '' : '#16a34a';
-  errEl.textContent = error ? error.message : 'Password reset email sent — check your inbox.';
+function openForgotPasswordModal() {
+  const prefill = document.getElementById('loginEmail').value.trim();
+  const errEl   = document.getElementById('forgotPasswordErr');
+  errEl.textContent = '';
+  errEl.style.color = '';
+  document.getElementById('forgotPasswordEmail').value = prefill;
+  document.getElementById('forgotPasswordOverlay').classList.add('open');
+  document.getElementById('forgotPasswordEmail').focus();
 }
+
+function closeForgotPasswordModal() {
+  document.getElementById('forgotPasswordOverlay').classList.remove('open');
+}
+
+async function submitForgotPassword() {
+  const email = document.getElementById('forgotPasswordEmail').value.trim();
+  const errEl = document.getElementById('forgotPasswordErr');
+  errEl.textContent = '';
+  errEl.style.color = '';
+  if (!email) { errEl.textContent = 'Please enter your email address.'; return; }
+
+  const btn = document.getElementById('forgotPasswordSend');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
+  if (error) { errEl.textContent = error.message; return; }
+  errEl.style.color   = '#16a34a';
+  errEl.textContent   = 'Password reset email sent — check your inbox.';
+}
+
+document.getElementById('forgotPasswordClose').addEventListener('click', closeForgotPasswordModal);
+document.getElementById('forgotPasswordCancel').addEventListener('click', closeForgotPasswordModal);
+document.getElementById('forgotPasswordOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeForgotPasswordModal(); });
+document.getElementById('forgotPasswordSend').addEventListener('click', submitForgotPassword);
+document.getElementById('forgotPasswordEmail').addEventListener('keydown', e => { if (e.key === 'Enter') submitForgotPassword(); });
 
 document.getElementById('loginBtn').addEventListener('click', handleLogin);
 document.getElementById('signupBtn').addEventListener('click', handleSignup);
-document.getElementById('forgotPasswordBtn').addEventListener('click', handleForgotPassword);
+document.getElementById('forgotPasswordBtn').addEventListener('click', openForgotPasswordModal);
 [['loginEmail','loginPassword'], ['signupEmail','signupPassword']].flat().forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
@@ -2173,7 +2200,7 @@ document.getElementById('filePreviewOverlay').addEventListener('click', e => { i
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm();
-    closeLeaveTeamOverlay(); closeFilePreview(); closeDeleteMemberModal(); closeUpgradeModal();
+    closeLeaveTeamOverlay(); closeFilePreview(); closeDeleteMemberModal(); closeUpgradeModal(); closeForgotPasswordModal();
   }
 });
 

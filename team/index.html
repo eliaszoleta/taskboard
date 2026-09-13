@@ -703,6 +703,25 @@
   </div>
 
   <!-- ── Announcement Modal ── -->
+  <!-- ── Forgot Password Modal ── -->
+  <div class="modal-overlay" id="forgotPasswordOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Reset Password</h2>
+        <button class="btn-close" id="forgotPasswordClose">&times;</button>
+      </div>
+      <div style="padding:0 24px 24px">
+        <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px;line-height:1.5">Enter your email and we'll send you a link to reset your password.</p>
+        <input type="email" id="forgotPasswordEmail" placeholder="Email address" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;font-family:'Poppins',sans-serif;box-sizing:border-box" autocomplete="email">
+        <p class="ws-section-err" id="forgotPasswordErr" style="min-height:1.1em;margin-top:8px"></p>
+        <div class="modal-actions" style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn-primary" id="forgotPasswordSend" style="flex:1">Send Reset Link</button>
+          <button class="btn-secondary" id="forgotPasswordCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="annoModalOverlay">
     <div class="modal modal-sm">
       <div class="modal-header">

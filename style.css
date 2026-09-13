@@ -709,6 +709,9 @@ h1 {
   padding: 16px;
 }
 .modal-overlay.open { display: flex; }
+/* Opened from inside the login/signup overlay (z-index: 300), so it needs
+   to stack above it, not behind it like every other .modal-overlay. */
+#forgotPasswordOverlay { z-index: 350; }
 .modal {
   background: var(--white);
   border-radius: 16px;
@@ -1153,30 +1156,34 @@ h1 {
 .sidebar-show-more:hover { background: #eef2ff; }
 .sidebar-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: .83rem; }
 
-/* ─── Sidebar Tabs ─── */
+/* ─── Sidebar Tabs (pill style, matching .auth-tabs) ─── */
 .sidebar-tabs {
   display: flex;
-  border-bottom: 2px solid var(--border);
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin: 10px 10px 8px;
   flex-shrink: 0;
 }
 .sidebar-tab {
   flex: 1;
-  padding: 9px 4px;
-  font-size: .66rem;
+  padding: 8px 4px;
+  font-size: .68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: .04em;
   color: var(--muted);
-  background: none;
+  background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border-radius: 7px;
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
-  transition: color .15s;
+  transition: background .15s, color .15s;
 }
 .sidebar-tab:hover { color: var(--primary); }
-.sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.sidebar-tab.active { background: var(--white); color: var(--primary); box-shadow: var(--shadow-sm); }
 .sidebar-tab-badge {
   display: inline-flex;
   align-items: center;
