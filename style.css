@@ -1407,6 +1407,69 @@ h1 {
 .anno-item-actions { display: flex; gap: 2px; flex-shrink: 0; }
 .anno-item-text { font-size: .77rem; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .anno-edited-tag { font-size: .62rem; color: var(--muted); font-style: italic; margin-left: 4px; }
+
+.anno-reactions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  position: relative;
+}
+.anno-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: .74rem;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background .15s, border-color .15s;
+}
+.anno-reaction-pill span { font-size: .68rem; color: var(--muted); font-weight: 600; }
+.anno-reaction-pill:hover { background: var(--border); }
+.anno-reaction-pill.mine { background: rgba(79,70,229,.12); border-color: var(--primary); }
+.anno-reaction-pill.mine span { color: var(--primary); }
+.anno-react-toggle {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: .72rem;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.anno-react-toggle:hover { background: var(--border); color: var(--text); }
+.anno-reaction-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  display: none;
+  gap: 3px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 6px;
+  box-shadow: var(--shadow-md);
+  z-index: 5;
+}
+.anno-picker-emoji {
+  border: none;
+  background: none;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 3px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .1s, background .1s;
+}
+.anno-picker-emoji:hover { background: var(--bg); transform: scale(1.25); }
+
 .anno-footer {
   padding: 8px 10px;
   border-top: 1px solid var(--border);

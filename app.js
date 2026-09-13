@@ -44,8 +44,9 @@ let knownNotifIds      = null;
 let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
-let announcements      = {};     // { id: { team_id, author_id, content, created_at, edited_at } }
-let editingAnnoId      = null;
+let announcements        = {};     // { id: { team_id, author_id, content, created_at, edited_at } }
+let editingAnnoId        = null;
+let announcementReactions = {};    // { announcement_id: { user_id: emoji } }
 
 let tasksChannel         = null;
 let commentsChannel      = null;
@@ -55,6 +56,7 @@ let membersChannel       = null;
 let teamChannel          = null;
 let dmChannel            = null;
 let announcementsChannel = null;
+let annoReactionsChannel = null;
 
 let currentFilter       = 'all';
 let currentUserFilter   = 'all';
@@ -686,9 +688,9 @@ async function enterTeam(team) {
 
 // ─── TEAM SUBSCRIPTIONS ───────────────────────────────────────────────────────
 function unsubscribeTeam() {
-  [tasksChannel, commentsChannel, notifChannel, taskCommentsChannel, membersChannel, teamChannel, dmChannel, announcementsChannel]
+  [tasksChannel, commentsChannel, notifChannel, taskCommentsChannel, membersChannel, teamChannel, dmChannel, announcementsChannel, annoReactionsChannel]
     .forEach(ch => { if (ch) supabase.removeChannel(ch); });
-  tasksChannel = commentsChannel = notifChannel = taskCommentsChannel = membersChannel = teamChannel = dmChannel = announcementsChannel = null;
+  tasksChannel = commentsChannel = notifChannel = taskCommentsChannel = membersChannel = teamChannel = dmChannel = announcementsChannel = annoReactionsChannel = null;
 }
 
 async function subscribeToTeam() {
@@ -783,6 +785,27 @@ async function subscribeToTeam() {
       updateAnnoBadge();
     })
     .subscribe();
+
+  // ── Announcement reactions ──
+  const { data: reactionRows } = await supabase.from('team_announcement_reactions').select('*').eq('team_id', teamId);
+  announcementReactions = {};
+  (reactionRows || []).forEach(r => {
+    (announcementReactions[r.announcement_id] ??= {})[r.user_id] = r.emoji;
+  });
+  renderAnnouncements();
+
+  annoReactionsChannel = supabase.channel(`team-anno-reactions-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_announcement_reactions', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'DELETE') {
+        const bucket = announcementReactions[payload.old.announcement_id];
+        if (bucket) delete bucket[payload.old.user_id];
+      } else {
+        const row = payload.new;
+        (announcementReactions[row.announcement_id] ??= {})[row.user_id] = row.emoji;
+      }
+      renderAnnouncements();
+    })
+    .subscribe();
 }
 
 // ─── HEADER USER DISPLAY ──────────────────────────────────────────────────────
@@ -839,6 +862,41 @@ function markAnnouncementsRead() {
   updateAnnoBadge();
 }
 
+const ANNO_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉'];
+
+function annoMyReaction(annoId) {
+  return currentUser ? announcementReactions[annoId]?.[currentUser.id] : null;
+}
+
+function annoReactionCounts(annoId) {
+  const bucket = announcementReactions[annoId] || {};
+  const counts = {};
+  Object.values(bucket).forEach(e => { counts[e] = (counts[e] || 0) + 1; });
+  return counts;
+}
+
+function annoReactionTitle(annoId, emoji) {
+  const bucket = announcementReactions[annoId] || {};
+  return Object.entries(bucket).filter(([, e]) => e === emoji).map(([uid]) => memberName(uid)).join(', ');
+}
+
+async function toggleReaction(announcementId, emoji) {
+  if (!currentUser || !currentTeam) return;
+  const current = annoMyReaction(announcementId);
+  if (current === emoji) {
+    if (announcementReactions[announcementId]) delete announcementReactions[announcementId][currentUser.id];
+    renderAnnouncements();
+    await supabase.from('team_announcement_reactions').delete()
+      .eq('announcement_id', announcementId).eq('user_id', currentUser.id);
+  } else {
+    (announcementReactions[announcementId] ??= {})[currentUser.id] = emoji;
+    renderAnnouncements();
+    await supabase.from('team_announcement_reactions')
+      .upsert({ announcement_id: announcementId, team_id: currentTeam.id, user_id: currentUser.id, emoji },
+              { onConflict: 'announcement_id,user_id' });
+  }
+}
+
 function renderAnnouncements() {
   const container = document.getElementById('annoList');
   const annos = Object.values(announcements).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -850,6 +908,11 @@ function renderAnnouncements() {
     const time      = new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const canModify = annoCanModify(a);
     const editedTag = a.edited_at ? '<span class="anno-edited-tag">(edited)</span>' : '';
+    const mine      = annoMyReaction(a.id);
+    const counts    = annoReactionCounts(a.id);
+    const pillsHtml = Object.entries(counts).map(([emoji, count]) => `
+      <button class="anno-reaction-pill${mine === emoji ? ' mine' : ''}" data-id="${a.id}" data-emoji="${emoji}" title="${escHtml(annoReactionTitle(a.id, emoji))}">${emoji} <span>${count}</span></button>
+    `).join('');
     return `<div class="anno-item" data-id="${a.id}">
       <div class="anno-item-header">
         <span class="anno-item-author">${escHtml(memberName(a.author_id))}</span>
@@ -860,6 +923,13 @@ function renderAnnouncements() {
         </div>` : ''}
       </div>
       <div class="anno-item-text">${escHtml(a.content)}${editedTag}</div>
+      <div class="anno-reactions-row">
+        ${pillsHtml}
+        <button class="anno-react-toggle" data-id="${a.id}" title="Add reaction">🙂+</button>
+        <div class="anno-reaction-picker" id="annoPicker-${a.id}" style="display:none">
+          ${ANNO_REACTION_EMOJIS.map(e => `<button class="anno-picker-emoji" data-id="${a.id}" data-emoji="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
     </div>`;
   }).join('');
 
@@ -868,6 +938,25 @@ function renderAnnouncements() {
   });
   container.querySelectorAll('.anno-del-btn').forEach(btn => {
     btn.addEventListener('click', () => deleteAnnouncement(btn.dataset.id));
+  });
+  container.querySelectorAll('.anno-reaction-pill').forEach(btn => {
+    btn.addEventListener('click', () => toggleReaction(btn.dataset.id, btn.dataset.emoji));
+  });
+  container.querySelectorAll('.anno-react-toggle').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const picker = document.getElementById(`annoPicker-${btn.dataset.id}`);
+      const opening = picker.style.display === 'none';
+      container.querySelectorAll('.anno-reaction-picker').forEach(p => { p.style.display = 'none'; });
+      if (picker) picker.style.display = opening ? 'flex' : 'none';
+    });
+  });
+  container.querySelectorAll('.anno-picker-emoji').forEach(btn => {
+    btn.addEventListener('click', () => {
+      toggleReaction(btn.dataset.id, btn.dataset.emoji);
+      const picker = document.getElementById(`annoPicker-${btn.dataset.id}`);
+      if (picker) picker.style.display = 'none';
+    });
   });
 }
 
@@ -1654,6 +1743,9 @@ document.getElementById('markAllRead').addEventListener('click', async () => {
 
 document.addEventListener('click', e => {
   if (!e.target.closest('.notif-wrapper')) closeNotifPanel();
+  if (!e.target.closest('.anno-reactions-row')) {
+    document.querySelectorAll('.anno-reaction-picker').forEach(p => { p.style.display = 'none'; });
+  }
 });
 
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
@@ -2210,7 +2302,7 @@ function resetToSignedOutState() {
   currentUser = null; currentTeam = null; myMembership = null; myTeams = [];
   members = {}; tasks = {}; commentCounts = {}; allNotifications = {}; knownNotifIds = null;
   dmMessages = []; dmActivePeerId = null; dmActivePeerName = null;
-  announcements = {}; editingAnnoId = null;
+  announcements = {}; editingAnnoId = null; announcementReactions = {};
   document.getElementById('sidebarTabActivity').click();
   document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
