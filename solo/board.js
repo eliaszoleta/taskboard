@@ -313,6 +313,7 @@ async function enterBoard() {
   nameEl.textContent = currentUser.email;
   document.getElementById('spaceDisplay').classList.add('visible');
   document.getElementById('boardSettingsWrapper').style.display = '';
+  document.getElementById('loginNavBtn').style.display = 'none';
   await subscribeToBoard();
 }
 
@@ -1310,11 +1311,14 @@ function resetToSignedOutState() {
   knownNotifIds = null;
   document.getElementById('spaceDisplay').classList.remove('visible');
   document.getElementById('boardSettingsWrapper').style.display = 'none';
+  document.getElementById('loginNavBtn').style.display = '';
   document.getElementById('notifBadge').classList.remove('visible');
   document.getElementById('notifList').innerHTML = '';
   demoTasks = Object.fromEntries(Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }]));
   renderBoard();
 }
+
+document.getElementById('loginNavBtn').addEventListener('click', () => showAuthOverlay('login'));
 
 document.getElementById('changeSpaceBtn').addEventListener('click', async () => {
   showToast('All tasks saved. Logging out…', 1500);
@@ -1374,9 +1378,10 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 });
 
 async function init() {
-  demoTasks = Object.fromEntries(Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }]));
-  renderBoard();
-
+  // Check auth state BEFORE rendering anything — otherwise a logged-in
+  // visitor sees a flash of the demo board on every reload while this
+  // resolves, since demoTasks used to be set and rendered unconditionally
+  // up front.
   const { data: { session } } = await supabase.auth.getSession();
   if (session) {
     currentUser = session.user;
@@ -1384,6 +1389,8 @@ async function init() {
     catch (e) { showToast('Could not load your board. Please refresh.'); console.error(e); }
   } else {
     // New or signed-out visitor — stay in demo mode, show the auth overlay.
+    demoTasks = Object.fromEntries(Object.entries(DEMO_TASKS_TEMPLATE).map(([k, t]) => [k, { ...t }]));
+    renderBoard();
     showAuthOverlay();
   }
 }
