@@ -238,16 +238,28 @@ const FILTER_LABELS = {
 
 // ─── AUTH OVERLAY ─────────────────────────────────────────────────────────────
 function setActiveStep(activeId) {
-  ['stepAuth','stepTeamSetup','stepPayment'].forEach(id => {
+  ['stepAuth','stepCheckEmail','stepTeamSetup','stepPayment'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === activeId ? '' : 'none';
   });
 }
 
-function showAuthOverlay() {
+function setAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('authTabLogin').classList.toggle('active', isLogin);
+  document.getElementById('authTabSignup').classList.toggle('active', !isLogin);
+  document.getElementById('loginSection').style.display  = isLogin ? '' : 'none';
+  document.getElementById('signupSection').style.display = isLogin ? 'none' : '';
+  (isLogin ? document.getElementById('loginEmail') : document.getElementById('signupEmail')).focus();
+}
+document.getElementById('authTabLogin').addEventListener('click', () => setAuthTab('login'));
+document.getElementById('authTabSignup').addEventListener('click', () => setAuthTab('signup'));
+
+function showAuthOverlay(tab = 'login') {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = '';
   setActiveStep('stepAuth');
+  setAuthTab(tab);
   document.getElementById('loginErr').textContent  = '';
   document.getElementById('signupErr').textContent = '';
   const pendingCode = localStorage.getItem('ab_pending_invite_code');
@@ -256,6 +268,15 @@ function showAuthOverlay() {
     document.getElementById('preInviteCode').value = pendingCode;
   }
 }
+
+function showCheckEmailStep(email) {
+  document.getElementById('userOverlay').classList.add('open');
+  document.getElementById('userOverlayClose').style.display = '';
+  setActiveStep('stepCheckEmail');
+  document.getElementById('checkEmailAddress').textContent =
+    `We've sent a confirmation link to ${email}.`;
+}
+document.getElementById('checkEmailBackBtn').addEventListener('click', () => showAuthOverlay('login'));
 
 // "Have an invite code?" toggle on the login/signup screen — lets someone
 // stash a code *before* they even have an account, so once they're logged
@@ -332,8 +353,9 @@ async function handleSignup() {
   if (error) { errEl.textContent = error.message; return; }
 
   if (!data.session) {
-    errEl.style.color = '#16a34a';
-    errEl.textContent = 'Account created! Check your email to confirm it, then log in.';
+    document.getElementById('signupEmail').value    = '';
+    document.getElementById('signupPassword').value = '';
+    showCheckEmailStep(email);
   }
 }
 

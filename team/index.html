@@ -111,7 +111,11 @@
           <p class="ws-section-err" id="preInviteHint" style="color:var(--muted)">Log in or create an account below — we'll take you straight to the join step.</p>
         </div>
 
-        <p class="ws-section-label">Log In</p>
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="authTabLogin">Log In</button>
+          <button type="button" class="auth-tab" id="authTabSignup">Sign Up</button>
+        </div>
+
         <div class="ws-section-form" id="loginSection">
           <input type="email" id="loginEmail" placeholder="Email address" maxlength="120" autocomplete="email">
           <input type="password" id="loginPassword" placeholder="Password" maxlength="120" autocomplete="current-password">
@@ -120,10 +124,7 @@
           <p class="ws-section-err" id="loginErr"></p>
         </div>
 
-        <div class="ws-divider">or</div>
-
-        <p class="ws-section-label">New to Achiever Board?</p>
-        <div class="ws-section-form" id="signupSection">
+        <div class="ws-section-form" id="signupSection" style="display:none">
           <input type="email" id="signupEmail" placeholder="Email address" maxlength="120" autocomplete="email">
           <input type="password" id="signupPassword" placeholder="Create a password (min. 6 characters)" maxlength="120" autocomplete="new-password">
           <button class="btn-secondary" id="signupBtn">Create Free Account</button>
@@ -131,10 +132,31 @@
         </div>
       </div>
 
+      <!-- Step: Check your email (shown after signup when confirmation is required) -->
+      <div id="stepCheckEmail" style="display:none">
+        <div class="user-card-logo">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        </div>
+        <p class="user-card-sub" style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px">Check your email</p>
+        <p class="user-card-sub" id="checkEmailAddress" style="margin-bottom:24px">We've sent a confirmation link to your email.</p>
+        <p class="user-card-sub" style="font-size:.82rem;margin-bottom:24px">Click the link to confirm your account, then come back and log in below.</p>
+        <button type="button" class="btn-primary" id="checkEmailBackBtn" style="width:100%">Back to Log In</button>
+      </div>
+
       <!-- Step: Create or join a team -->
       <div id="stepTeamSetup" style="display:none">
         <div class="user-card-logo">Your Teams</div>
         <p class="user-card-sub" id="teamSetupSub">Create a new team or join one with an invite code</p>
+
+        <p class="ws-section-label">Join a Team</p>
+        <div class="ws-section-form" id="joinTeamSection">
+          <input type="text" id="joinInviteCode" placeholder="Invite code…" maxlength="40" autocomplete="off">
+          <input type="text" id="joinDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
+          <button class="btn-primary" id="joinTeamBtn">Join Team</button>
+          <p class="ws-section-err" id="joinError"></p>
+        </div>
+
+        <div class="ws-divider">or</div>
 
         <p class="ws-section-label">Create a Team</p>
         <div class="ws-section-form" id="createTeamSection">
@@ -151,18 +173,8 @@
             <span class="plan-badge plan-badge--free">Free forever</span>
             No credit card required
           </div>
-          <button class="btn-primary" id="createTeamBtn">Create Team</button>
+          <button class="btn-secondary" id="createTeamBtn">Create Team</button>
           <p class="ws-section-err" id="createError"></p>
-        </div>
-
-        <div class="ws-divider">or</div>
-
-        <p class="ws-section-label">Join a Team</p>
-        <div class="ws-section-form" id="joinTeamSection">
-          <input type="text" id="joinInviteCode" placeholder="Invite code…" maxlength="40" autocomplete="off">
-          <input type="text" id="joinDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
-          <button class="btn-secondary" id="joinTeamBtn">Join Team</button>
-          <p class="ws-section-err" id="joinError"></p>
         </div>
 
         <div style="text-align:center;margin-top:10px">
