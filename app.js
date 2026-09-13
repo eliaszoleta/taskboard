@@ -44,14 +44,17 @@ let knownNotifIds      = null;
 let editingTaskId      = null;
 let detailTaskId       = null;
 let draggedId          = null;
+let announcements      = {};     // { id: { team_id, author_id, content, created_at, edited_at } }
+let editingAnnoId      = null;
 
-let tasksChannel        = null;
-let commentsChannel     = null;
-let taskCommentsChannel = null;
-let notifChannel        = null;
-let membersChannel      = null;
-let teamChannel         = null;
-let dmChannel           = null;
+let tasksChannel         = null;
+let commentsChannel      = null;
+let taskCommentsChannel  = null;
+let notifChannel         = null;
+let membersChannel       = null;
+let teamChannel          = null;
+let dmChannel            = null;
+let announcementsChannel = null;
 
 let currentFilter       = 'all';
 let currentUserFilter   = 'all';
@@ -634,9 +637,9 @@ async function enterTeam(team) {
 
 // ─── TEAM SUBSCRIPTIONS ───────────────────────────────────────────────────────
 function unsubscribeTeam() {
-  [tasksChannel, commentsChannel, notifChannel, taskCommentsChannel, membersChannel, teamChannel, dmChannel]
+  [tasksChannel, commentsChannel, notifChannel, taskCommentsChannel, membersChannel, teamChannel, dmChannel, announcementsChannel]
     .forEach(ch => { if (ch) supabase.removeChannel(ch); });
-  tasksChannel = commentsChannel = notifChannel = taskCommentsChannel = membersChannel = teamChannel = dmChannel = null;
+  tasksChannel = commentsChannel = notifChannel = taskCommentsChannel = membersChannel = teamChannel = dmChannel = announcementsChannel = null;
 }
 
 async function subscribeToTeam() {
@@ -715,6 +718,22 @@ async function subscribeToTeam() {
 
   await setupNotifListener();
   await setupDmListener();
+
+  // ── Announcements ──
+  const { data: annoRows } = await supabase.from('team_announcements').select('*').eq('team_id', teamId);
+  announcements = {};
+  (annoRows || []).forEach(row => { announcements[row.id] = row; });
+  renderAnnouncements();
+  updateAnnoBadge();
+
+  announcementsChannel = supabase.channel(`team-announcements-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_announcements', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete announcements[payload.old.id]; }
+      else { announcements[payload.new.id] = payload.new; }
+      renderAnnouncements();
+      updateAnnoBadge();
+    })
+    .subscribe();
 }
 
 // ─── HEADER USER DISPLAY ──────────────────────────────────────────────────────
@@ -746,6 +765,139 @@ function populateAssigneeDropdown() {
       .map(([id, m]) => `<option value="${id}">${escHtml(m.display_name)}</option>`).join('');
   sel.value = prev;
 }
+
+// ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+function annoCanModify(a) {
+  return !!currentUser && (a.author_id === currentUser.id || myMembership?.role === 'admin');
+}
+
+function annoReadKey() { return `ab_anno_read_${currentTeam?.id}`; }
+
+function updateAnnoBadge() {
+  const badge = document.getElementById('annoTabBadge');
+  if (!currentTeam) { badge.style.display = 'none'; return; }
+  let lastRead = 0;
+  try { lastRead = Number(localStorage.getItem(annoReadKey())) || 0; } catch {}
+  const count = Object.values(announcements)
+    .filter(a => new Date(a.created_at).getTime() > lastRead && a.author_id !== currentUser?.id).length;
+  badge.textContent    = count > 9 ? '9+' : String(count);
+  badge.style.display  = count > 0 ? '' : 'none';
+}
+
+function markAnnouncementsRead() {
+  if (!currentTeam) return;
+  try { localStorage.setItem(annoReadKey(), String(Date.now())); } catch {}
+  updateAnnoBadge();
+}
+
+function renderAnnouncements() {
+  const container = document.getElementById('annoList');
+  const annos = Object.values(announcements).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  if (!annos.length) {
+    container.innerHTML = '<div class="sidebar-empty">No announcements yet</div>';
+    return;
+  }
+  container.innerHTML = annos.map(a => {
+    const time      = new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const canModify = annoCanModify(a);
+    const editedTag = a.edited_at ? '<span class="anno-edited-tag">(edited)</span>' : '';
+    return `<div class="anno-item" data-id="${a.id}">
+      <div class="anno-item-header">
+        <span class="anno-item-author">${escHtml(memberName(a.author_id))}</span>
+        <span class="anno-item-time">${time}</span>
+        ${canModify ? `<div class="anno-item-actions">
+          <button class="btn-icon anno-edit-btn" data-id="${a.id}" title="Edit">${ICONS.edit}</button>
+          <button class="btn-icon delete anno-del-btn" data-id="${a.id}" title="Delete">${ICONS.trash}</button>
+        </div>` : ''}
+      </div>
+      <div class="anno-item-text">${escHtml(a.content)}${editedTag}</div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.anno-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openAnnoModal(btn.dataset.id));
+  });
+  container.querySelectorAll('.anno-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteAnnouncement(btn.dataset.id));
+  });
+}
+
+function openAnnoModal(annoId = null) {
+  if (!currentTeam) return;
+  editingAnnoId = annoId;
+  const titleEl = document.getElementById('annoModalTitle');
+  const textEl  = document.getElementById('annoModalText');
+  document.getElementById('annoModalErr').textContent = '';
+
+  if (annoId) {
+    const a = announcements[annoId];
+    if (!a) return;
+    titleEl.textContent = 'Edit Announcement';
+    textEl.value        = a.content;
+  } else {
+    titleEl.textContent = 'New Announcement';
+    textEl.value         = '';
+  }
+  document.getElementById('annoModalOverlay').classList.add('open');
+  textEl.focus();
+}
+
+function closeAnnoModal() {
+  editingAnnoId = null;
+  document.getElementById('annoModalOverlay').classList.remove('open');
+}
+
+async function saveAnnouncement() {
+  if (!currentTeam) return;
+  const content = document.getElementById('annoModalText').value.trim();
+  const errEl   = document.getElementById('annoModalErr');
+  if (!content) { errEl.textContent = 'Please enter an announcement.'; return; }
+
+  const saveBtn = document.getElementById('annoModalSave');
+  saveBtn.disabled = true;
+  try {
+    if (editingAnnoId) {
+      const { error } = await supabase.from('team_announcements')
+        .update({ content, edited_at: new Date().toISOString() }).eq('id', editingAnnoId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('team_announcements')
+        .insert({ team_id: currentTeam.id, author_id: currentUser.id, content });
+      if (error) throw error;
+    }
+    closeAnnoModal();
+  } catch (e) {
+    errEl.textContent = e.message || 'Could not save announcement.';
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+async function deleteAnnouncement(annoId) {
+  const a = announcements[annoId];
+  if (!a || !annoCanModify(a)) return;
+  if (!confirm('Delete this announcement?')) return;
+  await supabase.from('team_announcements').delete().eq('id', annoId);
+}
+
+document.getElementById('sidebarTabActivity').addEventListener('click', () => {
+  document.getElementById('sidebarTabActivity').classList.add('active');
+  document.getElementById('sidebarTabAnnouncements').classList.remove('active');
+  document.getElementById('panelActivity').style.display       = '';
+  document.getElementById('panelAnnouncements').style.display  = 'none';
+});
+document.getElementById('sidebarTabAnnouncements').addEventListener('click', () => {
+  document.getElementById('sidebarTabAnnouncements').classList.add('active');
+  document.getElementById('sidebarTabActivity').classList.remove('active');
+  document.getElementById('panelAnnouncements').style.display = '';
+  document.getElementById('panelActivity').style.display      = 'none';
+  markAnnouncementsRead();
+});
+document.getElementById('annoNewBtn').addEventListener('click', () => openAnnoModal());
+document.getElementById('annoModalClose').addEventListener('click', closeAnnoModal);
+document.getElementById('annoModalCancel').addEventListener('click', closeAnnoModal);
+document.getElementById('annoModalSave').addEventListener('click', saveAnnouncement);
+document.getElementById('annoModalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeAnnoModal(); });
 
 function populateUserFilter() {
   const sel  = document.getElementById('userFilter');
@@ -2009,6 +2161,8 @@ function resetToSignedOutState() {
   currentUser = null; currentTeam = null; myMembership = null; myTeams = [];
   members = {}; tasks = {}; commentCounts = {}; allNotifications = {}; knownNotifIds = null;
   dmMessages = []; dmActivePeerId = null; dmActivePeerName = null;
+  announcements = {}; editingAnnoId = null;
+  document.getElementById('sidebarTabActivity').click();
   document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
   updateDmFabBadge();

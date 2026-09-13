@@ -368,9 +368,25 @@
   <div class="board-wrapper">
 
     <aside class="notif-sidebar">
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="activity" id="sidebarTabActivity">Activity</button>
+        <button class="sidebar-tab" data-tab="announcements" id="sidebarTabAnnouncements">Announcements<span class="sidebar-tab-badge" id="annoTabBadge" style="display:none">0</span></button>
+      </div>
+
+      <!-- Activity Panel -->
       <div class="sidebar-panel" id="panelActivity">
         <div class="notif-sidebar-body" id="notifSidebarBody">
           <div class="sidebar-empty">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Announcements Panel -->
+      <div class="sidebar-panel" id="panelAnnouncements" style="display:none">
+        <div class="anno-list" id="annoList">
+          <div class="sidebar-empty">No announcements yet</div>
+        </div>
+        <div class="anno-footer">
+          <button class="btn-primary btn-sm anno-new-btn" id="annoNewBtn">+ Post Announcement</button>
         </div>
       </div>
     </aside>
@@ -670,6 +686,25 @@
           <button class="btn-danger" id="deleteMemberConfirmBtn" style="flex:1">Remove Member</button>
           <button class="btn-secondary" id="deleteMemberCancelBtn">Cancel</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Announcement Modal ── -->
+  <div class="modal-overlay" id="annoModalOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="annoModalTitle">New Announcement</h2>
+        <button class="btn-close" id="annoModalClose">&times;</button>
+      </div>
+      <div class="form-group" style="padding:0 24px">
+        <label for="annoModalText">Announcement</label>
+        <textarea id="annoModalText" rows="4" placeholder="Write your announcement…" maxlength="1000"></textarea>
+        <p class="anno-modal-err" id="annoModalErr" style="color:var(--high);font-size:.8rem;min-height:1.1em"></p>
+      </div>
+      <div class="modal-actions" style="padding:16px 24px 24px">
+        <button type="button" class="btn-secondary" id="annoModalCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="annoModalSave">Post</button>
       </div>
     </div>
   </div>
