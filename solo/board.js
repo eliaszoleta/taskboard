@@ -5,8 +5,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // The anon key is safe to expose in client code — it has no power on its own;
 // every table is protected by Row Level Security (see supabase/migrations/0001_init.sql),
 // so a request can only ever touch the signed-in user's own rows.
-const SUPABASE_URL      = 'YOUR_SUPABASE_PROJECT_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL      = 'https://mtlefbbziquriovbtyvb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10bGVmYmJ6aXF1cmlvdmJ0eXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzI3NTIsImV4cCI6MjEwNDg0ODc1Mn0.2J6Y4yAp14ZCcZnNPyQTJ9BJ-66eN0mNiP_G9w5ewnA';
 
 if (SUPABASE_URL.startsWith('YOUR_') || SUPABASE_ANON_KEY.startsWith('YOUR_')) {
   document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:24px">
