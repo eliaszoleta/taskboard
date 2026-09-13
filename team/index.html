@@ -18,10 +18,9 @@
   <link rel="apple-touch-icon" sizes="192x192" href="../favicon-192x192.png">
   <link rel="manifest" href="../site.webmanifest">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Preconnect to Firebase for faster data load -->
-  <link rel="preconnect" href="https://taskboard-d91be-default-rtdb.firebaseio.com">
-  <link rel="preconnect" href="https://www.gstatic.com">
-  <link rel="dns-prefetch" href="https://taskboard-d91be-default-rtdb.firebaseio.com">
+  <!-- Preconnect to Supabase for faster data load -->
+  <link rel="preconnect" href="https://mtlefbbziquriovbtyvb.supabase.co">
+  <link rel="dns-prefetch" href="https://mtlefbbziquriovbtyvb.supabase.co">
 
   <!-- Primary SEO -->
   <title>Online Team Task Board — Assign Tasks, Track Deadlines & Collaborate | Achiever Board</title>
@@ -66,7 +65,7 @@
     "featureList": [
       "Task assignment with instant notifications",
       "Threaded comments on tasks with real-time notifications",
-      "Visual kanban board: To Do, In Progress, Pending, Done, Overdue",
+      "Visual kanban board: To Do, In Progress, Done, Overdue",
       "Personal task dashboard per team member",
       "Due date and deadline tracking",
       "Automatic overdue task flagging",
@@ -87,13 +86,13 @@
 </head>
 <body>
 
-  <!-- ── User Selection Overlay ── -->
+  <!-- ── Auth / Team Setup Overlay ── -->
   <div class="user-overlay" id="userOverlay">
     <div class="user-card">
       <button class="user-overlay-close" id="userOverlayClose" title="Close">✕</button>
 
-      <!-- Step: Enter workspace name -->
-      <div id="stepWorkspace">
+      <!-- Step: Log in / Sign up -->
+      <div id="stepAuth">
         <div class="user-card-logo">
           <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect width="36" height="36" rx="9" fill="#4f6ef5"/>
@@ -106,54 +105,35 @@
         </div>
         <p class="user-card-sub">Free for 2 users · Plans from $15/mo</p>
 
-        <!-- Sign in to existing teamboard -->
-        <p class="ws-section-label">Login to Your Taskboard</p>
-        <div class="ws-section-form" id="signInSection">
-          <input type="text" id="wsNameInput" placeholder="Enter the teamboard name you belong to…" maxlength="50" autocomplete="off">
-          <button class="btn-primary" id="wsContinueBtn">Login →</button>
-          <p class="ws-section-err" id="wsError"></p>
+        <p class="ws-section-label">Log In</p>
+        <div class="ws-section-form" id="loginSection">
+          <input type="email" id="loginEmail" placeholder="Email address" maxlength="120" autocomplete="email">
+          <input type="password" id="loginPassword" placeholder="Password" maxlength="120" autocomplete="current-password">
+          <button class="btn-primary" id="loginBtn">Log In</button>
+          <button type="button" class="btn-text" id="forgotPasswordBtn" style="width:100%;margin-top:2px">Forgot password?</button>
+          <p class="ws-section-err" id="loginErr"></p>
         </div>
 
         <div class="ws-divider">or</div>
 
-        <!-- Create new teamboard -->
         <p class="ws-section-label">New to Achiever Board?</p>
-        <div class="ws-section-form" id="createSection">
-          <input type="text" id="wsCreateNameInput" placeholder="Choose a teamboard name…" maxlength="50" autocomplete="off">
-          <button class="btn-secondary" id="wsCreateBtn">Create Teamboard</button>
-          <p class="ws-section-err" id="wsCreateError"></p>
+        <div class="ws-section-form" id="signupSection">
+          <input type="email" id="signupEmail" placeholder="Email address" maxlength="120" autocomplete="email">
+          <input type="password" id="signupPassword" placeholder="Create a password (min. 6 characters)" maxlength="120" autocomplete="new-password">
+          <button class="btn-secondary" id="signupBtn">Create Free Account</button>
+          <p class="ws-section-err" id="signupErr"></p>
         </div>
       </div>
 
-      <!-- Step: Sign in to workspace -->
-      <div id="stepLogin" style="display:none">
-        <div class="user-card-logo" id="loginWsName"></div>
-        <p class="user-card-sub">Who are you?</p>
-        <div class="user-list" id="loginUserList"></div>
-        <div id="loginPasswordSection" style="display:none">
-          <div class="user-join-form">
-            <input type="password" id="loginPassword" placeholder="Password…" maxlength="100" autocomplete="current-password">
-            <button class="btn-primary" id="loginBtn">Login</button>
-          </div>
-        </div>
-        <p class="login-error" id="loginError"></p>
-        <div style="text-align:center;margin-top:4px">
-          <button class="btn-text" id="forgotPwdBtn" style="display:none">Forgot password?</button>
-        </div>
-        <div style="text-align:center;margin-top:8px">
-          <button class="btn-text" id="backToWorkspaceBtn">← Change taskboard</button>
-        </div>
-      </div>
+      <!-- Step: Create or join a team -->
+      <div id="stepTeamSetup" style="display:none">
+        <div class="user-card-logo">Your Teams</div>
+        <p class="user-card-sub" id="teamSetupSub">Create a new team or join one with an invite code</p>
 
-      <!-- Step: Create new workspace -->
-      <div id="stepCreate" style="display:none">
-        <div class="user-card-logo">Create Teamboard</div>
-        <p class="user-card-sub" id="createWsSub">Set up your team teamboard</p>
-        <div class="user-join-form">
-          <input type="text"     id="adminName"            placeholder="Your name (admin)…"         maxlength="30">
-          <input type="email"    id="adminEmail"           placeholder="Email for password recovery…" maxlength="150">
-          <input type="password" id="adminPassword"        placeholder="Choose a password…"         maxlength="100">
-          <input type="password" id="adminConfirmPassword" placeholder="Confirm password…"          maxlength="100">
+        <p class="ws-section-label">Create a Team</p>
+        <div class="ws-section-form" id="createTeamSection">
+          <input type="text" id="createTeamName" placeholder="Team name…" maxlength="60" autocomplete="off">
+          <input type="text" id="createDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
           <select id="teamSizeSelect">
             <option value="2" selected>Free — 2 users (you + 1 member)</option>
             <option value="5">Starter — Up to 5 users · $15/month</option>
@@ -165,11 +145,22 @@
             <span class="plan-badge plan-badge--free">Free forever</span>
             No credit card required
           </div>
-          <button class="btn-primary" id="createWsBtn">Create Teamboard</button>
+          <button class="btn-primary" id="createTeamBtn">Create Team</button>
+          <p class="ws-section-err" id="createError"></p>
         </div>
-        <p class="login-error" id="createError"></p>
-        <div style="text-align:center;margin-top:8px">
-          <button class="btn-text" id="backToWorkspaceFromCreate">← Back</button>
+
+        <div class="ws-divider">or</div>
+
+        <p class="ws-section-label">Join a Team</p>
+        <div class="ws-section-form" id="joinTeamSection">
+          <input type="text" id="joinInviteCode" placeholder="Invite code…" maxlength="40" autocomplete="off">
+          <input type="text" id="joinDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
+          <button class="btn-secondary" id="joinTeamBtn">Join Team</button>
+          <p class="ws-section-err" id="joinError"></p>
+        </div>
+
+        <div style="text-align:center;margin-top:10px">
+          <button class="btn-text" id="teamSetupLogoutBtn">Not you? Log out</button>
         </div>
       </div>
 
@@ -184,37 +175,11 @@
         <button class="btn-primary" id="payNowBtn" style="width:100%;margin-top:16px">
           Continue to Payment →
         </button>
-        <p class="payment-note">You'll be taken to Stripe's secure payment page. After paying, you'll return here and your workspace will be created automatically.</p>
+        <p class="payment-note">You'll be taken to Stripe's secure payment page. After paying, you'll return here and your team will be created automatically.</p>
         <p class="login-error" id="paymentError"></p>
         <div style="text-align:center;margin-top:8px">
           <button class="btn-text" id="backFromPaymentBtn">← Back to setup</button>
         </div>
-      </div>
-
-      <!-- Step: Forgot password — email verification -->
-      <div id="stepForgot" style="display:none">
-        <div class="user-card-logo">Forgot Password</div>
-        <p class="user-card-sub" id="forgotSub">Enter the email linked to your account</p>
-        <div class="user-join-form" id="forgotEmailForm">
-          <input type="email" id="forgotEmail" placeholder="Your email address…" maxlength="150">
-          <button class="btn-primary" id="forgotVerifyBtn">Verify Email</button>
-        </div>
-        <p class="login-error" id="forgotError"></p>
-        <div style="text-align:center;margin-top:10px">
-          <button class="btn-text" id="backToLoginBtn">← Back to sign in</button>
-        </div>
-      </div>
-
-      <!-- Step: Reset password -->
-      <div id="stepReset" style="display:none">
-        <div class="user-card-logo">Reset Password</div>
-        <p class="user-card-sub">Create a new password for your account</p>
-        <div class="user-join-form">
-          <input type="password" id="resetPassword"        placeholder="New password…"     maxlength="100">
-          <input type="password" id="resetConfirmPassword" placeholder="Confirm password…" maxlength="100">
-          <button class="btn-primary" id="resetPasswordBtn">Reset Password</button>
-        </div>
-        <p class="login-error" id="resetError"></p>
       </div>
 
     </div>
@@ -229,14 +194,22 @@
       </div>
       <div class="profile-body">
 
-        <!-- Admin: Team Members section (only visible to workspace admin) -->
+        <!-- Admin: Team Members section (only visible to team admin) -->
         <div id="adminTeamSection" style="display:none">
           <div class="admin-section-header">
             <strong class="admin-section-title">Team Members</strong>
             <span id="seatUsage" class="seat-usage"></span>
           </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label>Invite Code</label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="inviteCodeInput" class="form-control" readonly style="flex:1;font-family:monospace">
+              <button class="btn-secondary btn-sm" id="copyInviteBtn" type="button">Copy</button>
+              <button class="btn-secondary btn-sm" id="regenerateInviteBtn" type="button" title="Generate a new invite code">↻</button>
+            </div>
+            <p class="ws-section-err" id="inviteCodeMsg" style="color:var(--muted)"></p>
+          </div>
           <div id="membersList" class="members-list"></div>
-          <button class="btn-secondary" id="addMemberBtn" style="margin-top:10px;width:100%">+ Add Team Member</button>
           <hr style="margin:20px 0;border:none;border-top:1px solid var(--border)">
         </div>
 
@@ -254,7 +227,11 @@
           </div>
         </div>
         <div class="form-group" style="margin-top:16px">
-          <label>Recovery Email</label>
+          <label>Display Name</label>
+          <input type="text" id="profileDisplayName" placeholder="Your name…" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
           <input type="email" id="profileEmail" placeholder="your@email.com" maxlength="150">
         </div>
         <div class="form-group">
@@ -267,8 +244,8 @@
         </div>
         <p class="profile-error" id="profileError"></p>
         <div class="modal-actions profile-actions">
-          <button class="btn-danger-sm" id="deleteAccountBtn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Account
+          <button class="btn-danger-sm" id="leaveTeamBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Leave Team
           </button>
           <button class="btn-primary" id="saveProfileBtn">Save Changes</button>
         </div>
@@ -292,6 +269,9 @@
       <div class="header-right">
 
         <div class="header-actions">
+          <!-- Team switcher (shown once signed in) -->
+          <select class="date-filter" id="teamSwitcher" title="Switch team" style="display:none"></select>
+
           <!-- Notifications -->
           <div class="notif-wrapper">
             <button class="notif-btn" id="notifBtn" title="Notifications">
@@ -373,8 +353,8 @@
   <!-- ── Guest Banner (shown when not logged in) ── -->
   <div class="guest-banner" id="guestBanner" style="display:none">
     <div class="guest-banner-inner">
-      <p>Sign in to your workspace to view and manage tasks.</p>
-      <button class="btn-primary" id="guestSignInBtn">Login / Create Teamboard</button>
+      <p>Sign in to your team to view and manage tasks.</p>
+      <button class="btn-primary" id="guestSignInBtn">Log In / Create Team</button>
     </div>
   </div>
 
@@ -382,25 +362,9 @@
   <div class="board-wrapper">
 
     <aside class="notif-sidebar">
-      <div class="sidebar-tabs">
-        <button class="sidebar-tab active" data-tab="activity">Activity</button>
-        <button class="sidebar-tab" data-tab="announcements">Announcement<span class="sidebar-tab-badge" id="annoTabBadge" style="display:none">0</span></button>
-      </div>
-
-      <!-- Activity Panel -->
       <div class="sidebar-panel" id="panelActivity">
         <div class="notif-sidebar-body" id="notifSidebarBody">
           <div class="sidebar-empty">Loading…</div>
-        </div>
-      </div>
-
-      <!-- Announcements Panel -->
-      <div class="sidebar-panel" id="panelAnnouncements" style="display:none">
-        <div class="anno-list" id="annoList">
-          <div class="sidebar-empty">No announcements yet</div>
-        </div>
-        <div class="anno-footer">
-          <button class="btn-primary btn-sm anno-new-btn" id="annoNewBtn">+ Post Announcement</button>
         </div>
       </div>
     </aside>
@@ -471,7 +435,7 @@
   <section class="seo-features" aria-label="Achiever Board Features">
     <div class="seo-features-inner">
       <h2>Every Feature Your Team Actually Needs</h2>
-      <p class="seo-features-sub">All features are included on every plan — free or paid. No feature paywalls, no bait-and-switch. The only difference between plans is how many seats your workspace can hold.</p>
+      <p class="seo-features-sub">All features are included on every plan — free or paid. No feature paywalls, no bait-and-switch. The only difference between plans is how many seats your team can hold.</p>
       <div class="seo-features-grid">
         <div class="seo-feature-card">
           <h3>Task Assignment + Instant Notifications</h3>
@@ -501,7 +465,7 @@
 
       <div class="seo-compare">
         <h2>Simple, Transparent Pricing</h2>
-        <p>All features included on every plan. The only difference is how many seats your workspace holds. Start free — upgrade only when your team grows.</p>
+        <p>All features included on every plan. The only difference is how many seats your team holds. Start free — upgrade only when your team grows.</p>
 
         <div class="pricing-single-wrap">
 
@@ -537,11 +501,10 @@
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Due dates + automatic overdue flagging</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority labels (High / Medium / Low)</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>1-on-1 direct messages with teammates</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Team announcement board with admin controls</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Personal activity &amp; notification feed</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Date filters — Today, This Week, This Month</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Real-time sync across all devices</li>
-              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Admin controls — add &amp; remove members</li>
+              <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Admin controls — invite &amp; remove members</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>User-based task filtering</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Flat team rate — not per person</li>
               <li><svg class="feat-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancel anytime</li>
@@ -549,7 +512,7 @@
           </div>
 
         </div>
-        <p class="seo-cta-note">Need a personal board without accounts? Try the <a href="../">free solo task management board</a> — no sign-up needed.</p>
+        <p class="seo-cta-note">Need a personal board without a team? Try the <a href="../">free solo task management board</a> — no team required.</p>
       </div>
     </div>
   </section>
@@ -646,7 +609,7 @@
             </div>
             <div class="resource-file-list" id="resourceFileList"><span class="no-files-label">No files chosen</span></div>
             <input type="file" id="resourceFile" style="display:none" multiple>
-            <p class="resource-hint">Multiple files · 10 MB combined max · Stored as data URLs</p>
+            <p class="resource-hint">Multiple files · 10 MB combined max</p>
           </div>
         </div>
 
@@ -673,27 +636,22 @@
     </div>
   </div>
 
-  <!-- ── Delete Account Confirmation Modal ── -->
-  <div class="modal-overlay" id="deleteAccountOverlay">
+  <!-- ── Leave Team Confirmation Modal ── -->
+  <div class="modal-overlay" id="leaveTeamOverlay">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <h2>Delete Account</h2>
-        <button class="btn-close" id="deleteAccountOverlayClose">&times;</button>
+        <h2>Leave Team</h2>
+        <button class="btn-close" id="leaveTeamOverlayClose">&times;</button>
       </div>
-      <p class="delete-confirm-body" id="deleteAccountMsg">Are you sure you want to delete your account? This cannot be undone.</p>
-      <div class="form-group" id="deleteAccountPwdGroup" style="display:none;padding:0 24px 4px">
-        <label for="deleteAccountPwdInput" style="font-size:.82rem;color:var(--text-muted)">Enter your password to confirm</label>
-        <input type="password" id="deleteAccountPwdInput" class="form-control" placeholder="Password" autocomplete="current-password">
-        <p class="field-error" id="deleteAccountPwdError" style="color:var(--danger);font-size:.8rem;margin:4px 0 0"></p>
-      </div>
+      <p class="delete-confirm-body" id="leaveTeamMsg">Are you sure you want to leave this team?</p>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" id="deleteAccountOverlayCancel">Cancel</button>
-        <button type="button" class="btn-danger"    id="deleteAccountOverlayOk">Delete Account</button>
+        <button type="button" class="btn-secondary" id="leaveTeamOverlayCancel">Cancel</button>
+        <button type="button" class="btn-danger"    id="leaveTeamOverlayOk">Leave Team</button>
       </div>
     </div>
   </div>
 
-  <!-- ── Delete Member Confirmation Modal ── -->
+  <!-- ── Remove Team Member Confirmation Modal ── -->
   <div class="modal-overlay" id="deleteMemberOverlay">
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -702,12 +660,7 @@
       </div>
       <div style="padding:0 24px 24px">
         <p id="deleteMemberMsg" style="color:var(--muted);font-size:.88rem;margin-bottom:18px;line-height:1.55"></p>
-        <div class="form-group">
-          <label style="font-size:.82rem;font-weight:600">Confirm with your admin password</label>
-          <input type="password" id="deleteMemberPassword" placeholder="Your password…" maxlength="100">
-        </div>
-        <p class="login-error" id="deleteMemberError"></p>
-        <div class="modal-actions" style="margin-top:18px;display:flex;gap:10px">
+        <div class="modal-actions" style="display:flex;gap:10px">
           <button class="btn-danger" id="deleteMemberConfirmBtn" style="flex:1">Remove Member</button>
           <button class="btn-secondary" id="deleteMemberCancelBtn">Cancel</button>
         </div>
@@ -723,7 +676,7 @@
         <button class="btn-close" id="upgradeClose">&times;</button>
       </div>
       <div style="padding:0 24px 24px">
-        <p style="color:var(--muted);font-size:.88rem;margin-bottom:18px">Your workspace has reached its seat limit. Upgrade to add more team members — all features are included on every plan.</p>
+        <p style="color:var(--muted);font-size:.88rem;margin-bottom:18px">Your team has reached its seat limit. Upgrade to add more team members — all features are included on every plan.</p>
         <div class="upgrade-tiers">
           <div class="upgrade-tier"><span class="upgrade-tier-name">Starter</span><span class="upgrade-tier-users">Up to 5 users</span><span class="upgrade-tier-price">$15<em>/mo</em></span></div>
           <div class="upgrade-tier"><span class="upgrade-tier-name">Growth</span><span class="upgrade-tier-users">Up to 10 users</span><span class="upgrade-tier-price">$30<em>/mo</em></span></div>
@@ -733,35 +686,6 @@
         <div class="modal-actions" style="margin-top:20px">
           <a href="mailto:hello@achieverboard.com?subject=Upgrade%20Plan%20Request" class="btn-primary" style="text-decoration:none">Contact Us to Upgrade</a>
           <button class="btn-secondary" id="upgradeCancel">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Add Team Member Modal ── -->
-  <div class="modal-overlay" id="addMemberOverlay">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h2>Add Team Member</h2>
-        <button class="btn-close" id="addMemberClose">&times;</button>
-      </div>
-      <div style="padding:0 24px 20px">
-        <div class="form-group">
-          <label>Name <span class="required">*</span></label>
-          <input type="text" id="memberName" placeholder="Their name…" maxlength="30">
-        </div>
-        <div class="form-group">
-          <label>Email <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
-          <input type="email" id="memberEmail" placeholder="For password recovery…" maxlength="150">
-        </div>
-        <div class="form-group">
-          <label>Password <span class="required">*</span></label>
-          <input type="password" id="memberPassword" placeholder="Set a password for them…" maxlength="100">
-        </div>
-        <p class="login-error" id="addMemberError" style="margin-bottom:12px"></p>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" id="addMemberCancel">Cancel</button>
-          <button type="button" class="btn-primary"   id="addMemberSubmit">Add Member</button>
         </div>
       </div>
     </div>
@@ -842,25 +766,6 @@
     </button>
   </div>
 
-  <!-- ── Announcement Modal ── -->
-  <div class="modal-overlay" id="annoModalOverlay">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h2 id="annoModalTitle">New Announcement</h2>
-        <button class="btn-close" id="annoModalClose">&times;</button>
-      </div>
-      <div class="form-group">
-        <label for="annoModalText">Announcement</label>
-        <textarea id="annoModalText" rows="4" placeholder="Write your announcement…" maxlength="1000"></textarea>
-        <p class="anno-modal-err" id="annoModalErr"></p>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" id="annoModalCancel">Cancel</button>
-        <button type="button" class="btn-primary" id="annoModalSave">Post</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="../app.js?v=33"></script>
+  <script type="module" src="../app.js?v=34"></script>
 </body>
 </html>

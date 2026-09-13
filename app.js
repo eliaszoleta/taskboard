@@ -1,30 +1,24 @@
-import { initializeApp }                                    from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getDatabase, ref, push, set, update, remove,
-         onValue, get }                                      from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey:            "AIzaSyCT2yccAHsvB6_NvLL1if7V1FxzYK6tRE0",
-  authDomain:        "taskboard-d91be.firebaseapp.com",
-  databaseURL:       "https://taskboard-d91be-default-rtdb.firebaseio.com",
-  projectId:         "taskboard-d91be",
-  storageBucket:     "taskboard-d91be.firebasestorage.app",
-  messagingSenderId: "34815479362",
-  appId:             "1:34815479362:web:25069a6f086ecfcb17e7db",
-};
+// ─── SUPABASE CONFIG ────────────────────────────────────────────────────────
+// Same project as the Solo Board (see solo/board.js). The anon key is safe to
+// expose in client code — every table is protected by Row Level Security
+// (see supabase/migrations/0002_teams.sql), so a request can only ever touch
+// rows for teams the signed-in account actually belongs to.
+const SUPABASE_URL      = 'https://mtlefbbziquriovbtyvb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10bGVmYmJ6aXF1cmlvdmJ0eXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNzI3NTIsImV4cCI6MjEwNDg0ODc1Mn0.2J6Y4yAp14ZCcZnNPyQTJ9BJ-66eN0mNiP_G9w5ewnA';
 
-if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
-  document.body.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:16px;padding:24px;text-align:center;">
-      <div style="font-size:2.5rem">⚙️</div>
-      <h2 style="color:#4f46e5">Firebase setup required</h2>
-      <p style="color:#64748b;max-width:400px">Open <strong>app.js</strong> and replace the placeholder values in <code>firebaseConfig</code> with your Firebase project credentials.</p>
-    </div>`;
-  throw new Error('Firebase config not set up.');
+if (SUPABASE_URL.startsWith('YOUR_') || SUPABASE_ANON_KEY.startsWith('YOUR_')) {
+  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:24px">
+    <div><h2 style="color:#4f46e5">Supabase setup required</h2>
+    <p style="color:#64748b;max-width:420px">Open <strong>app.js</strong> and replace <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> with your Supabase project's values (Project Settings → API).</p></div>
+  </div>`;
+  throw new Error('Supabase config not set up.');
 }
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db          = getDatabase(firebaseApp);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ATTACHMENTS_BUCKET = 'task-attachments';
+const AVATARS_BUCKET     = 'avatars';
 
 // ─── SVG ICON LIBRARY ─────────────────────────────────────────────────────────
 const ICONS = {
@@ -33,78 +27,53 @@ const ICONS = {
   comment: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   calendar:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
   clock:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-  lock:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
   clip:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
   eye:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let currentUser          = null;   // { id, workspaceId, name, role }
-let users                = {};     // workspace users { userId: { name, passwordHash, email?, role, createdAt, photoURL? } }
-let tasks                = {};
-let commentCounts        = {};
-let allNotifications     = {};
-let currentWorkspaceMeta = null;   // { name, adminId, maxUsers, createdAt }
+let currentUser        = null;   // Supabase auth user, or null
+let myTeams            = [];     // [{ id, name, invite_code, max_users, role, display_name }]
+let currentTeam        = null;   // { id, name, invite_code, max_users, created_by }
+let myMembership       = null;   // full team_members row for currentUser in currentTeam
+let members            = {};     // { user_id: { display_name, role, photo_url, joined_at } }
+let tasks              = {};     // { task_id: task }
+let commentCounts      = {};
+let allNotifications   = {};
+let knownNotifIds      = null;
+let editingTaskId      = null;
+let detailTaskId       = null;
+let draggedId          = null;
 
-// Workspace Firebase listener unsubscribers
-let wsMetaUnsub        = null;
-let wsUsersUnsub       = null;
-let wsTasksUnsub       = null;
-let wsCommentsUnsub    = null;
-let wsNotifsAllUnsub   = null;
-let notifBadgeUnsub    = null;
-let commentsUnsub      = null;
-let annoUnsub          = null;
-let dmUnreadUnsub      = null;
-let dmMsgUnsub         = null;
+let tasksChannel        = null;
+let commentsChannel     = null;
+let taskCommentsChannel = null;
+let notifChannel        = null;
+let membersChannel      = null;
+let teamChannel         = null;
+let dmChannel           = null;
 
-// Announcements state
-let announcements     = {};
-let activeSidebarTab  = 'activity';
-let editingAnnoId     = null;
-let annoLastReadAt    = {};  // { wsId: timestamp } — persisted in localStorage
+let currentFilter       = 'all';
+let currentUserFilter   = 'all';
+let customDateStart     = null;
+let customDateEnd       = null;
+let colPriorityFilter   = { todo: 'all', inprogress: 'all', done: 'all', overdue: 'all' };
+let sidebarLimit        = 10;
+let pendingDeleteId     = null;
+let pendingDeleteMemberUid = null;
+let pendingResourceFiles = [];
+let pendingResourceLinks = [''];
+let pendingAfterLogin   = null;
 
-// DM widget state
-let dmUnreadCounts    = {};  // { dmKey: count }
-let dmActivePeerId    = null;
-let dmActivePeerName  = null;
-let dmCurrentMsgs     = {};
+// Direct messages
+let dmMessages       = [];    // all of my DM rows in the current team
+let dmActivePeerId   = null;
+let dmActivePeerName = null;
 
 let _resolveTasksLoaded;
 const tasksLoaded = new Promise(r => { _resolveTasksLoaded = r; });
 
-let editingTaskId        = null;
-let detailTaskId         = null;
-let draggedId            = null;
-let currentFilter        = 'all';
-let currentUserFilter    = 'all';
-let colPriorityFilter    = { todo: 'all', inprogress: 'all', done: 'all', overdue: 'all' };
-let customDateStart      = null;
-let customDateEnd        = null;
-let sidebarLimit         = 10;
-let knownNotifIds        = null;
-let pendingLoginUid      = null;    // user ID within workspace during login flow
-let pendingWorkspaceId   = null;    // workspace key during login flow
-let loginWorkspaceUsers  = {};      // users loaded during login (before listeners start)
-let pendingAfterLogin    = null;
-let pendingProfilePhoto  = null;
-let pendingResourceFiles = [];
-let pendingResourceLinks = [''];
-let pendingDeleteId      = null;
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getTaskResources(task) {
-  if (task.resources && task.resources.length) return task.resources;
-  if (task.resourceUrl) return [{ type: task.resourceType || 'link', url: task.resourceUrl, name: task.resourceName || task.resourceUrl }];
-  return [];
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 const escHtml = str =>
   String(str || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -126,6 +95,103 @@ const isOverdue = dateStr => {
   return new Date(dateStr + 'T00:00:00') < today;
 };
 
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getTaskResources(task) {
+  if (task.resources && task.resources.length) return task.resources;
+  return [];
+}
+
+let toastTimer = null;
+function showToast(msg, duration = 3000) {
+  let el = document.getElementById('appToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'appToast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), duration);
+}
+
+const byNewest = (a, b) => b.createdAt - a.createdAt;
+
+const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
+const avatarColor = name => {
+  let h = 0;
+  for (const c of (name || '')) h = (h * 31 + c.charCodeAt(0)) & 0x7fffffff;
+  return COLORS[h % COLORS.length];
+};
+const initials = name => (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+// Look a team member up by user id and render their avatar chip.
+function avatarHtml(uid, lg = false) {
+  const cls = `avatar${lg ? ' avatar-lg' : ''}`;
+  const m   = members[uid];
+  const name = m?.display_name || 'Unknown';
+  if (m?.photo_url) {
+    return `<img class="${cls} avatar-photo" src="${escHtml(m.photo_url)}" alt="${escHtml(initials(name))}">`;
+  }
+  return `<span class="${cls}" style="background:${avatarColor(name)}">${initials(name)}</span>`;
+}
+function memberName(uid) { return members[uid]?.display_name || 'Unknown'; }
+
+// Map a Postgres team_tasks row to the in-memory shape the renderer expects.
+function rowToTask(row) {
+  return {
+    title:              row.title,
+    desc:               row.description || '',
+    priority:           row.priority,
+    status:             row.status,
+    scheduledFor:       row.scheduled_for,
+    due:                row.due_date,
+    resources:          row.resources || [],
+    assignedTo:         row.assigned_to,
+    createdBy:          row.created_by,
+    createdAt:          new Date(row.created_at).getTime(),
+    overdueNotifiedAt:  row.overdue_notified_at ? new Date(row.overdue_notified_at).getTime() : null,
+  };
+}
+
+function memberRowToObj(row) {
+  return { display_name: row.display_name, role: row.role, photo_url: row.photo_url, joined_at: new Date(row.joined_at).getTime() };
+}
+
+function notifRowToObj(row) {
+  return { message: row.message, taskId: row.task_id, actorId: row.actor_id, read: row.read, createdAt: new Date(row.created_at).getTime() };
+}
+
+// Extract the storage object path from a public attachment URL, e.g.
+// ".../storage/v1/object/public/task-attachments/<uid>/<file>" → "<uid>/<file>"
+function storagePathFromUrl(url, bucket) {
+  const marker = `/object/public/${bucket}/`;
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length);
+}
+
+async function deleteResourceFiles(resources) {
+  const paths = (resources || [])
+    .filter(r => r.type === 'file')
+    .map(r => storagePathFromUrl(r.url, ATTACHMENTS_BUCKET))
+    .filter(Boolean);
+  if (paths.length) {
+    try { await supabase.storage.from(ATTACHMENTS_BUCKET).remove(paths); } catch {}
+  }
+}
+
+function isTaskOwner(task) {
+  if (!currentUser) return false;
+  return task.createdBy === currentUser.id || task.assignedTo === currentUser.id;
+}
+
+// ─── DATE FILTER LOGIC ────────────────────────────────────────────────────────
 function weekRange(offset = 0) {
   const today = new Date(); today.setHours(0,0,0,0);
   const dow   = today.getDay();
@@ -167,133 +233,25 @@ const FILTER_LABELS = {
   'last-week':'Last week','this-month':'This month','overdue':'Overdue','custom':'Custom range',
 };
 
-const COLORS = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0284c7','#0e7490'];
-const byNewest = (a, b) => b.createdAt - a.createdAt;
-const avatarColor = name => {
-  let h = 0;
-  for (const c of (name||'')) h = (h * 31 + c.charCodeAt(0)) & 0x7fffffff;
-  return COLORS[h % COLORS.length];
-};
-const initials = name =>
-  (name||'?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
-const avatarHtml = (name, lg = false) => {
-  const cls  = `avatar${lg ? ' avatar-lg' : ''}`;
-  const user = Object.values(users).find(u => u.name === name);
-  if (user?.photoURL) {
-    return `<img class="${cls} avatar-photo" src="${user.photoURL}" alt="${escHtml(initials(name))}">`;
-  }
-  return `<span class="${cls}" style="background:${avatarColor(name)}">${initials(name)}</span>`;
-};
-
-async function hashPassword(password) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-function resizeImage(file, maxPx = 200) {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const s = Math.min(maxPx / img.width, maxPx / img.height, 1);
-        const c = document.createElement('canvas');
-        c.width  = Math.round(img.width  * s);
-        c.height = Math.round(img.height * s);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.8));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function toWorkspaceKey(name) {
-  return name.trim().toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || null;
-}
-
-// Workspace-scoped Firebase ref helper (requires currentUser to be set)
-const wsRef = (...path) => ref(db, ['workspaces', currentUser.workspaceId, ...path].join('/'));
-
-// ─── USER AUTH / STORAGE ──────────────────────────────────────────────────────
-function loadCurrentUser() {
-  try { currentUser = JSON.parse(localStorage.getItem('achieverboard-ws-user')); } catch { currentUser = null; }
-}
-
-function saveCurrentUser(user) {
-  currentUser = user;
-  localStorage.setItem('achieverboard-ws-user', JSON.stringify(user));
-}
-
-function clearCurrentUser() {
-  currentUser = null;
-  localStorage.removeItem('achieverboard-ws-user');
-}
-
-function cacheWorkspaceTasks(wsId, tasksObj) {
-  try { localStorage.setItem(`ab-tasks-${wsId}`, JSON.stringify(tasksObj)); } catch {}
-}
-
-function loadCachedTasks(wsId) {
-  try { return JSON.parse(localStorage.getItem(`ab-tasks-${wsId}`)); } catch { return null; }
-}
-
-function logout() {
-  closeProfile();
-  if (currentUser?.workspaceId) localStorage.removeItem(`ab-tasks-${currentUser.workspaceId}`);
-  stopWorkspaceListeners();
-  clearCurrentUser();
-  const dmPopup = document.getElementById('dmPopup');
-  if (dmPopup) dmPopup.style.display = 'none';
-  updateDmFabBadge();
-  const guestBanner  = document.getElementById('guestBanner');
-  const boardWrapper = document.querySelector('.board-wrapper');
-  if (guestBanner)  guestBanner.style.display  = '';
-  if (boardWrapper) boardWrapper.style.display = 'none';
-  updateHeaderUser();
-}
-
-// ─── OVERLAY MANAGEMENT ───────────────────────────────────────────────────────
+// ─── AUTH OVERLAY ─────────────────────────────────────────────────────────────
 function setActiveStep(activeId) {
-  ['stepWorkspace','stepLogin','stepCreate','stepPayment','stepForgot','stepReset'].forEach(id => {
+  ['stepAuth','stepTeamSetup','stepPayment'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === activeId ? '' : 'none';
   });
 }
 
-function showUserOverlay() {
+function showAuthOverlay() {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = '';
-  showStepWorkspace();
+  setActiveStep('stepAuth');
+  document.getElementById('loginErr').textContent  = '';
+  document.getElementById('signupErr').textContent = '';
 }
 
-function hideUserOverlay() {
+function hideAuthOverlay() {
   document.getElementById('userOverlay').classList.remove('open');
   sidebarLimit = 10;
-  // Update guest banner / board visibility
-  const guestBanner  = document.getElementById('guestBanner');
-  const boardWrapper = document.querySelector('.board-wrapper');
-  if (guestBanner)  guestBanner.style.display  = currentUser ? 'none' : '';
-  if (boardWrapper) boardWrapper.style.display = currentUser ? ''     : 'none';
-  updateHeaderUser();
-  if (currentUser) currentUserFilter = currentUser.id;
-  renderBoard();
-  setupNotifListener();
-  renderNotifSidebar();
-  unlockAudioContext();
   if (pendingAfterLogin) {
     const fn = pendingAfterLogin;
     pendingAfterLogin = null;
@@ -301,76 +259,92 @@ function hideUserOverlay() {
   }
 }
 
-function showStepWorkspace() {
-  setActiveStep('stepWorkspace');
-  pendingLoginUid     = null;
-  pendingWorkspaceId  = null;
-  loginWorkspaceUsers = {};
-  const inp = document.getElementById('wsNameInput');
-  if (inp) { inp.value = ''; inp.focus(); }
-  const inp2 = document.getElementById('wsCreateNameInput');
-  if (inp2) inp2.value = '';
-  const err = document.getElementById('wsError');
-  if (err) err.textContent = '';
-  const err2 = document.getElementById('wsCreateError');
-  if (err2) err2.textContent = '';
-}
-
-function showStepLogin(wsId, wsDisplayName) {
-  pendingWorkspaceId = wsId;
-  const nameEl = document.getElementById('loginWsName');
-  if (nameEl) nameEl.textContent = wsDisplayName;
-
-  // Build user chip list
-  const list = document.getElementById('loginUserList');
-  list.innerHTML = '';
-  pendingLoginUid = null;
-  document.getElementById('loginPasswordSection').style.display = 'none';
-  document.getElementById('forgotPwdBtn').style.display = 'none';
-  document.getElementById('loginPassword').value = '';
-  document.getElementById('loginError').textContent = '';
-
-  Object.entries(loginWorkspaceUsers)
-    .sort(([,a],[,b]) => a.name.localeCompare(b.name))
-    .forEach(([uid, u]) => {
-      const chip = document.createElement('button');
-      chip.className = 'user-chip';
-      chip.type = 'button';
-      chip.innerHTML = `${avatarHtml(u.name)}<span class="chip-name">${escHtml(u.name)}</span>` +
-        (u.role === 'admin' ? `<span class="admin-tag">ADMIN</span>` : '');
-      chip.addEventListener('click', () => {
-        pendingLoginUid = uid;
-        document.getElementById('loginPasswordSection').style.display = '';
-        document.getElementById('forgotPwdBtn').style.display = '';
-        document.getElementById('loginError').textContent = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginPassword').focus();
-        // highlight selected chip
-        list.querySelectorAll('.user-chip').forEach(c => c.classList.remove('selected'));
-        chip.classList.add('selected');
-      });
-      list.appendChild(chip);
-    });
-
-  setActiveStep('stepLogin');
-}
-
-function showStepCreate(wsId, wsDisplayName) {
-  pendingWorkspaceId = wsId;
-  const sub = document.getElementById('createWsSub');
-  if (sub) sub.textContent = `Create teamboard "${wsDisplayName}"`;
-  setActiveStep('stepCreate');
-  document.getElementById('adminName').value            = '';
-  document.getElementById('adminEmail').value           = '';
-  document.getElementById('adminPassword').value        = '';
-  document.getElementById('adminConfirmPassword').value = '';
-  document.getElementById('teamSizeSelect').value       = '2';
-  document.getElementById('createError').textContent    = '';
+function showTeamSetupStep() {
+  document.getElementById('userOverlay').classList.add('open');
+  document.getElementById('userOverlayClose').style.display = myTeams.length ? '' : 'none';
+  setActiveStep('stepTeamSetup');
+  document.getElementById('teamSetupSub').textContent = currentUser
+    ? `Signed in as ${currentUser.email}`
+    : 'Create a new team or join one with an invite code';
+  document.getElementById('createTeamName').value    = '';
+  document.getElementById('createDisplayName').value = '';
+  document.getElementById('teamSizeSelect').value     = '2';
+  document.getElementById('createError').textContent  = '';
+  document.getElementById('joinInviteCode').value     = '';
+  document.getElementById('joinDisplayName').value    = '';
+  document.getElementById('joinError').textContent    = '';
   updatePlanInfo();
-  document.getElementById('adminName').focus();
 }
 
-// ─── PLAN INFO DISPLAY ─────────────────────────────────────────────────────────
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Log In';
+  if (error) { errEl.textContent = error.message; return; }
+}
+
+async function handleSignup() {
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const errEl    = document.getElementById('signupErr');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Please enter an email and password.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  const { data, error } = await supabase.auth.signUp({
+    email, password,
+    options: { emailRedirectTo: window.location.origin + window.location.pathname },
+  });
+  btn.disabled = false; btn.textContent = 'Create Free Account';
+  if (error) { errEl.textContent = error.message; return; }
+
+  if (!data.session) {
+    errEl.style.color = '#16a34a';
+    errEl.textContent = 'Account created! Check your email to confirm it, then log in.';
+  }
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const errEl = document.getElementById('loginErr');
+  if (!email) { errEl.textContent = 'Enter your email above first, then click "Forgot password?".'; return; }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  errEl.style.color = error ? '' : '#16a34a';
+  errEl.textContent = error ? error.message : 'Password reset email sent — check your inbox.';
+}
+
+document.getElementById('loginBtn').addEventListener('click', handleLogin);
+document.getElementById('signupBtn').addEventListener('click', handleSignup);
+document.getElementById('forgotPasswordBtn').addEventListener('click', handleForgotPassword);
+[['loginEmail','loginPassword'], ['signupEmail','signupPassword']].flat().forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (id.startsWith('login')) handleLogin(); else handleSignup();
+  });
+});
+document.getElementById('userOverlayClose').addEventListener('click', () => {
+  pendingAfterLogin = null;
+  document.getElementById('userOverlay').classList.remove('open');
+});
+document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
+  if (!currentUser) showAuthOverlay();
+  else showTeamSetupStep();
+});
+document.getElementById('teamSetupLogoutBtn').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  showAuthOverlay();
+});
+
+// ─── PLAN INFO / PRICING (unchanged from the legacy Firebase build) ──────────
 const PLAN_INFO = {
   '2':  { label: 'Free forever',  note: 'No credit card required',         cls: 'free' },
   '5':  { label: '$15/month',     note: 'Billed monthly · cancel anytime', cls: 'paid' },
@@ -380,15 +354,6 @@ const PLAN_INFO = {
 };
 
 // ─── STRIPE PAYMENT LINKS ─────────────────────────────────────────────────────
-// HOW TO SET UP:
-//   1. Create a Stripe account at https://stripe.com
-//   2. Go to Dashboard → Payment Links → Create a link for each plan below
-//   3. Set the price for each link (e.g. $15/month recurring)
-//   4. In "After payment", set Confirmation page → Redirect to URL:
-//        https://achieverboard.com/team/?payment_ok=1&plan=PLAN_SIZE&session_id={CHECKOUT_SESSION_ID}
-//      Replace PLAN_SIZE with the actual number (5, 10, 15, or 20)
-//   5. Set Cancel URL to: https://achieverboard.com/team/?payment_cancelled=1
-//   6. Paste each link URL below, replacing the placeholder strings
 const STRIPE_LINKS = {
   '5':  'https://buy.stripe.com/4gMdR97pOa04faA4uad7q01',   // Starter  – $15/mo, up to 5 users
   '10': 'PASTE_YOUR_STRIPE_LINK_FOR_GROWTH_HERE',    // Growth   – $30/mo, up to 10 users
@@ -414,178 +379,89 @@ function updatePlanInfo() {
 document.getElementById('teamSizeSelect')?.addEventListener('change', updatePlanInfo);
 
 // ─── UPGRADE MODAL ─────────────────────────────────────────────────────────────
-function openUpgradeModal() {
-  document.getElementById('upgradeOverlay')?.classList.add('open');
-}
-function closeUpgradeModal() {
-  document.getElementById('upgradeOverlay')?.classList.remove('open');
-}
+function openUpgradeModal()  { document.getElementById('upgradeOverlay')?.classList.add('open'); }
+function closeUpgradeModal() { document.getElementById('upgradeOverlay')?.classList.remove('open'); }
 document.getElementById('upgradeClose')?.addEventListener('click', closeUpgradeModal);
 document.getElementById('upgradeCancel')?.addEventListener('click', closeUpgradeModal);
-document.getElementById('upgradeOverlay')?.addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeUpgradeModal();
-});
+document.getElementById('upgradeOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeUpgradeModal(); });
 
-function showStepForgot() {
-  setActiveStep('stepForgot');
-  document.getElementById('forgotEmail').value       = '';
-  document.getElementById('forgotError').textContent = '';
-  const u    = loginWorkspaceUsers[pendingLoginUid];
-  const sub  = document.getElementById('forgotSub');
-  const form = document.getElementById('forgotEmailForm');
-  if (!u?.email) {
-    sub.textContent    = 'No recovery email is linked to this account. Contact your workspace admin.';
-    form.style.display = 'none';
-  } else {
-    const [local, domain] = u.email.split('@');
-    const masked = local.slice(0, 2) + '***@' + domain;
-    sub.textContent    = `Enter the email linked to your account (hint: ${masked})`;
-    form.style.display = '';
-    document.getElementById('forgotEmail').focus();
-  }
-}
-
-// ─── WORKSPACE LOOKUP ─────────────────────────────────────────────────────────
-// Sign In path: look up existing teamboard → go to login step
-async function handleWsContinue() {
-  const name  = document.getElementById('wsNameInput').value.trim();
-  const errEl = document.getElementById('wsError');
+// ─── CREATE / JOIN A TEAM ─────────────────────────────────────────────────────
+async function handleCreateTeamSubmit() {
+  const errEl       = document.getElementById('createError');
   errEl.textContent = '';
-  if (!name) { errEl.textContent = 'Please enter your teamboard name.'; return; }
-  const wsKey = toWorkspaceKey(name);
-  if (!wsKey) { errEl.textContent = 'Invalid teamboard name.'; return; }
+  const teamName    = document.getElementById('createTeamName').value.trim();
+  const displayName = document.getElementById('createDisplayName').value.trim();
+  const teamSize    = parseInt(document.getElementById('teamSizeSelect').value, 10);
 
-  errEl.textContent = 'Looking up teamboard…';
-  try {
-    const snap = await get(ref(db, `workspaces/${wsKey}/meta`));
-    if (snap.exists()) {
-      const usersSnap    = await get(ref(db, `workspaces/${wsKey}/users`));
-      loginWorkspaceUsers = usersSnap.val() || {};
-      errEl.textContent  = '';
-      showStepLogin(wsKey, snap.val().name || name);
-    } else {
-      errEl.textContent = 'Teamboard not found. Check the name or create a new one below.';
-    }
-  } catch (e) {
-    errEl.textContent = 'Connection error. Please try again.';
-    console.error(e);
-  }
-}
+  if (!teamName)    { errEl.textContent = 'Please enter a team name.';         return; }
+  if (!displayName) { errEl.textContent = 'Please enter your display name.';  return; }
 
-// Create path: go directly to create step with the chosen name
-async function handleWsCreate() {
-  const name  = document.getElementById('wsCreateNameInput').value.trim();
-  const errEl = document.getElementById('wsCreateError');
-  errEl.textContent = '';
-  if (!name) { errEl.textContent = 'Please enter a name for your teamboard.'; return; }
-  const wsKey = toWorkspaceKey(name);
-  if (!wsKey) { errEl.textContent = 'Invalid teamboard name.'; return; }
-
-  errEl.textContent = 'Checking availability…';
-  try {
-    const snap = await get(ref(db, `workspaces/${wsKey}/meta`));
-    if (snap.exists()) {
-      errEl.textContent = 'A teamboard with this name already exists. Sign in above instead.';
-      return;
-    }
-    errEl.textContent = '';
-    showStepCreate(wsKey, name);
-  } catch (e) {
-    errEl.textContent = 'Connection error. Please try again.';
-    console.error(e);
-  }
-}
-
-// ─── LOGIN ────────────────────────────────────────────────────────────────────
-async function attemptLogin() {
-  const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
-  if (!pendingLoginUid) { errEl.textContent = 'Please select who you are first.'; return; }
-  const u   = loginWorkspaceUsers[pendingLoginUid];
-  const pwd = document.getElementById('loginPassword').value;
-  if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
-  const hash = await hashPassword(pwd);
-  if (hash !== u.passwordHash) {
-    errEl.textContent = 'Incorrect password. Try again.';
-    document.getElementById('loginPassword').select();
-    return;
-  }
-  saveCurrentUser({ id: pendingLoginUid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
-  startWorkspaceListeners();
-  hideUserOverlay();
-}
-
-// ─── CREATE WORKSPACE ─────────────────────────────────────────────────────────
-async function createWorkspace() {
-  const errEl      = document.getElementById('createError');
-  errEl.textContent = '';
-  const adminName    = document.getElementById('adminName').value.trim();
-  const adminEmail   = document.getElementById('adminEmail').value.trim().toLowerCase();
-  const adminPwd     = document.getElementById('adminPassword').value;
-  const confirmPwd   = document.getElementById('adminConfirmPassword').value;
-  const teamSize     = parseInt(document.getElementById('teamSizeSelect').value, 10);
-
-  if (!adminName)              { errEl.textContent = 'Please enter your name.';                    return; }
-  if (!adminPwd)               { errEl.textContent = 'Please choose a password.';                 return; }
-  if (adminPwd.length < 4)    { errEl.textContent = 'Password must be at least 4 characters.';    return; }
-  if (adminPwd !== confirmPwd) { errEl.textContent = 'Passwords do not match.';                   return; }
-
-  // ── Paid plan: gate behind Stripe payment before touching Firebase ──────────
   if (teamSize > 2) {
     const stripeLink = STRIPE_LINKS[String(teamSize)];
     if (!stripeLink || stripeLink.startsWith('PASTE_YOUR')) {
       errEl.textContent = 'Payments are not configured yet. Contact the site admin.';
       return;
     }
-    const wsName = document.getElementById('createWsSub').textContent
-      .replace(/^Create teamboard "/, '').replace(/"$/, '');
-    const hash   = await hashPassword(adminPwd);
-    sessionStorage.setItem('ab_pending_ws', JSON.stringify({
-      workspaceId: pendingWorkspaceId,
-      workspaceName: wsName,
-      adminName, adminEmail, passwordHash: hash, teamSize,
-      savedAt: Date.now(),
-    }));
+    localStorage.setItem('ab_pending_team', JSON.stringify({ teamName, displayName, teamSize, savedAt: Date.now() }));
     showPaymentStep(teamSize);
     return;
   }
 
-  // ── Free plan (2 users): create immediately ─────────────────────────────────
-  await doCreateWorkspace({ workspaceId: pendingWorkspaceId, adminName, adminEmail,
-    passwordHash: await hashPassword(adminPwd), teamSize });
+  await doCreateTeam({ teamName, displayName, teamSize });
 }
 
-async function doCreateWorkspace({ workspaceId, adminName, adminEmail, passwordHash, teamSize }) {
+async function doCreateTeam({ teamName, displayName, teamSize }) {
   const errEl = document.getElementById('createError');
+  const btn   = document.getElementById('createTeamBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
   try {
-    const existing = await get(ref(db, `workspaces/${workspaceId}/meta`));
-    if (existing.exists()) {
-      if (errEl) errEl.textContent = 'This teamboard was just created by someone else. Click "← Back" and sign in.';
-      return;
-    }
-    const now    = Date.now();
-    const wsName = document.getElementById('createWsSub')?.textContent
-      .replace(/^Create teamboard "/, '').replace(/"$/, '') || workspaceId;
-
-    await set(ref(db, `workspaces/${workspaceId}/meta`), {
-      name: wsName, maxUsers: teamSize || 0, createdAt: now,
+    const { data: team, error } = await supabase.rpc('create_team', {
+      _name: teamName, _display_name: displayName, _max_users: teamSize,
     });
-
-    const userRef   = push(ref(db, `workspaces/${workspaceId}/users`));
-    const adminData = { name: adminName, passwordHash, role: 'admin', createdAt: now };
-    if (adminEmail) adminData.email = adminEmail;
-    await set(userRef, adminData);
-    await update(ref(db, `workspaces/${workspaceId}/meta`), { adminId: userRef.key });
-
-    pendingWorkspaceId = workspaceId;
-    saveCurrentUser({ id: userRef.key, workspaceId, name: adminName, role: 'admin' });
-    startWorkspaceListeners();
-    hideUserOverlay();
+    if (error) throw error;
+    localStorage.removeItem('ab_pending_team');
+    localStorage.setItem('ab_last_team_id', team.id);
+    await loadMyTeams();
+    const entry = myTeams.find(t => t.id === team.id) || team;
+    await enterTeam(entry);
+    hideAuthOverlay();
   } catch (e) {
-    if (errEl) errEl.textContent = 'Error creating workspace. Please try again.';
+    if (errEl) errEl.textContent = e.message || 'Error creating team. Please try again.';
     console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Team'; }
   }
 }
+
+async function handleJoinTeamSubmit() {
+  const errEl       = document.getElementById('joinError');
+  errEl.textContent = '';
+  const code        = document.getElementById('joinInviteCode').value.trim();
+  const displayName = document.getElementById('joinDisplayName').value.trim();
+  if (!code)        { errEl.textContent = 'Please enter an invite code.'; return; }
+  if (!displayName) { errEl.textContent = 'Please enter your display name.'; return; }
+
+  const btn = document.getElementById('joinTeamBtn');
+  btn.disabled = true; btn.textContent = 'Joining…';
+  try {
+    const { data: team, error } = await supabase.rpc('redeem_invite_code', {
+      _code: code, _display_name: displayName,
+    });
+    if (error) throw error;
+    localStorage.setItem('ab_last_team_id', team.id);
+    await loadMyTeams();
+    const entry = myTeams.find(t => t.id === team.id) || team;
+    await enterTeam(entry);
+    hideAuthOverlay();
+  } catch (e) {
+    errEl.textContent = e.message || 'Could not join that team.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Join Team';
+  }
+}
+
+document.getElementById('createTeamBtn').addEventListener('click', handleCreateTeamSubmit);
+document.getElementById('joinTeamBtn').addEventListener('click', handleJoinTeamSubmit);
 
 // ─── PAYMENT STEP ─────────────────────────────────────────────────────────────
 function showPaymentStep(teamSize) {
@@ -602,66 +478,56 @@ function showPaymentStep(teamSize) {
   document.getElementById('paymentError').textContent = '';
 
   document.getElementById('payNowBtn').onclick = () => {
-    const pending = JSON.parse(sessionStorage.getItem('ab_pending_ws') || '{}');
-    let url = STRIPE_LINKS[key];
-    const params = new URLSearchParams({ client_reference_id: pending.workspaceId || '' });
-    if (pending.adminEmail) params.set('prefilled_email', pending.adminEmail);
-    window.location.href = `${url}?${params.toString()}`;
+    const url    = STRIPE_LINKS[key];
+    const params = new URLSearchParams();
+    if (currentUser?.email) params.set('prefilled_email', currentUser.email);
+    window.location.href = params.toString() ? `${url}?${params.toString()}` : url;
   };
 
   setActiveStep('stepPayment');
 }
 
-// Resume workspace creation after returning from Stripe
-async function resumePendingWorkspaceCreation(pending) {
-  // Show user overlay in a "completing" state briefly
-  document.getElementById('userOverlay')?.classList.add('open');
-  document.getElementById('userOverlayClose').style.display = 'none';
-  setActiveStep('stepCreate');
-  const sub = document.getElementById('createWsSub');
-  if (sub) sub.textContent = `Create teamboard "${pending.workspaceName}"`;
-  const errEl = document.getElementById('createError');
-  if (errEl) errEl.textContent = 'Payment confirmed — creating your workspace…';
+document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
+  localStorage.removeItem('ab_pending_team');
+  setActiveStep('stepTeamSetup');
+});
 
-  await doCreateWorkspace(pending);
-}
-
-// ─── STRIPE RETURN HANDLER ────────────────────────────────────────────────────
+// Returns true if a Stripe redirect was handled (so callers can skip the
+// normal "load my teams" flow for this page load).
 async function handlePaymentReturn() {
   const p = new URLSearchParams(window.location.search);
   if (p.get('payment_ok') === '1') {
     const plan    = p.get('plan');
-    const pending = JSON.parse(sessionStorage.getItem('ab_pending_ws') || 'null');
+    const pending = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
     history.replaceState({}, '', window.location.pathname);
 
-    if (pending && String(pending.teamSize) === plan && (Date.now() - pending.savedAt) < 7_200_000) {
-      sessionStorage.removeItem('ab_pending_ws');
-      await resumePendingWorkspaceCreation(pending);
-    } else {
-      sessionStorage.removeItem('ab_pending_ws');
-      setTimeout(() => {
-        showUserOverlay();
-        showToast('Payment received but setup data expired — please create your workspace again.', 5000);
-      }, 400);
+    if (!currentUser) {
+      showAuthOverlay();
+      showToast('Please log in, then finish creating your team.', 5000);
+      return true;
     }
-    return;
+    if (pending && (!plan || String(pending.teamSize) === plan) && (Date.now() - pending.savedAt) < 7_200_000) {
+      showTeamSetupStep();
+      document.getElementById('createError').textContent = 'Payment confirmed — creating your team…';
+      await doCreateTeam(pending);
+    } else {
+      localStorage.removeItem('ab_pending_team');
+      showTeamSetupStep();
+      showToast('Payment received but setup data expired — please create your team again.', 5000);
+    }
+    return true;
   }
   if (p.get('payment_cancelled') === '1') {
     history.replaceState({}, '', window.location.pathname);
-    sessionStorage.removeItem('ab_pending_ws');
-    setTimeout(() => {
-      showUserOverlay();
-      showToast('Payment was cancelled. You can try again anytime.', 4000);
-    }, 400);
+    localStorage.removeItem('ab_pending_team');
+    if (currentUser) showTeamSetupStep(); else showAuthOverlay();
+    showToast('Payment was cancelled. You can try again anytime.', 4000);
+    return true;
   }
+  return false;
 }
 
-document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
-  sessionStorage.removeItem('ab_pending_ws');
-  setActiveStep('stepCreate');
-});
-
-// ─── SINGLE PRICING CARD — dynamic update from dropdown ───────────────────────
+// ─── PRICING CARD (marketing section) ─────────────────────────────────────────
 const PRICING_CARD_DATA = {
   '2':  { name: 'Free',     tagline: 'For small teams just getting started', amount: '$0',  seats: 'Up to 2 users · forever free',       cta: 'Get Started Free' },
   '5':  { name: 'Starter',  tagline: 'For small teams ready to grow',        amount: '$15', seats: 'Up to 5 users · flat team rate',       cta: 'Get Starter'      },
@@ -682,164 +548,150 @@ function updatePricingCard() {
 }
 document.getElementById('pricingPlanSelect')?.addEventListener('change', updatePricingCard);
 
-// Pricing CTA button → open the user overlay (payment gate handles the rest)
 document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
-  showUserOverlay();
   const plan = document.getElementById('pricingCtaBtn')?.dataset.plan;
-  if (plan && plan !== '2') {
-    const sel = document.getElementById('teamSizeSelect');
-    if (sel) { sel.value = plan; updatePlanInfo(); }
-  }
+  const open = () => {
+    showTeamSetupStep();
+    if (plan && plan !== '2') {
+      const sel = document.getElementById('teamSizeSelect');
+      if (sel) { sel.value = plan; updatePlanInfo(); }
+    }
+  };
+  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay(); }
+  else open();
 });
 
-// ─── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
-function handleForgotPwdClick() {
-  const errEl = document.getElementById('loginError');
-  if (!pendingLoginUid) { errEl.textContent = 'Select your account first.'; return; }
-  showStepForgot();
+// ─── LOAD / SWITCH TEAMS ──────────────────────────────────────────────────────
+async function loadMyTeams() {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('team_id, role, display_name, teams(id, name, invite_code, max_users, created_by, created_at)')
+    .eq('user_id', currentUser.id);
+  if (error) { console.error(error); myTeams = []; return; }
+  myTeams = (data || [])
+    .filter(row => row.teams)
+    .map(row => ({ ...row.teams, role: row.role, display_name: row.display_name }));
 }
 
-async function handleForgotVerify() {
-  const u     = loginWorkspaceUsers[pendingLoginUid];
-  const errEl = document.getElementById('forgotError');
-  if (!u?.email) return;
-  const inputEmail = document.getElementById('forgotEmail').value.trim().toLowerCase();
-  if (!inputEmail) { errEl.textContent = 'Please enter your email address.'; return; }
-  if (inputEmail !== u.email.toLowerCase()) {
-    errEl.textContent = 'Email does not match our records. Try again.';
+function populateTeamSwitcher() {
+  const sel = document.getElementById('teamSwitcher');
+  if (!sel) return;
+  if (!myTeams.length) { sel.style.display = 'none'; return; }
+  sel.style.display = '';
+  sel.innerHTML = myTeams.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('') +
+    `<option value="__new__">+ New / Join Team…</option>`;
+  if (currentTeam) sel.value = currentTeam.id;
+}
+
+document.getElementById('teamSwitcher')?.addEventListener('change', async e => {
+  const val = e.target.value;
+  if (val === '__new__') {
+    if (currentTeam) e.target.value = currentTeam.id;
+    showTeamSetupStep();
     return;
   }
-  setActiveStep('stepReset');
-  document.getElementById('resetPassword').value        = '';
-  document.getElementById('resetConfirmPassword').value = '';
-  document.getElementById('resetError').textContent     = '';
-  document.getElementById('resetPassword').focus();
+  const team = myTeams.find(t => t.id === val);
+  if (team) await enterTeam(team);
+});
+
+async function enterTeam(team) {
+  currentTeam = team;
+  localStorage.setItem('ab_last_team_id', team.id);
+
+  const { data: memRow } = await supabase
+    .from('team_members').select('*').eq('team_id', team.id).eq('user_id', currentUser.id).maybeSingle();
+  myMembership = memRow || { team_id: team.id, user_id: currentUser.id, display_name: team.display_name, role: team.role };
+
+  document.getElementById('guestBanner').style.display  = 'none';
+  document.querySelector('.board-wrapper').style.display = '';
+  populateTeamSwitcher();
+  updateHeaderUser();
+  await subscribeToTeam();
 }
 
-async function handleResetPassword() {
-  const errEl     = document.getElementById('resetError');
-  const newPwd    = document.getElementById('resetPassword').value;
-  const confirmPwd = document.getElementById('resetConfirmPassword').value;
-  if (!newPwd)               { errEl.textContent = 'Please enter a new password.';               return; }
-  if (newPwd !== confirmPwd) { errEl.textContent = 'Passwords do not match.';                    return; }
-  if (newPwd.length < 4)     { errEl.textContent = 'Password must be at least 4 characters.';   return; }
-
-  const hash = await hashPassword(newPwd);
-  await update(ref(db, `workspaces/${pendingWorkspaceId}/users/${pendingLoginUid}`), { passwordHash: hash });
-  if (loginWorkspaceUsers[pendingLoginUid]) {
-    loginWorkspaceUsers[pendingLoginUid] = { ...loginWorkspaceUsers[pendingLoginUid], passwordHash: hash };
-  }
-  const u = loginWorkspaceUsers[pendingLoginUid];
-  saveCurrentUser({ id: pendingLoginUid, workspaceId: pendingWorkspaceId, name: u.name, role: u.role || 'member' });
-  startWorkspaceListeners();
-  hideUserOverlay();
+// ─── TEAM SUBSCRIPTIONS ───────────────────────────────────────────────────────
+function unsubscribeTeam() {
+  [tasksChannel, commentsChannel, notifChannel, taskCommentsChannel, membersChannel, teamChannel, dmChannel]
+    .forEach(ch => { if (ch) supabase.removeChannel(ch); });
+  tasksChannel = commentsChannel = notifChannel = taskCommentsChannel = membersChannel = teamChannel = dmChannel = null;
 }
 
-// ─── EVENT WIRING: OVERLAY ────────────────────────────────────────────────────
-document.getElementById('wsContinueBtn').addEventListener('click', handleWsContinue);
-document.getElementById('wsNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsContinue(); });
-document.getElementById('wsCreateBtn').addEventListener('click', handleWsCreate);
-document.getElementById('wsCreateNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleWsCreate(); });
-document.getElementById('loginBtn').addEventListener('click', attemptLogin);
-document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
-document.getElementById('forgotPwdBtn').addEventListener('click', handleForgotPwdClick);
-document.getElementById('backToWorkspaceBtn').addEventListener('click', showStepWorkspace);
-document.getElementById('backToWorkspaceFromCreate').addEventListener('click', showStepWorkspace);
-document.getElementById('createWsBtn').addEventListener('click', createWorkspace);
-document.getElementById('backToLoginBtn').addEventListener('click', () => {
-  setActiveStep('stepLogin');
-  document.getElementById('forgotError').textContent = '';
-});
-document.getElementById('forgotVerifyBtn').addEventListener('click', handleForgotVerify);
-document.getElementById('forgotEmail').addEventListener('keydown', e => { if (e.key === 'Enter') handleForgotVerify(); });
-document.getElementById('resetPasswordBtn').addEventListener('click', handleResetPassword);
-document.getElementById('resetPassword').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('resetConfirmPassword').focus(); });
-document.getElementById('resetConfirmPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleResetPassword(); });
-document.getElementById('changeUserBtn').addEventListener('click', logout);
-document.getElementById('userOverlayClose').addEventListener('click', () => {
-  pendingAfterLogin = null;
-  hideUserOverlay();
-});
-document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
-  showUserOverlay();
-});
+async function subscribeToTeam() {
+  unsubscribeTeam();
+  if (!currentTeam) return;
+  const teamId = currentTeam.id;
 
-// ─── WORKSPACE LISTENERS ──────────────────────────────────────────────────────
-function startWorkspaceListeners() {
-  stopWorkspaceListeners();
-  if (!currentUser) return;
-  const wsId = currentUser.workspaceId;
+  // ── Members roster ──
+  const { data: memberRows } = await supabase.from('team_members').select('*').eq('team_id', teamId);
+  members = {};
+  (memberRows || []).forEach(row => { members[row.user_id] = memberRowToObj(row); });
+  populateAssigneeDropdown();
+  populateUserFilter();
+  updateHeaderUser();
+  if (document.getElementById('profileOverlay')?.classList.contains('open')) renderAdminSection();
 
-  // Render from cache immediately so the board appears without waiting for Firebase
-  const cached = loadCachedTasks(wsId);
-  if (cached) {
-    tasks = cached;
-    _resolveTasksLoaded();
-    renderBoard();
-  }
-
-  wsMetaUnsub = onValue(ref(db, `workspaces/${wsId}/meta`), snap => {
-    currentWorkspaceMeta = snap.val() || null;
-    // Refresh admin section if profile is open
-    if (document.getElementById('profileOverlay')?.classList.contains('open')) {
-      renderAdminSection();
-    }
-  });
-
-  wsUsersUnsub = onValue(ref(db, `workspaces/${wsId}/users`), snap => {
-    users = snap.val() || {};
-    populateAssigneeDropdown();
-    populateUserFilter();
-    renderNotifSidebar();
-    updateHeaderUser();
-    if (document.getElementById('profileOverlay')?.classList.contains('open')) {
-      renderAdminSection();
-    }
-  });
-
-  wsTasksUnsub = onValue(ref(db, `workspaces/${wsId}/tasks`), snap => {
-    tasks = snap.val() || {};
-    cacheWorkspaceTasks(wsId, tasks);
-    _resolveTasksLoaded();
-    renderBoard();
-    checkAndNotifyOverdue();
-  });
-
-  wsCommentsUnsub = onValue(ref(db, `workspaces/${wsId}/comments`), snap => {
-    const data = snap.val() || {};
-    commentCounts = {};
-    for (const [taskId, cmts] of Object.entries(data)) {
-      commentCounts[taskId] = Object.keys(cmts).length;
-    }
-    renderBoard();
-  });
-
-  wsNotifsAllUnsub = onValue(ref(db, `workspaces/${wsId}/notifications`), snap => {
-    allNotifications = snap.val() || {};
-    renderNotifSidebar();
-  });
-
-  dmUnreadUnsub = onValue(ref(db, `workspaces/${wsId}/dmUnread/${currentUser.id}`), snap => {
-    dmUnreadCounts = snap.val() || {};
-    updateDmFabBadge();
-    if (document.getElementById('dmPopup')?.style.display !== 'none' && !dmActivePeerId) {
+  membersChannel = supabase.channel(`team-members-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete members[payload.old.user_id]; }
+      else { members[payload.new.user_id] = memberRowToObj(payload.new); }
+      populateAssigneeDropdown();
+      populateUserFilter();
+      renderBoard();
+      updateHeaderUser();
       renderDmContacts();
-    }
-  });
+      if (document.getElementById('profileOverlay')?.classList.contains('open')) renderAdminSection();
+    })
+    .subscribe();
 
-  annoUnsub = onValue(ref(db, `workspaces/${wsId}/announcements`), snap => {
-    announcements = snap.val() || {};
-    renderAnnouncements();
-  });
-}
+  // ── Team row itself (rename / invite code regen / plan change) ──
+  teamChannel = supabase.channel(`team-${teamId}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` }, payload => {
+      currentTeam = { ...currentTeam, ...payload.new };
+      const idx = myTeams.findIndex(t => t.id === teamId);
+      if (idx !== -1) myTeams[idx] = { ...myTeams[idx], ...payload.new };
+      populateTeamSwitcher();
+      if (document.getElementById('profileOverlay')?.classList.contains('open')) renderAdminSection();
+    })
+    .subscribe();
 
-function stopWorkspaceListeners() {
-  [wsMetaUnsub, wsUsersUnsub, wsTasksUnsub, wsCommentsUnsub, wsNotifsAllUnsub, notifBadgeUnsub, annoUnsub, dmUnreadUnsub, dmMsgUnsub]
-    .forEach(u => { if (u) u(); });
-  wsMetaUnsub = wsUsersUnsub = wsTasksUnsub = wsCommentsUnsub = wsNotifsAllUnsub = notifBadgeUnsub = annoUnsub = dmUnreadUnsub = dmMsgUnsub = null;
-  users = {}; tasks = {}; commentCounts = {}; allNotifications = {}; announcements = {};
-  dmUnreadCounts = {}; dmActivePeerId = null; dmCurrentMsgs = {};
-  currentWorkspaceMeta = null;
+  // ── Tasks ──
+  const { data: taskRows } = await supabase.from('team_tasks').select('*').eq('team_id', teamId);
+  tasks = {};
+  (taskRows || []).forEach(row => { tasks[row.id] = rowToTask(row); });
+  _resolveTasksLoaded();
+  currentUserFilter = currentUser.id;
+  renderBoard();
+  checkAndNotifyOverdue();
+
+  tasksChannel = supabase.channel(`team-tasks-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_tasks', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete tasks[payload.old.id]; }
+      else { tasks[payload.new.id] = rowToTask(payload.new); }
+      renderBoard();
+    })
+    .subscribe();
+
+  // ── Comment counts (board-wide) ──
+  const { data: commentRows } = await supabase.from('team_comments').select('task_id').eq('team_id', teamId);
+  commentCounts = {};
+  (commentRows || []).forEach(c => { commentCounts[c.task_id] = (commentCounts[c.task_id] || 0) + 1; });
+  renderBoard();
+
+  commentsChannel = supabase.channel(`team-comments-${teamId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_comments', filter: `team_id=eq.${teamId}` }, payload => {
+      const tid = payload.new.task_id;
+      commentCounts[tid] = (commentCounts[tid] || 0) + 1;
+      renderBoard();
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'team_comments', filter: `team_id=eq.${teamId}` }, payload => {
+      const tid = payload.old.task_id;
+      if (commentCounts[tid]) commentCounts[tid]--;
+      renderBoard();
+    })
+    .subscribe();
+
+  await setupNotifListener();
+  await setupDmListener();
 }
 
 // ─── HEADER USER DISPLAY ──────────────────────────────────────────────────────
@@ -849,29 +701,26 @@ function updateHeaderUser() {
   if (!currentUser) {
     document.getElementById('userNameDisplay').textContent = '';
     document.getElementById('userAvatar').innerHTML = '';
-    if (logoutBtn)     logoutBtn.style.display     = 'none';
-    if (currentUserEl) currentUserEl.style.display = 'none';
+    logoutBtn.style.display     = 'none';
+    currentUserEl.style.display = 'none';
     return;
   }
-  if (logoutBtn)     logoutBtn.style.display     = '';
-  if (currentUserEl) currentUserEl.style.display = '';
-  document.getElementById('userNameDisplay').textContent = currentUser.name;
-  const u  = users[currentUser.id];
-  const el = document.getElementById('userAvatar');
-  if (u?.photoURL) {
-    el.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${u.photoURL}" alt="${escHtml(initials(currentUser.name))}">`;
-  } else {
-    el.innerHTML = avatarHtml(currentUser.name, true);
-  }
+  logoutBtn.style.display     = '';
+  currentUserEl.style.display = '';
+  const name = myMembership?.display_name || currentUser.email;
+  document.getElementById('userNameDisplay').textContent = name;
+  document.getElementById('userAvatar').innerHTML = myMembership
+    ? avatarHtml(currentUser.id, true)
+    : `<span class="avatar avatar-lg" style="background:${avatarColor(name)}">${initials(name)}</span>`;
 }
 
 function populateAssigneeDropdown() {
   const sel  = document.getElementById('taskAssignee');
   const prev = sel.value;
   sel.innerHTML = '<option value="">Unassigned</option>' +
-    Object.entries(users)
-      .sort(([,a],[,b]) => a.name.localeCompare(b.name))
-      .map(([id, u]) => `<option value="${id}">${escHtml(u.name)}</option>`).join('');
+    Object.entries(members)
+      .sort(([,a],[,b]) => a.display_name.localeCompare(b.display_name))
+      .map(([id, m]) => `<option value="${id}">${escHtml(m.display_name)}</option>`).join('');
   sel.value = prev;
 }
 
@@ -881,9 +730,9 @@ function populateUserFilter() {
   const prev = sel.value;
   sel.innerHTML = '<option value="all">All users</option>' +
     '<option value="unassigned">Unassigned</option>' +
-    Object.entries(users)
-      .sort(([,a],[,b]) => a.name.localeCompare(b.name))
-      .map(([id, u]) => `<option value="${id}">${escHtml(u.name)}</option>`).join('');
+    Object.entries(members)
+      .sort(([,a],[,b]) => a.display_name.localeCompare(b.display_name))
+      .map(([id, m]) => `<option value="${id}">${escHtml(m.display_name)}</option>`).join('');
   if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
 }
 
@@ -899,9 +748,10 @@ function renderBoard() {
   const parts = [];
   if (currentUserFilter === 'unassigned') {
     parts.push('Unassigned tasks');
-  } else if (currentUserFilter !== 'all') {
-    const u = users[currentUserFilter];
-    parts.push(u ? `${u.name}'s tasks` : 'Unknown user');
+  } else if (currentUserFilter !== 'all' && currentUserFilter !== currentUser?.id) {
+    parts.push(members[currentUserFilter] ? `${memberName(currentUserFilter)}'s tasks` : 'Unknown user');
+  } else if (currentUserFilter === currentUser?.id) {
+    parts.push('My tasks');
   }
   if (currentFilter === 'custom') {
     const fmt = s => s ? new Date(s + 'T00:00:00').toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }) : '…';
@@ -945,7 +795,7 @@ function renderBoard() {
   const overdueTasks = Object.entries(tasks)
     .filter(([, t]) => t.status !== 'done' && isOverdue(t.due))
     .map(([id, t]) => ({ id, ...t }))
-    .filter(t => currentUserFilter === 'all' || t.assignedTo === currentUserFilter)
+    .filter(t => currentUserFilter === 'all' || (currentUserFilter === 'unassigned' ? !t.assignedTo : t.assignedTo === currentUserFilter))
     .filter(t => colPriorityFilter.overdue === 'all' || t.priority === colPriorityFilter.overdue)
     .sort(byNewest);
 
@@ -960,17 +810,12 @@ function renderBoard() {
   }
 }
 
-function isTaskOwner(task) {
-  if (!currentUser) return false;
-  return task.createdBy === currentUser.id || task.assignedTo === currentUser.id;
-}
-
 function buildCard(task) {
   const overdue  = isOverdue(task.due);
-  const assignee = task.assignedTo ? users[task.assignedTo] : null;
+  const assignee = task.assignedTo && members[task.assignedTo] ? task.assignedTo : null;
   const owned    = isTaskOwner(task);
   const cCount   = commentCounts[task.id] || 0;
-  const hasRes   = !!(task.resourceUrl || (task.resources && task.resources.length));
+  const hasRes   = !!(task.resources && task.resources.length);
 
   const card = document.createElement('div');
   card.className = 'task-card';
@@ -995,7 +840,7 @@ function buildCard(task) {
       <div class="card-meta">
         ${task.due ? `<span class="due-date ${overdue?'overdue':''}">${ICONS.calendar} ${formatDate(task.due)}</span>` : ''}
         ${task.createdAt ? `<span class="created-date">${ICONS.clock} ${fmtTimestamp(task.createdAt)}</span>` : ''}
-        ${assignee ? `<span class="assignee-chip">${avatarHtml(assignee.name)}<span>${escHtml(assignee.name)}</span></span>` : ''}
+        ${assignee ? `<span class="assignee-chip">${avatarHtml(assignee)}<span>${escHtml(memberName(assignee))}</span></span>` : ''}
         <span class="comment-count" title="${cCount} comment${cCount === 1 ? '' : 's'}">${ICONS.comment} ${cCount}</span>
         ${hasRes ? `<span class="resource-indicator" title="Has attachment">${ICONS.clip}</span>` : ''}
       </div>
@@ -1026,7 +871,7 @@ document.querySelectorAll('.task-list').forEach(list => {
     list.classList.remove('drag-over');
     const id = draggedId;
     draggedId = null;
-    if (!id) return;
+    if (!id || !currentTeam) return;
     const newStatus = list.id.replace('list-', '');
     if (newStatus === 'overdue') return;
     const task = tasks[id];
@@ -1035,14 +880,14 @@ document.querySelectorAll('.task-list').forEach(list => {
     const oldStatus = task.status;
     tasks[id] = { ...task, status: newStatus };
     renderBoard();
-    await update(wsRef('tasks', id), { status: newStatus });
+    await supabase.from('team_tasks').update({ status: newStatus }).eq('id', id);
     if (newStatus === 'done' && oldStatus !== 'done') {
-      await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
+      await notifyParticipants(task, id, `${memberName(currentUser.id)} completed "${task.title}"`);
     }
   });
 });
 
-// ─── RESOURCE ATTACHMENTS ────────────────────────────────────────────────────
+// ─── RESOURCE ATTACHMENTS ─────────────────────────────────────────────────────
 function renderLinkRows() {
   const container = document.getElementById('resourceLinksContainer');
   container.innerHTML = pendingResourceLinks.map((url, i) => `
@@ -1075,45 +920,16 @@ function renderFileList() {
         ${f.size ? `<span class="resource-file-item-size">${formatSize(f.size)}</span>` : ''}
         <button type="button" class="resource-link-remove" data-idx="${i}" title="Remove">&times;</button>
       </div>`).join('') +
-    (totalSize ? `<div class="resource-file-total">${formatSize(totalSize)} / 10 MB used</div>` : '');
+    (totalSize ? `<div class="resource-file-total">${formatSize(totalSize)} / 10 MB</div>` : '');
   container.querySelectorAll('.resource-link-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      pendingResourceFiles.splice(+btn.dataset.idx, 1);
+    btn.addEventListener('click', async () => {
+      const idx = +btn.dataset.idx;
+      const [removed] = pendingResourceFiles.splice(idx, 1);
       renderFileList();
+      if (removed?.path) { try { await supabase.storage.from(ATTACHMENTS_BUCKET).remove([removed.path]); } catch {} }
     });
   });
 }
-
-document.getElementById('resourceLinkAdd').addEventListener('click', () => {
-  pendingResourceLinks.push('');
-  renderLinkRows();
-  const inputs = document.querySelectorAll('.resource-url-input');
-  inputs[inputs.length - 1]?.focus();
-});
-
-document.getElementById('resourceFileBtn').addEventListener('click', () => {
-  document.getElementById('resourceFile').click();
-});
-
-document.getElementById('resourceFile').addEventListener('change', async e => {
-  const files = Array.from(e.target.files);
-  e.target.value = '';
-  if (!files.length) return;
-  const MAX_TOTAL = 10 * 1024 * 1024;
-  const newEntries = [];
-  for (const file of files) {
-    const dataUrl = await readFileAsDataURL(file);
-    newEntries.push({ dataUrl, name: file.name, size: file.size });
-  }
-  const combined  = [...pendingResourceFiles, ...newEntries];
-  const totalSize = combined.reduce((s, f) => s + (f.size || 0), 0);
-  if (totalSize > MAX_TOTAL) {
-    showToast(`Combined size (${formatSize(totalSize)}) exceeds the 10 MB limit.`);
-    return;
-  }
-  pendingResourceFiles = combined;
-  renderFileList();
-});
 
 function resetResourceFields() {
   pendingResourceLinks = [''];
@@ -1130,8 +946,45 @@ function populateResourceFields(task) {
   const linkResources = resources.filter(r => r.type !== 'file');
   const fileResources = resources.filter(r => r.type === 'file');
   if (linkResources.length) { pendingResourceLinks = linkResources.map(r => r.url); renderLinkRows(); }
-  if (fileResources.length) { pendingResourceFiles = fileResources.map(r => ({ dataUrl: r.url, name: r.name, size: 0 })); renderFileList(); }
+  if (fileResources.length) {
+    pendingResourceFiles = fileResources.map(r => ({ url: r.url, path: storagePathFromUrl(r.url, ATTACHMENTS_BUCKET), name: r.name, size: 0 }));
+    renderFileList();
+  }
 }
+
+document.getElementById('resourceLinkAdd').addEventListener('click', () => {
+  pendingResourceLinks.push('');
+  renderLinkRows();
+  const inputs = document.querySelectorAll('.resource-url-input');
+  inputs[inputs.length - 1]?.focus();
+});
+
+document.getElementById('resourceFileBtn').addEventListener('click', () => {
+  document.getElementById('resourceFile').click();
+});
+
+document.getElementById('resourceFile').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  if (!files.length || !currentUser) return;
+  const MAX_TOTAL = 10 * 1024 * 1024;
+  const existingSize = pendingResourceFiles.reduce((s, f) => s + (f.size || 0), 0);
+  const newSize = files.reduce((s, f) => s + f.size, 0);
+  if (existingSize + newSize > MAX_TOTAL) {
+    showToast(`Combined size exceeds the 10 MB limit.`);
+    return;
+  }
+
+  showToast('Uploading…', 1500);
+  for (const file of files) {
+    const path = `${currentUser.id}/${crypto.randomUUID()}-${file.name}`;
+    const { error } = await supabase.storage.from(ATTACHMENTS_BUCKET).upload(path, file);
+    if (error) { showToast(`Upload failed: ${error.message}`); continue; }
+    const { data } = supabase.storage.from(ATTACHMENTS_BUCKET).getPublicUrl(path);
+    pendingResourceFiles.push({ url: data.publicUrl, path, name: file.name, size: file.size });
+  }
+  renderFileList();
+});
 
 // ─── TASK CREATE / EDIT MODAL ─────────────────────────────────────────────────
 function openNew(defaultStatus = 'todo') {
@@ -1167,7 +1020,7 @@ function closeModal() {
 
 document.getElementById('taskForm').addEventListener('submit', async e => {
   e.preventDefault();
-  if (!currentUser) return;
+  if (!currentUser || !currentTeam) return;
   const title = document.getElementById('taskTitle').value.trim();
   if (!title) return;
 
@@ -1176,47 +1029,47 @@ document.getElementById('taskForm').addEventListener('submit', async e => {
       const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
       return { type: 'link', url: normalized, name: url };
     });
-  const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.dataUrl, name: f.name }));
-  const allItems  = [...linkItems, ...fileItems];
-  const resources = allItems.length ? allItems : null;
+  const fileItems = pendingResourceFiles.map(f => ({ type: 'file', url: f.url, name: f.name }));
+  const resources = [...linkItems, ...fileItems];
 
   const newAssignee = document.getElementById('taskAssignee').value || null;
   const newStatus   = document.getElementById('taskStatus').value;
-  const fields = {
+
+  const row = {
     title,
-    desc:         document.getElementById('taskDesc').value.trim(),
-    priority:     document.getElementById('taskPriority').value,
-    scheduledFor: document.getElementById('taskScheduled').value || null,
-    due:          document.getElementById('taskDue').value || null,
-    status:       newStatus,
-    assignedTo:   newAssignee,
+    description:   document.getElementById('taskDesc').value.trim(),
+    priority:      document.getElementById('taskPriority').value,
+    scheduled_for: document.getElementById('taskScheduled').value || null,
+    due_date:      document.getElementById('taskDue').value || null,
+    status:        newStatus,
+    assigned_to:   newAssignee,
     resources,
-    resourceType: null,
-    resourceUrl:  null,
-    resourceName: null,
+  };
+  const local = {
+    title, desc: row.description, priority: row.priority, scheduledFor: row.scheduled_for,
+    due: row.due_date, status: newStatus, assignedTo: newAssignee, resources,
   };
 
   if (editingTaskId) {
     const old = tasks[editingTaskId];
-    await update(wsRef('tasks', editingTaskId), fields);
-    tasks[editingTaskId] = { ...old, ...fields };
+    tasks[editingTaskId] = { ...old, ...local };
     closeModal();
     renderBoard();
+    await supabase.from('team_tasks').update(row).eq('id', editingTaskId);
     if (newAssignee && newAssignee !== old.assignedTo) {
-      await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, editingTaskId);
+      await notifyUser(newAssignee, `${memberName(currentUser.id)} assigned "${title}" to you`, editingTaskId);
     }
     if (newStatus === 'done' && old.status !== 'done') {
-      await notifyParticipants({...old,...fields}, editingTaskId, `${currentUser.name} completed "${title}"`);
+      await notifyParticipants({ ...old, ...local }, editingTaskId, `${memberName(currentUser.id)} completed "${title}"`);
     }
   } else {
-    const newRef   = push(wsRef('tasks'));
-    const taskData = { ...fields, createdBy: currentUser.id, createdAt: Date.now() };
-    await set(newRef, taskData);
-    tasks[newRef.key] = taskData;
+    const newId = crypto.randomUUID();
+    tasks[newId] = { ...local, createdBy: currentUser.id, createdAt: Date.now() };
     closeModal();
     renderBoard();
-    if (newAssignee) await notify(newAssignee, `${currentUser.name} assigned "${title}" to you`, newRef.key);
-    if (newStatus === 'done') await notifyParticipants(taskData, newRef.key, `${currentUser.name} completed "${title}"`);
+    await supabase.from('team_tasks').insert({ id: newId, team_id: currentTeam.id, created_by: currentUser.id, ...row });
+    if (newAssignee) await notifyUser(newAssignee, `${memberName(currentUser.id)} assigned "${title}" to you`, newId);
+    if (newStatus === 'done') await notifyParticipants(tasks[newId], newId, `${memberName(currentUser.id)} completed "${title}"`);
   }
 });
 
@@ -1236,15 +1089,16 @@ async function confirmDeleteTask() {
   const id = pendingDeleteId;
   closeDeleteConfirm();
   if (!id) return;
-  await remove(wsRef('tasks', id));
-  await remove(wsRef('comments', id));
+  const task = tasks[id];
   delete tasks[id];
   renderBoard();
+  await supabase.from('team_tasks').delete().eq('id', id);
+  if (task) await deleteResourceFiles(task.resources);
 }
 
 // ─── OVERDUE AUTO-NOTIFY ──────────────────────────────────────────────────────
 async function checkAndNotifyOverdue() {
-  if (!currentUser) return;
+  if (!currentTeam) return;
   const now = Date.now();
   for (const [id, task] of Object.entries(tasks)) {
     if (task.status === 'done')  continue;
@@ -1253,9 +1107,11 @@ async function checkAndNotifyOverdue() {
     const msg      = `Task "${task.title}" is now overdue!`;
     const toNotify = new Set([task.createdBy, task.assignedTo].filter(Boolean));
     for (const uid of toNotify) {
-      await push(wsRef('notifications', uid), { message: msg, taskId: id, read: false, createdAt: now });
+      await supabase.from('team_notifications').insert({
+        team_id: currentTeam.id, user_id: uid, actor_id: currentUser.id, task_id: id, message: msg, read: false,
+      });
     }
-    await update(wsRef('tasks', id), { overdueNotifiedAt: now });
+    await supabase.from('team_tasks').update({ overdue_notified_at: new Date(now).toISOString() }).eq('id', id);
     tasks[id] = { ...tasks[id], overdueNotifiedAt: now };
   }
 }
@@ -1271,7 +1127,14 @@ function openFilePreview(resource) {
   dlBtn.href         = resource.url;
   dlBtn.download     = resource.name || 'download';
 
-  const mime = resource.url.match(/^data:([^;]+);/)?.[1] || '';
+  const extMatch = (resource.name || resource.url).match(/\.([a-z0-9]+)(?:\?.*)?$/i);
+  const ext = extMatch ? extMatch[1].toLowerCase() : '';
+  const mime = resource.mime || {
+    jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml',
+    pdf:'application/pdf', mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', wav:'audio/wav',
+    txt:'text/plain', json:'application/json',
+  }[ext] || '';
+
   if (mime.startsWith('image/')) {
     bodyEl.innerHTML = `<img class="fp-image" src="${resource.url}" alt="${escHtml(resource.name || 'File')}">`;
   } else if (mime === 'application/pdf') {
@@ -1280,16 +1143,10 @@ function openFilePreview(resource) {
     bodyEl.innerHTML = `<video class="fp-video" src="${resource.url}" controls></video>`;
   } else if (mime.startsWith('audio/')) {
     bodyEl.innerHTML = `<audio class="fp-audio" src="${resource.url}" controls></audio>`;
-  } else if (mime.startsWith('text/') || mime === 'application/json') {
-    try {
-      const text = atob(resource.url.split(',')[1]);
-      bodyEl.innerHTML = `<pre class="fp-text">${escHtml(text)}</pre>`;
-    } catch {
-      bodyEl.innerHTML = `<div class="fp-unsupported">Cannot preview this file type.<br>Use the Download button above.</div>`;
-    }
   } else {
-    bodyEl.innerHTML = `<div class="fp-unsupported">Preview not available for this file type.<br>Use the Download button above.</div>`;
+    bodyEl.innerHTML = `<div class="fp-unsupported"><p>Preview not available.<br>Use the Download button above.</p></div>`;
   }
+
   overlay.classList.add('open');
 }
 
@@ -1306,13 +1163,11 @@ async function openDetail(id) {
   }
   await tasksLoaded;
   let task = tasks[id];
-  if (!task) {
+  if (!task && currentTeam) {
     try {
-      const snap = await get(wsRef('tasks', id));
-      if (snap.exists()) { task = snap.val(); tasks[id] = task; }
-    } catch (err) {
-      console.error('openDetail: Firebase fetch error', err);
-    }
+      const { data: row } = await supabase.from('team_tasks').select('*').eq('id', id).maybeSingle();
+      if (row) { task = rowToTask(row); tasks[id] = task; }
+    } catch (err) { console.error(err); }
   }
   if (!task) {
     showToast('Task not found — it may have been deleted.');
@@ -1320,8 +1175,6 @@ async function openDetail(id) {
   }
   detailTaskId = id;
 
-  const assignee      = task.assignedTo ? users[task.assignedTo] : null;
-  const creator       = task.createdBy  ? users[task.createdBy]  : null;
   const overdue       = isOverdue(task.due);
   const owned         = isTaskOwner(task);
   const taskResources = getTaskResources(task);
@@ -1366,13 +1219,13 @@ async function openDetail(id) {
         <span class="detail-chip-label">Created</span>
         <span class="detail-created">${fmtTimestamp(task.createdAt)}</span>
       </div>` : ''}
-      ${assignee ? `<div class="detail-chip">
+      ${task.assignedTo && members[task.assignedTo] ? `<div class="detail-chip">
         <span class="detail-chip-label">Assigned to</span>
-        <span class="assignee-chip">${avatarHtml(assignee.name, true)}<span>${escHtml(assignee.name)}</span></span>
+        <span class="assignee-chip">${avatarHtml(task.assignedTo, true)}<span>${escHtml(memberName(task.assignedTo))}</span></span>
       </div>` : ''}
-      ${creator ? `<div class="detail-chip">
+      ${task.createdBy && members[task.createdBy] ? `<div class="detail-chip">
         <span class="detail-chip-label">Created by</span>
-        <span class="assignee-chip">${avatarHtml(creator.name, true)}<span>${escHtml(creator.name)}</span></span>
+        <span class="assignee-chip">${avatarHtml(task.createdBy, true)}<span>${escHtml(memberName(task.createdBy))}</span></span>
       </div>` : ''}
     </div>
     ${task.desc ? `<p class="detail-desc">${escHtml(task.desc)}</p>` : ''}
@@ -1397,13 +1250,13 @@ async function openDetail(id) {
       const newStatus = sel.value;
       const oldStatus = tasks[id]?.status;
       saveBtn.disabled = true;
-      await update(wsRef('tasks', id), { status: newStatus });
+      await supabase.from('team_tasks').update({ status: newStatus }).eq('id', id);
       tasks[id] = { ...tasks[id], status: newStatus };
       saveBtn.style.display = 'none';
       saveBtn.disabled = false;
       renderBoard();
       if (newStatus === 'done' && oldStatus !== 'done') {
-        await notifyParticipants(task, id, `${currentUser.name} completed "${task.title}"`);
+        await notifyParticipants(task, id, `${memberName(currentUser.id)} completed "${task.title}"`);
       }
     });
     document.getElementById('detailEditBtn').style.display = '';
@@ -1412,179 +1265,190 @@ async function openDetail(id) {
     document.getElementById('detailEditBtn').style.display = 'none';
   }
 
-  if (commentsUnsub) commentsUnsub();
-  commentsUnsub = onValue(wsRef('comments', id), snap => {
-    if (detailTaskId !== id) return;
-    const data     = snap.val() || {};
-    const comments = Object.entries(data).map(([cid, c]) => ({ id: cid, ...c })).sort((a,b) => a.createdAt - b.createdAt);
-    const list     = document.getElementById('commentsList');
-    if (!comments.length) {
-      list.innerHTML = '<div class="no-comments">No comments yet. Be the first!</div>';
-      return;
-    }
-    list.innerHTML = comments.map(c => {
-      const author   = users[c.author];
-      const name     = author ? author.name : 'Unknown';
-      const time     = new Date(c.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-      const isOwn    = currentUser && c.author === currentUser.id;
-      const editedTag = c.editedAt ? '<span class="comment-edited">(edited)</span>' : '';
-      return `<div class="comment" data-cid="${c.id}">
-        ${avatarHtml(name, true)}
-        <div class="comment-body">
-          <div class="comment-meta">
-            <strong>${escHtml(name)}</strong>
-            <span class="comment-time">${time}</span>
-            ${editedTag}
-            ${isOwn ? `<button class="comment-edit-btn" data-cid="${c.id}" title="Edit comment">${ICONS.edit}</button>` : ''}
-          </div>
-          <p class="comment-text" data-cid="${c.id}">${escHtml(c.text)}</p>
-        </div>
-      </div>`;
-    }).join('');
-    list.querySelectorAll('.comment-edit-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const cData = comments.find(x => x.id === btn.dataset.cid);
-        if (cData) startEditComment(btn.dataset.cid, cData);
-      });
-    });
-    list.scrollTop = list.scrollHeight;
-  });
+  if (taskCommentsChannel) supabase.removeChannel(taskCommentsChannel);
+  const { data: initialComments } = await supabase.from('team_comments').select('*').eq('task_id', id).order('created_at', { ascending: true });
+  renderCommentsList(initialComments || []);
+
+  taskCommentsChannel = supabase.channel(`team-task-comments-${id}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_comments', filter: `task_id=eq.${id}` }, async () => {
+      if (detailTaskId !== id) return;
+      const { data: rows } = await supabase.from('team_comments').select('*').eq('task_id', id).order('created_at', { ascending: true });
+      renderCommentsList(rows || []);
+    })
+    .subscribe();
 
   document.getElementById('detailOverlay').classList.add('open');
   document.getElementById('commentInput').focus();
   return true;
 }
 
+function renderCommentsList(rows) {
+  const list = document.getElementById('commentsList');
+  if (!rows.length) {
+    list.innerHTML = '<div class="no-comments">No comments yet. Be the first!</div>';
+    return;
+  }
+  list.innerHTML = rows.map(c => {
+    const time = new Date(c.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const name = memberName(c.author_id);
+    return `<div class="comment">
+      ${avatarHtml(c.author_id, true)}
+      <div class="comment-body">
+        <div class="comment-meta"><strong>${escHtml(name)}</strong><span class="comment-time">${time}</span></div>
+        <p class="comment-text">${escHtml(c.text)}</p>
+      </div>
+    </div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
 function closeDetail() {
   document.getElementById('detailOverlay').classList.remove('open');
   detailTaskId = null;
-  if (commentsUnsub) { commentsUnsub(); commentsUnsub = null; }
+  if (taskCommentsChannel) { supabase.removeChannel(taskCommentsChannel); taskCommentsChannel = null; }
 }
 
 // ─── COMMENTS ─────────────────────────────────────────────────────────────────
 async function postComment() {
-  if (!currentUser || !detailTaskId) return;
+  if (!currentUser || !currentTeam || !detailTaskId) return;
   const input = document.getElementById('commentInput');
   const text  = input.value.trim();
   if (!text) return;
+  input.value = '';
 
-  const commentData = { text, author: currentUser.id, createdAt: Date.now() };
+  await supabase.from('team_comments').insert({
+    task_id: detailTaskId, team_id: currentTeam.id, author_id: currentUser.id, text,
+  });
 
   const task = tasks[detailTaskId];
   if (task) {
     const recipient = currentUser.id === task.assignedTo ? task.createdBy : task.assignedTo;
     if (recipient && recipient !== currentUser.id) {
-      const preview   = text.length > 80 ? text.slice(0, 80) + '…' : text;
-      const notifRef  = push(wsRef('notifications', recipient), {
-        message: `${currentUser.name} commented on "${task.title}": "${preview}"`,
-        taskId: detailTaskId, read: false, createdAt: Date.now(),
-      });
-      commentData.notifId = notifRef.key;
-      commentData.notifTo = recipient;
+      const preview = text.length > 80 ? text.slice(0, 80) + '…' : text;
+      await notifyUser(recipient, `${memberName(currentUser.id)} commented on "${task.title}": "${preview}"`, detailTaskId);
     }
   }
-
-  await push(wsRef('comments', detailTaskId), commentData);
-  input.value = '';
 }
 
 document.getElementById('postCommentBtn').addEventListener('click', postComment);
 document.getElementById('commentInput').addEventListener('keydown', e => { if (e.key === 'Enter') postComment(); });
 
-// ─── COMMENT EDITING ──────────────────────────────────────────────────────────
-function startEditComment(cid, comment) {
-  const commentEl = document.querySelector(`.comment[data-cid="${cid}"]`);
-  if (!commentEl) return;
-  const textEl = commentEl.querySelector('.comment-text');
-  if (!textEl) return;
-  const origText = comment.text;
-  textEl.outerHTML = `<div class="comment-edit-area">
-    <textarea class="comment-edit-input" id="editCommentInput_${cid}" rows="2">${escHtml(origText)}</textarea>
-    <div class="comment-edit-actions">
-      <button class="btn-sm btn-primary" id="saveEdit_${cid}">Save</button>
-      <button class="btn-sm btn-secondary" id="cancelEdit_${cid}">Cancel</button>
-    </div>
-  </div>`;
-  const inp = document.getElementById(`editCommentInput_${cid}`);
-  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-  document.getElementById(`saveEdit_${cid}`)?.addEventListener('click', () => saveCommentEdit(cid, comment));
-  document.getElementById(`cancelEdit_${cid}`)?.addEventListener('click', () => {
-    const editArea = document.querySelector(`.comment[data-cid="${cid}"] .comment-edit-area`);
-    if (editArea) editArea.outerHTML = `<p class="comment-text" data-cid="${cid}">${escHtml(origText)}</p>`;
-  });
-}
-
-async function saveCommentEdit(cid, originalComment) {
-  const input = document.getElementById(`editCommentInput_${cid}`);
-  if (!input) return;
-  const newText = input.value.trim();
-  if (!newText) return;
-
-  await update(wsRef('comments', detailTaskId, cid), { text: newText, editedAt: Date.now() });
-
-  if (originalComment.notifTo && originalComment.notifId) {
-    const task = tasks[detailTaskId];
-    if (task) {
-      const preview = newText.length > 80 ? newText.slice(0, 80) + '…' : newText;
-      await update(wsRef('notifications', originalComment.notifTo, originalComment.notifId), {
-        message: `${currentUser.name} commented on "${task.title}": "${preview}" (edited)`,
-      });
-    }
-  }
-}
-
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────
-async function notify(toUserId, message, taskId) {
-  if (!toUserId || toUserId === currentUser?.id) return;
-  await push(wsRef('notifications', toUserId), { message, taskId: taskId || '', read: false, createdAt: Date.now() });
+async function notifyUser(toUserId, message, taskId) {
+  if (!toUserId || toUserId === currentUser?.id || !currentTeam) return;
+  await supabase.from('team_notifications').insert({
+    team_id: currentTeam.id, user_id: toUserId, actor_id: currentUser.id, task_id: taskId || null, message, read: false,
+  });
 }
 
 async function notifyParticipants(task, taskId, message) {
   if (task.createdBy && task.createdBy !== currentUser?.id) {
-    await notify(task.createdBy, message, taskId);
+    await notifyUser(task.createdBy, message, taskId);
   }
 }
 
-// ─── NOTIFICATION TASK ID RESOLVER ────────────────────────────────────────────
-async function resolveNotifTaskId(notifId) {
-  if (!notifId || !currentUser) return '';
-  try {
-    const s = await get(wsRef('notifications', currentUser.id, notifId));
-    if (!s.exists()) return '';
-    const val = s.val();
-    if (val.taskId) return val.taskId;
-    await tasksLoaded;
-    const m = (val.message || '').match(/"([^"]+)"/);
-    if (!m) return '';
-    const title   = m[1];
-    const matchId = Object.keys(tasks).find(id => tasks[id]?.title === title);
-    if (!matchId) return '';
-    update(wsRef('notifications', currentUser.id, notifId), { taskId: matchId });
-    return matchId;
-  } catch { return ''; }
+async function setupNotifListener() {
+  if (notifChannel) supabase.removeChannel(notifChannel);
+  const badge = document.getElementById('notifBadge');
+  badge.textContent = '';
+  badge.classList.remove('visible');
+  document.getElementById('notifList').innerHTML = '<div class="no-notifs">No notifications yet</div>';
+  if (!currentTeam) return;
+  const teamId = currentTeam.id;
+
+  const { data: rows } = await supabase.from('team_notifications').select('*').eq('team_id', teamId).eq('user_id', currentUser.id);
+  allNotifications = {};
+  (rows || []).forEach(r => { allNotifications[r.id] = notifRowToObj(r); });
+  refreshNotifUI();
+
+  notifChannel = supabase.channel(`team-notifications-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_notifications', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'DELETE') { delete allNotifications[payload.old.id]; }
+      else { allNotifications[payload.new.id] = notifRowToObj(payload.new); }
+      refreshNotifUI();
+    })
+    .subscribe();
 }
 
+function refreshNotifUI() {
+  const entries = Object.entries(allNotifications).map(([id, n]) => ({ id, ...n }));
+  const unread  = entries.filter(n => !n.read);
+  const badge   = document.getElementById('notifBadge');
+  badge.textContent = unread.length > 9 ? '9+' : String(unread.length);
+  badge.classList.toggle('visible', unread.length > 0);
+
+  if (knownNotifIds !== null) {
+    const newOnes = entries.filter(n => !n.read && !knownNotifIds.has(n.id));
+    if (newOnes.length) playNotificationSound();
+  }
+  knownNotifIds = new Set(entries.map(n => n.id));
+
+  const sorted = [...entries].sort((a, b) => b.createdAt - a.createdAt);
+  const list = document.getElementById('notifList');
+  if (!sorted.length) {
+    list.innerHTML = '<div class="no-notifs">No notifications yet</div>';
+  } else {
+    list.innerHTML = sorted.slice(0, 30).map(n => {
+      const time = new Date(n.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      return `<div class="notif-item ${n.read?'':'unread'}" data-id="${n.id}" data-task="${n.taskId || ''}">
+        <div class="notif-msg">${escHtml(n.message)}</div>
+        <div class="notif-time">${time}</div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.notif-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const nid = item.dataset.id, tid = item.dataset.task;
+        closeNotifPanel();
+        if (nid && allNotifications[nid] && !allNotifications[nid].read) {
+          await supabase.from('team_notifications').update({ read: true }).eq('id', nid);
+        }
+        if (tid) openDetail(tid);
+      });
+    });
+  }
+
+  renderNotifSidebar(sorted);
+}
+
+function closeNotifPanel() { document.getElementById('notifPanel').classList.remove('open'); }
+
+document.getElementById('notifBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const panel = document.getElementById('notifPanel');
+  if (window.innerWidth <= 640) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 8) + 'px';
+  }
+  panel.classList.toggle('open');
+});
+
+document.getElementById('markAllRead').addEventListener('click', async () => {
+  if (!currentTeam) return;
+  const unreadIds = Object.entries(allNotifications).filter(([, n]) => !n.read).map(([id]) => id);
+  if (unreadIds.length) await supabase.from('team_notifications').update({ read: true }).in('id', unreadIds);
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.notif-wrapper')) closeNotifPanel();
+});
+
 // ─── ACTIVITY SIDEBAR ─────────────────────────────────────────────────────────
-function renderNotifSidebar() {
+function renderNotifSidebar(sortedEntries) {
   const body = document.getElementById('notifSidebarBody');
   if (!body) return;
 
-  if (!currentUser) {
+  if (!currentTeam) {
     body.innerHTML = '<div class="sidebar-empty">Sign in to see your activity</div>';
     return;
   }
-
-  const allMyNotifs = Object.entries(allNotifications[currentUser.id] || {})
-    .map(([id, n]) => ({ id, ...n }))
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  if (!allMyNotifs.length) {
+  const all = sortedEntries || Object.entries(allNotifications).map(([id, n]) => ({ id, ...n })).sort((a, b) => b.createdAt - a.createdAt);
+  if (!all.length) {
     body.innerHTML = '<div class="sidebar-empty">No activity yet</div>';
     return;
   }
 
-  const visible = allMyNotifs.slice(0, sidebarLimit);
-  const hasMore = allMyNotifs.length > sidebarLimit;
+  const visible = all.slice(0, sidebarLimit);
+  const hasMore = all.length > sidebarLimit;
 
   body.innerHTML = visible.map(n => {
     const time = new Date(n.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
@@ -1596,258 +1460,16 @@ function renderNotifSidebar() {
 
   body.querySelectorAll('.sidebar-notif-item').forEach(item => {
     item.addEventListener('click', async () => {
-      let taskId    = item.dataset.task;
-      const notifId = item.dataset.id;
-      if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
-        taskId = await resolveNotifTaskId(notifId);
-      }
-      const found = await openDetail(taskId);
-      if (found === false && notifId && currentUser) {
-        remove(wsRef('notifications', currentUser.id, notifId));
-      }
-      if (found && notifId && currentUser) {
-        update(wsRef('notifications', currentUser.id, notifId), { read: true });
+      const taskId = item.dataset.task, notifId = item.dataset.id;
+      const found  = await openDetail(taskId);
+      if (found && notifId && allNotifications[notifId] && !allNotifications[notifId].read) {
+        await supabase.from('team_notifications').update({ read: true }).eq('id', notifId);
       }
     });
   });
 
   const showMoreBtn = body.querySelector('#sidebarShowMore');
   if (showMoreBtn) showMoreBtn.addEventListener('click', () => { sidebarLimit += 10; renderNotifSidebar(); });
-}
-
-// ─── DM WIDGET ────────────────────────────────────────────────────────────────
-function getDmKey(id1, id2) { return [id1, id2].sort().join('__'); }
-
-function updateDmFabBadge() {
-  const total = Object.values(dmUnreadCounts).reduce((s, n) => s + (n || 0), 0);
-  const badge = document.getElementById('dmFabBadge');
-  if (!badge) return;
-  badge.textContent = total > 9 ? '9+' : String(total);
-  badge.style.display = total > 0 ? 'flex' : 'none';
-}
-
-function renderDmContacts() {
-  const list = document.getElementById('dmContactsList');
-  if (!list) return;
-  if (!currentUser) {
-    list.innerHTML = '<div class="sidebar-empty">Sign in to message teammates</div>';
-    return;
-  }
-  const peers = Object.entries(users)
-    .filter(([id]) => id !== currentUser.id)
-    .sort(([, a], [, b]) => a.name.localeCompare(b.name));
-  if (!peers.length) {
-    list.innerHTML = '<div class="sidebar-empty">No other team members yet</div>';
-    return;
-  }
-  list.innerHTML = peers.map(([id, u]) => {
-    const dmKey = getDmKey(currentUser.id, id);
-    const unread = dmUnreadCounts[dmKey] || 0;
-    return `<div class="dm-contact-item" data-id="${id}" data-name="${escHtml(u.name)}">
-      ${avatarHtml(u.name)}
-      <span class="dm-contact-name">${escHtml(u.name)}</span>
-      ${unread > 0 ? `<span class="dm-contact-unread">${unread > 9 ? '9+' : unread}</span>` : ''}
-    </div>`;
-  }).join('');
-  list.querySelectorAll('.dm-contact-item').forEach(item => {
-    item.addEventListener('click', () => openDmChat(item.dataset.id, item.dataset.name));
-  });
-}
-
-function openDmChat(peerId, peerName) {
-  if (!currentUser) return;
-  dmActivePeerId   = peerId;
-  dmActivePeerName = peerName;
-  document.getElementById('dmContactsView').style.display = 'none';
-  document.getElementById('dmChatView').style.display     = '';
-  document.getElementById('dmPopupTitle').textContent     = peerName;
-  document.getElementById('dmBackBtn').style.display      = '';
-
-  // Mark as read
-  const dmKey = getDmKey(currentUser.id, peerId);
-  set(wsRef('dmUnread', currentUser.id, dmKey), 0);
-  dmUnreadCounts[dmKey] = 0;
-  updateDmFabBadge();
-
-  // Subscribe to messages
-  if (dmMsgUnsub) { dmMsgUnsub(); dmMsgUnsub = null; }
-  dmMsgUnsub = onValue(wsRef('dms', dmKey), snap => {
-    dmCurrentMsgs = snap.val() || {};
-    renderDmMessages();
-  });
-
-  document.getElementById('dmInput')?.focus();
-}
-
-function closeDmChat() {
-  if (dmMsgUnsub) { dmMsgUnsub(); dmMsgUnsub = null; }
-  dmActivePeerId = null; dmActivePeerName = null; dmCurrentMsgs = {};
-  const cv = document.getElementById('dmContactsView');
-  const chv = document.getElementById('dmChatView');
-  const bb  = document.getElementById('dmBackBtn');
-  const tt  = document.getElementById('dmPopupTitle');
-  if (cv)  cv.style.display  = '';
-  if (chv) chv.style.display = 'none';
-  if (bb)  bb.style.display  = 'none';
-  if (tt)  tt.textContent    = 'Messages';
-  renderDmContacts();
-}
-
-function renderDmMessages() {
-  const container = document.getElementById('dmChatMessages');
-  if (!container) return;
-  const msgs = Object.entries(dmCurrentMsgs)
-    .map(([id, m]) => ({ id, ...m }))
-    .sort((a, b) => a.createdAt - b.createdAt);
-  if (!msgs.length) {
-    container.innerHTML = '<div class="sidebar-empty">No messages yet — say hi!</div>';
-    return;
-  }
-  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
-  container.innerHTML = msgs.map(m => {
-    const isMe = currentUser && m.senderId === currentUser.id;
-    const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `<div class="dm-msg${isMe ? ' dm-msg-me' : ''}">
-      <div class="dm-msg-bubble">${escHtml(m.text)}</div>
-      <div class="dm-msg-time">${time}</div>
-    </div>`;
-  }).join('');
-  if (wasAtBottom) container.scrollTop = container.scrollHeight;
-}
-
-async function sendDmMessage() {
-  if (!currentUser || !dmActivePeerId) return;
-  const input = document.getElementById('dmInput');
-  const text  = input?.value.trim();
-  if (!text) return;
-  input.value = '';
-  const dmKey = getDmKey(currentUser.id, dmActivePeerId);
-  await push(wsRef('dms', dmKey), {
-    text,
-    senderId:   currentUser.id,
-    senderName: currentUser.name,
-    createdAt:  Date.now(),
-  });
-  // Increment recipient unread count
-  const snap = await get(wsRef('dmUnread', dmActivePeerId, dmKey));
-  await set(wsRef('dmUnread', dmActivePeerId, dmKey), (snap.val() || 0) + 1);
-}
-
-// ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
-function loadAnnoLastRead() {
-  try { annoLastReadAt = JSON.parse(localStorage.getItem('achieverboard-anno-read') || '{}'); } catch { annoLastReadAt = {}; }
-}
-function saveAnnoLastRead() {
-  localStorage.setItem('achieverboard-anno-read', JSON.stringify(annoLastReadAt));
-}
-function updateAnnoTabBadge() {
-  const badge = document.getElementById('annoTabBadge');
-  if (!badge) return;
-  if (!currentUser) { badge.style.display = 'none'; return; }
-  const lastRead = annoLastReadAt[currentUser.workspaceId] || 0;
-  const count = Object.values(announcements).filter(a => a.createdAt > lastRead && a.authorId !== currentUser.id).length;
-  badge.textContent  = count > 9 ? '9+' : String(count);
-  badge.style.display = count > 0 ? 'inline-flex' : 'none';
-}
-
-function renderAnnouncements() {
-  const container = document.getElementById('annoList');
-  if (!container) return;
-
-  const annos = Object.entries(announcements)
-    .map(([id, a]) => ({ id, ...a }))
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  if (!annos.length) {
-    container.innerHTML = '<div class="sidebar-empty">No announcements yet</div>';
-    return;
-  }
-
-  container.innerHTML = annos.map(a => {
-    const time = new Date(a.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const canModify = currentUser && (a.authorId === currentUser.id || currentUser.role === 'admin');
-    const editedTag = a.editedAt ? '<span class="anno-edited-tag">(edited)</span>' : '';
-    return `<div class="anno-item" data-id="${a.id}">
-      <div class="anno-item-header">
-        <span class="anno-item-author">${escHtml(a.authorName)}</span>
-        <span class="anno-item-time">${time}</span>
-        ${canModify ? `<div class="anno-item-actions">
-          <button class="btn-icon anno-edit-btn" data-id="${a.id}" title="Edit">${ICONS.edit}</button>
-          <button class="btn-icon delete anno-del-btn" data-id="${a.id}" title="Delete">${ICONS.trash}</button>
-        </div>` : ''}
-      </div>
-      <div class="anno-item-text">${escHtml(a.content)}${editedTag}</div>
-    </div>`;
-  }).join('');
-
-  container.querySelectorAll('.anno-edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => openAnnoModal(btn.dataset.id));
-  });
-  container.querySelectorAll('.anno-del-btn').forEach(btn => {
-    btn.addEventListener('click', () => deleteAnnouncement(btn.dataset.id));
-  });
-  updateAnnoTabBadge();
-}
-
-function openAnnoModal(annoId = null) {
-  if (!currentUser) {
-    pendingAfterLogin = () => openAnnoModal(annoId);
-    showUserOverlay();
-    return;
-  }
-  editingAnnoId = annoId;
-  const titleEl  = document.getElementById('annoModalTitle');
-  const textEl   = document.getElementById('annoModalText');
-  const saveBtn  = document.getElementById('annoModalSave');
-  document.getElementById('annoModalErr').textContent = '';
-
-  if (annoId) {
-    const a = announcements[annoId];
-    titleEl.textContent  = 'Edit Announcement';
-    textEl.value         = a?.content || '';
-    saveBtn.textContent  = 'Save';
-  } else {
-    titleEl.textContent  = 'New Announcement';
-    textEl.value         = '';
-    saveBtn.textContent  = 'Post';
-  }
-  document.getElementById('annoModalOverlay').classList.add('open');
-  textEl.focus();
-}
-
-function closeAnnoModal() {
-  editingAnnoId = null;
-  document.getElementById('annoModalOverlay')?.classList.remove('open');
-}
-
-async function saveAnnouncement() {
-  if (!currentUser) return;
-  const content = document.getElementById('annoModalText').value.trim();
-  const errEl   = document.getElementById('annoModalErr');
-  if (!content) { errEl.textContent = 'Please enter an announcement.'; return; }
-
-  if (editingAnnoId) {
-    const a = announcements[editingAnnoId];
-    if (!a) { closeAnnoModal(); return; }
-    if (a.authorId !== currentUser.id && currentUser.role !== 'admin') { closeAnnoModal(); return; }
-    await update(wsRef('announcements', editingAnnoId), { content, editedAt: Date.now() });
-  } else {
-    await push(wsRef('announcements'), {
-      content,
-      authorId:   currentUser.id,
-      authorName: currentUser.name,
-      createdAt:  Date.now(),
-    });
-  }
-  closeAnnoModal();
-}
-
-async function deleteAnnouncement(annoId) {
-  if (!currentUser) return;
-  const a = announcements[annoId];
-  if (!a) return;
-  if (a.authorId !== currentUser.id && currentUser.role !== 'admin') return;
-  await remove(wsRef('announcements', annoId));
 }
 
 // ─── NOTIFICATION SOUND ───────────────────────────────────────────────────────
@@ -1869,7 +1491,7 @@ function unlockAudioContext() {
     src.buffer = buf;
     src.connect(audioCtx.destination);
     src.start(0);
-  } catch (e) { audioCtx = null; }
+  } catch { audioCtx = null; }
 }
 
 function _playBeep() {
@@ -1914,85 +1536,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ─── HEADER NOTIFICATION PANEL ────────────────────────────────────────────────
-function setupNotifListener() {
-  if (notifBadgeUnsub) { notifBadgeUnsub(); notifBadgeUnsub = null; }
-  const badge = document.getElementById('notifBadge');
-  badge.textContent = '';
-  badge.classList.remove('visible');
-  document.getElementById('notifList').innerHTML = '<div class="no-notifs">No notifications yet</div>';
-  if (!currentUser) return;
-
-  notifBadgeUnsub = onValue(wsRef('notifications', currentUser.id), snap => {
-    const data   = snap.val() || {};
-    const notifs = Object.entries(data).map(([id, n]) => ({ id, ...n })).sort((a,b) => b.createdAt - a.createdAt);
-    const unread = notifs.filter(n => !n.read).length;
-
-    const incomingIds = new Set(Object.keys(data));
-    if (knownNotifIds === null) {
-      knownNotifIds = incomingIds;
-    } else {
-      const newNotifs = notifs.filter(n => !knownNotifIds.has(n.id));
-      if (newNotifs.length) playNotificationSound();
-      knownNotifIds = incomingIds;
-    }
-
-    badge.textContent = unread;
-    badge.classList.toggle('visible', unread > 0);
-
-    const list = document.getElementById('notifList');
-    if (!notifs.length) {
-      list.innerHTML = '<div class="no-notifs">No notifications yet</div>';
-      return;
-    }
-    list.innerHTML = notifs.slice(0, 30).map(n => {
-      const time = new Date(n.createdAt).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-      return `<div class="notif-item ${n.read?'':'unread'}" data-id="${n.id}" data-task="${n.taskId}">
-        <div class="notif-msg">${escHtml(n.message)}</div>
-        <div class="notif-time">${time}</div>
-      </div>`;
-    }).join('');
-
-    list.querySelectorAll('.notif-item').forEach(item => {
-      item.addEventListener('click', async () => {
-        let taskId    = item.dataset.task;
-        const notifId = item.dataset.id;
-        closeNotifPanel();
-        if ((!taskId || taskId === 'undefined' || taskId === 'null') && notifId && currentUser) {
-          taskId = await resolveNotifTaskId(notifId);
-        }
-        const found = await openDetail(taskId);
-        if (found === false && notifId && currentUser) {
-          remove(wsRef('notifications', currentUser.id, notifId));
-        } else if (notifId && currentUser) {
-          update(wsRef('notifications', currentUser.id, notifId), { read: true });
-        }
-      });
-    });
-  });
-}
-
-document.getElementById('notifBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  const panel = document.getElementById('notifPanel');
-  if (window.innerWidth <= 640) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    panel.style.top = (rect.bottom + 8) + 'px';
-  }
-  panel.classList.toggle('open');
-});
-
-document.getElementById('markAllRead').addEventListener('click', async () => {
-  if (!currentUser) return;
-  const snap = await get(wsRef('notifications', currentUser.id));
-  const data = snap.val() || {};
-  const upd  = Object.fromEntries(Object.keys(data).map(k => [`${k}/read`, true]));
-  if (Object.keys(upd).length) await update(wsRef('notifications', currentUser.id), upd);
-});
-
-function closeNotifPanel() { document.getElementById('notifPanel').classList.remove('open'); }
-document.addEventListener('click', e => { if (!e.target.closest('.notif-wrapper')) closeNotifPanel(); });
-
 // ─── DARK MODE ────────────────────────────────────────────────────────────────
 document.getElementById('themeBtn').addEventListener('click', () => {
   const isDark = document.documentElement.dataset.theme === 'dark';
@@ -2000,41 +1543,195 @@ document.getElementById('themeBtn').addEventListener('click', () => {
   localStorage.setItem('theme', isDark ? 'light' : 'dark');
 });
 
+// ─── DM WIDGET ────────────────────────────────────────────────────────────────
+function updateDmFabBadge() {
+  const total = dmMessages.filter(m => m.recipientId === currentUser?.id && !m.read).length;
+  const badge = document.getElementById('dmFabBadge');
+  if (!badge) return;
+  badge.textContent = total > 9 ? '9+' : String(total);
+  badge.style.display = total > 0 ? 'flex' : 'none';
+}
+
+function dmUnreadFrom(peerId) {
+  return dmMessages.filter(m => m.senderId === peerId && m.recipientId === currentUser?.id && !m.read).length;
+}
+
+function renderDmContacts() {
+  const list = document.getElementById('dmContactsList');
+  if (!list) return;
+  if (!currentUser || !currentTeam) {
+    list.innerHTML = '<div class="sidebar-empty">Sign in to message teammates</div>';
+    return;
+  }
+  const peers = Object.entries(members)
+    .filter(([id]) => id !== currentUser.id)
+    .sort(([, a], [, b]) => a.display_name.localeCompare(b.display_name));
+  if (!peers.length) {
+    list.innerHTML = '<div class="sidebar-empty">No other team members yet</div>';
+    return;
+  }
+  list.innerHTML = peers.map(([id, m]) => {
+    const unread = dmUnreadFrom(id);
+    return `<div class="dm-contact-item" data-id="${id}" data-name="${escHtml(m.display_name)}">
+      ${avatarHtml(id)}
+      <span class="dm-contact-name">${escHtml(m.display_name)}</span>
+      ${unread > 0 ? `<span class="dm-contact-unread">${unread > 9 ? '9+' : unread}</span>` : ''}
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.dm-contact-item').forEach(item => {
+    item.addEventListener('click', () => openDmChat(item.dataset.id, item.dataset.name));
+  });
+}
+
+async function openDmChat(peerId, peerName) {
+  if (!currentUser || !currentTeam) return;
+  dmActivePeerId   = peerId;
+  dmActivePeerName = peerName;
+  document.getElementById('dmContactsView').style.display = 'none';
+  document.getElementById('dmChatView').style.display     = '';
+  document.getElementById('dmPopupTitle').textContent      = peerName;
+  document.getElementById('dmBackBtn').style.display       = '';
+
+  renderDmMessages();
+
+  const unreadIds = dmMessages.filter(m => m.senderId === peerId && m.recipientId === currentUser.id && !m.read).map(m => m.id);
+  if (unreadIds.length) {
+    await supabase.from('team_direct_messages').update({ read: true }).in('id', unreadIds);
+    unreadIds.forEach(id => { const m = dmMessages.find(x => x.id === id); if (m) m.read = true; });
+    updateDmFabBadge();
+    renderDmContacts();
+  }
+
+  document.getElementById('dmInput')?.focus();
+}
+
+function closeDmChat() {
+  dmActivePeerId = null; dmActivePeerName = null;
+  const cv = document.getElementById('dmContactsView');
+  const chv = document.getElementById('dmChatView');
+  const bb  = document.getElementById('dmBackBtn');
+  const tt  = document.getElementById('dmPopupTitle');
+  if (cv)  cv.style.display  = '';
+  if (chv) chv.style.display = 'none';
+  if (bb)  bb.style.display  = 'none';
+  if (tt)  tt.textContent    = 'Messages';
+  renderDmContacts();
+}
+
+function renderDmMessages() {
+  const container = document.getElementById('dmChatMessages');
+  if (!container || !dmActivePeerId) return;
+  const msgs = dmMessages
+    .filter(m => (m.senderId === currentUser.id && m.recipientId === dmActivePeerId) || (m.senderId === dmActivePeerId && m.recipientId === currentUser.id))
+    .sort((a, b) => a.createdAt - b.createdAt);
+  if (!msgs.length) {
+    container.innerHTML = '<div class="sidebar-empty">No messages yet — say hi!</div>';
+    return;
+  }
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+  container.innerHTML = msgs.map(m => {
+    const isMe = m.senderId === currentUser.id;
+    const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div class="dm-msg${isMe ? ' dm-msg-me' : ''}">
+      <div class="dm-msg-bubble">${escHtml(m.text)}</div>
+      <div class="dm-msg-time">${time}</div>
+    </div>`;
+  }).join('');
+  if (wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+async function sendDmMessage() {
+  if (!currentUser || !currentTeam || !dmActivePeerId) return;
+  const input = document.getElementById('dmInput');
+  const text  = input?.value.trim();
+  if (!text) return;
+  input.value = '';
+  await supabase.from('team_direct_messages').insert({
+    team_id: currentTeam.id, sender_id: currentUser.id, recipient_id: dmActivePeerId, text, read: false,
+  });
+}
+
+async function setupDmListener() {
+  if (dmChannel) supabase.removeChannel(dmChannel);
+  dmMessages = [];
+  updateDmFabBadge();
+  if (!currentTeam) return;
+  const teamId = currentTeam.id;
+
+  const { data: rows } = await supabase.from('team_direct_messages').select('*').eq('team_id', teamId);
+  dmMessages = (rows || []).map(r => ({
+    id: r.id, text: r.text, senderId: r.sender_id, recipientId: r.recipient_id, read: r.read, createdAt: new Date(r.created_at).getTime(),
+  }));
+  updateDmFabBadge();
+  renderDmContacts();
+  if (dmActivePeerId) renderDmMessages();
+
+  dmChannel = supabase.channel(`team-dm-${teamId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'team_direct_messages', filter: `team_id=eq.${teamId}` }, payload => {
+      if (payload.eventType === 'INSERT') {
+        const r = payload.new;
+        dmMessages.push({ id: r.id, text: r.text, senderId: r.sender_id, recipientId: r.recipient_id, read: r.read, createdAt: new Date(r.created_at).getTime() });
+      } else if (payload.eventType === 'UPDATE') {
+        const r = payload.new;
+        const m = dmMessages.find(x => x.id === r.id);
+        if (m) m.read = r.read;
+      }
+      updateDmFabBadge();
+      renderDmContacts();
+      if (dmActivePeerId) renderDmMessages();
+    })
+    .subscribe();
+}
+
+document.getElementById('dmFab')?.addEventListener('click', () => {
+  const popup = document.getElementById('dmPopup');
+  if (!popup) return;
+  const opening = popup.style.display === 'none';
+  if (opening) {
+    if (!currentUser) { pendingAfterLogin = () => { popup.style.display = ''; renderDmContacts(); }; showAuthOverlay(); return; }
+    popup.style.display = '';
+    renderDmContacts();
+  } else {
+    popup.style.display = 'none';
+    closeDmChat();
+  }
+});
+document.getElementById('dmPopupClose')?.addEventListener('click', () => {
+  document.getElementById('dmPopup').style.display = 'none';
+  closeDmChat();
+});
+document.getElementById('dmBackBtn')?.addEventListener('click', closeDmChat);
+document.getElementById('dmSendBtn')?.addEventListener('click', sendDmMessage);
+document.getElementById('dmInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendDmMessage(); });
+
 // ─── PROFILE SETTINGS ─────────────────────────────────────────────────────────
 document.getElementById('currentUserBtn').addEventListener('click', openProfile);
 
 function openProfile() {
-  if (!currentUser) return;
-  const u = users[currentUser.id];
-  if (!u) return;
+  if (!currentUser || !currentTeam || !myMembership) return;
 
-  document.getElementById('profileNameDisplay').textContent =
-    u.name + (u.passwordHash ? '' : ' (no password)');
-  document.getElementById('profileMemberSince').textContent =
-    u.createdAt ? `Member since ${fmtTimestamp(u.createdAt)}` : '';
+  document.getElementById('profileNameDisplay').textContent   = myMembership.display_name;
+  document.getElementById('profileMemberSince').textContent   = myMembership.joined_at ? `Member since ${fmtTimestamp(myMembership.joined_at)}` : '';
 
   const preview = document.getElementById('profilePhotoPreview');
-  if (u.photoURL) {
-    preview.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${u.photoURL}" alt="${escHtml(initials(u.name))}" style="width:72px;height:72px">`;
+  if (myMembership.photo_url) {
+    preview.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${escHtml(myMembership.photo_url)}" alt="${escHtml(initials(myMembership.display_name))}" style="width:72px;height:72px">`;
   } else {
-    preview.innerHTML = `<span class="avatar" style="background:${avatarColor(u.name)};width:72px;height:72px;font-size:1.6rem">${initials(u.name)}</span>`;
+    preview.innerHTML = `<span class="avatar" style="background:${avatarColor(myMembership.display_name)};width:72px;height:72px;font-size:1.6rem">${initials(myMembership.display_name)}</span>`;
   }
 
-  document.getElementById('profileEmail').value           = u.email || '';
-  document.getElementById('profileNewPassword').value     = '';
-  document.getElementById('profileConfirmPassword').value = '';
-  document.getElementById('profileError').textContent     = '';
-  pendingProfilePhoto = null;
-  document.getElementById('profilePhotoInput').value = '';
+  document.getElementById('profileDisplayName').value      = myMembership.display_name || '';
+  document.getElementById('profileEmail').value             = currentUser.email || '';
+  document.getElementById('profileNewPassword').value       = '';
+  document.getElementById('profileConfirmPassword').value   = '';
+  document.getElementById('profileError').textContent       = '';
+  document.getElementById('profilePhotoInput').value        = '';
 
   renderAdminSection();
   document.getElementById('profileOverlay').classList.add('open');
 }
 
-function closeProfile() {
-  document.getElementById('profileOverlay').classList.remove('open');
-}
-
+function closeProfile() { document.getElementById('profileOverlay').classList.remove('open'); }
 document.getElementById('closeProfile').addEventListener('click', closeProfile);
 document.getElementById('profileOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeProfile(); });
 
@@ -2044,134 +1741,117 @@ document.getElementById('profilePhotoEditBtn').addEventListener('click', () => {
 
 document.getElementById('profilePhotoInput').addEventListener('change', async e => {
   const file = e.target.files[0];
-  if (!file) return;
-  pendingProfilePhoto = await resizeImage(file, 200);
+  if (!file || !currentUser || !currentTeam) return;
+  showToast('Uploading photo…', 1500);
+  const path = `${currentUser.id}/${crypto.randomUUID()}-${file.name}`;
+  const { error } = await supabase.storage.from(AVATARS_BUCKET).upload(path, file);
+  if (error) { showToast(`Upload failed: ${error.message}`); return; }
+  const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path);
   const preview = document.getElementById('profilePhotoPreview');
-  preview.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${pendingProfilePhoto}" alt="preview" style="width:72px;height:72px">`;
+  preview.innerHTML = `<img class="avatar avatar-lg avatar-photo" src="${escHtml(data.publicUrl)}" alt="preview" style="width:72px;height:72px">`;
+  await supabase.from('team_members').update({ photo_url: data.publicUrl }).eq('team_id', currentTeam.id).eq('user_id', currentUser.id);
+  myMembership.photo_url = data.publicUrl;
+  members[currentUser.id] = { ...members[currentUser.id], photo_url: data.publicUrl };
+  updateHeaderUser();
+  renderBoard();
 });
 
 document.getElementById('saveProfileBtn').addEventListener('click', async () => {
-  if (!currentUser) return;
+  if (!currentUser || !currentTeam) return;
   const err        = document.getElementById('profileError');
   const newPwd     = document.getElementById('profileNewPassword').value;
   const confirmPwd = document.getElementById('profileConfirmPassword').value;
-  const email      = document.getElementById('profileEmail').value.trim().toLowerCase();
+  const email      = document.getElementById('profileEmail').value.trim();
+  const displayName = document.getElementById('profileDisplayName').value.trim();
 
+  if (!displayName) { err.textContent = 'Display name cannot be empty.'; return; }
   if (newPwd || confirmPwd) {
     if (newPwd !== confirmPwd) { err.textContent = 'Passwords do not match.'; return; }
-    if (newPwd.length < 4)    { err.textContent = 'Password must be at least 4 characters.'; return; }
+    if (newPwd.length < 6)     { err.textContent = 'Password must be at least 6 characters.'; return; }
   }
   err.textContent = '';
 
-  const updates = {};
-  if (newPwd)              updates.passwordHash = await hashPassword(newPwd);
-  if (pendingProfilePhoto) updates.photoURL     = pendingProfilePhoto;
-  updates.email = email || null;
-
-  await update(wsRef('users', currentUser.id), updates);
-  pendingProfilePhoto = null;
-  closeProfile();
-});
-
-// ─── DELETE ACCOUNT ───────────────────────────────────────────────────────────
-document.getElementById('deleteAccountBtn').addEventListener('click', () => {
-  if (!currentUser) return;
-  const u      = users[currentUser.id];
-  const hasPwd = !!u?.passwordHash;
-  const isAdmin = currentUser.role === 'admin';
-
-  document.getElementById('deleteAccountMsg').textContent = isAdmin
-    ? `Delete your admin account "${currentUser.name}"? This will permanently delete the entire workspace and all its tasks, members, and data. This cannot be undone.`
-    : `Delete your account "${currentUser.name}"? This cannot be undone.`;
-
-  document.getElementById('deleteAccountPwdGroup').style.display = hasPwd ? '' : 'none';
-  document.getElementById('deleteAccountPwdInput').value         = '';
-  document.getElementById('deleteAccountPwdError').textContent   = '';
-  document.getElementById('deleteAccountOverlay').classList.add('open');
-});
-
-function closeDeleteAccountOverlay() {
-  document.getElementById('deleteAccountOverlay').classList.remove('open');
-  document.getElementById('deleteAccountPwdInput').value       = '';
-  document.getElementById('deleteAccountPwdError').textContent = '';
-}
-
-document.getElementById('deleteAccountOverlayClose').addEventListener('click', closeDeleteAccountOverlay);
-document.getElementById('deleteAccountOverlayCancel').addEventListener('click', closeDeleteAccountOverlay);
-document.getElementById('deleteAccountOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteAccountOverlay(); });
-
-document.getElementById('deleteAccountOverlayOk').addEventListener('click', async () => {
-  if (!currentUser) return;
-  const u = users[currentUser.id];
-
-  if (u?.passwordHash) {
-    const pwd = document.getElementById('deleteAccountPwdInput').value;
-    if (!pwd) { document.getElementById('deleteAccountPwdError').textContent = 'Please enter your password.'; return; }
-    const hash = await hashPassword(pwd);
-    if (hash !== u.passwordHash) { document.getElementById('deleteAccountPwdError').textContent = 'Incorrect password.'; return; }
+  const authUpdates = {};
+  if (email && email !== currentUser.email) authUpdates.email = email;
+  if (newPwd) authUpdates.password = newPwd;
+  if (Object.keys(authUpdates).length) {
+    const { error } = await supabase.auth.updateUser(authUpdates);
+    if (error) { err.textContent = error.message; return; }
   }
 
-  closeDeleteAccountOverlay();
-  const wsId = currentUser.workspaceId;
-  const uid  = currentUser.id;
-  const role = currentUser.role;
-
-  stopWorkspaceListeners();
-  if (role === 'admin') {
-    // Admin deletes the entire workspace
-    await remove(ref(db, `workspaces/${wsId}`));
-  } else {
-    // Member removes only their own account
-    await remove(ref(db, `workspaces/${wsId}/users/${uid}`));
-    await remove(ref(db, `workspaces/${wsId}/notifications/${uid}`));
+  if (displayName !== myMembership.display_name) {
+    await supabase.from('team_members').update({ display_name: displayName }).eq('team_id', currentTeam.id).eq('user_id', currentUser.id);
+    myMembership.display_name = displayName;
+    members[currentUser.id] = { ...members[currentUser.id], display_name: displayName };
+    const idx = myTeams.findIndex(t => t.id === currentTeam.id);
+    if (idx !== -1) myTeams[idx].display_name = displayName;
   }
 
-  clearCurrentUser();
-  knownNotifIds = null;
-  tasks = {}; users = {}; commentCounts = {}; allNotifications = {};
-  closeProfile();
-  renderBoard();
-  renderNotifSidebar();
   updateHeaderUser();
-  setupNotifListener();
+  renderBoard();
+  closeProfile();
+  showToast('Profile updated.');
+});
 
-  // Show guest banner, hide board
-  const guestBanner  = document.getElementById('guestBanner');
-  const boardWrapper = document.querySelector('.board-wrapper');
-  if (guestBanner)  guestBanner.style.display  = '';
-  if (boardWrapper) boardWrapper.style.display = 'none';
+// ─── LEAVE TEAM ───────────────────────────────────────────────────────────────
+document.getElementById('leaveTeamBtn').addEventListener('click', () => {
+  if (!currentTeam) return;
+  document.getElementById('leaveTeamMsg').textContent =
+    `Leave "${currentTeam.name}"? You'll lose access to its tasks and messages. This cannot be undone.`;
+  document.getElementById('leaveTeamOverlay').classList.add('open');
+});
+function closeLeaveTeamOverlay() { document.getElementById('leaveTeamOverlay').classList.remove('open'); }
+document.getElementById('leaveTeamOverlayClose').addEventListener('click', closeLeaveTeamOverlay);
+document.getElementById('leaveTeamOverlayCancel').addEventListener('click', closeLeaveTeamOverlay);
+document.getElementById('leaveTeamOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeLeaveTeamOverlay(); });
+
+document.getElementById('leaveTeamOverlayOk').addEventListener('click', async () => {
+  if (!currentUser || !currentTeam) return;
+  const teamId = currentTeam.id;
+  closeLeaveTeamOverlay();
+  closeProfile();
+  await supabase.from('team_members').delete().eq('team_id', teamId).eq('user_id', currentUser.id);
+  myTeams = myTeams.filter(t => t.id !== teamId);
+  unsubscribeTeam();
+  currentTeam = null; myMembership = null; members = {}; tasks = {}; commentCounts = {};
+  allNotifications = {}; knownNotifIds = null; dmMessages = [];
+  document.getElementById('dmPopup').style.display = 'none';
+  updateDmFabBadge();
+  if (localStorage.getItem('ab_last_team_id') === teamId) localStorage.removeItem('ab_last_team_id');
+  showToast('You left the team.');
+  if (myTeams.length) {
+    await enterTeam(myTeams[0]);
+  } else {
+    document.querySelector('.board-wrapper').style.display = 'none';
+    document.getElementById('guestBanner').style.display   = '';
+    updateHeaderUser();
+    renderBoard();
+    showTeamSetupStep();
+  }
 });
 
 // ─── ADMIN TEAM PANEL ─────────────────────────────────────────────────────────
 function renderAdminSection() {
   const section = document.getElementById('adminTeamSection');
-  if (!section) return;
-  if (!currentUser || currentUser.role !== 'admin') { section.style.display = 'none'; return; }
+  if (!section || !currentTeam) return;
+  if (!myMembership || myMembership.role !== 'admin') { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  const userArr    = Object.entries(users).map(([id, u]) => ({ id, ...u })).sort((a, b) => a.name.localeCompare(b.name));
-  const maxUsers   = currentWorkspaceMeta?.maxUsers || 0;
-  const memberCount = userArr.length;
+  const memberArr   = Object.entries(members).map(([id, m]) => ({ id, ...m })).sort((a, b) => a.display_name.localeCompare(b.display_name));
+  const maxUsers    = currentTeam.max_users || 0;
+  const memberCount = memberArr.length;
 
-  document.getElementById('seatUsage').textContent = maxUsers > 0
-    ? `${memberCount} / ${maxUsers} seats`
-    : `${memberCount} member${memberCount !== 1 ? 's' : ''}`;
+  document.getElementById('seatUsage').textContent = `${memberCount} / ${maxUsers} seats`;
+  document.getElementById('inviteCodeInput').value  = currentTeam.invite_code || '';
+  document.getElementById('inviteCodeMsg').textContent = memberCount >= maxUsers
+    ? 'All seats are filled — new joins will be rejected until you upgrade.' : '';
 
-  const canAdd = maxUsers === 0 || memberCount < maxUsers;
-  const addBtn = document.getElementById('addMemberBtn');
-  if (addBtn) {
-    addBtn.disabled    = false;
-    addBtn.textContent = canAdd ? '+ Add Team Member' : '↑ Upgrade Plan to Add More';
-    addBtn.title       = canAdd ? '' : `All ${maxUsers} seats are filled — upgrade to add more members`;
-    addBtn.onclick     = canAdd ? null : (e => { e.stopPropagation(); openUpgradeModal(); });
-  }
-
-  document.getElementById('membersList').innerHTML = userArr.map(u => `
+  document.getElementById('membersList').innerHTML = memberArr.map(m => `
     <div class="member-row">
-      ${avatarHtml(u.name)}
-      <span class="member-name">${escHtml(u.name)}${u.role === 'admin' ? ' <span class="admin-tag">admin</span>' : ''}</span>
-      ${u.id !== currentUser.id
-        ? `<button class="btn-icon delete remove-member-btn" data-uid="${u.id}" title="Remove ${escHtml(u.name)}">${ICONS.trash}</button>`
+      ${avatarHtml(m.id)}
+      <span class="member-name">${escHtml(m.display_name)}${m.role === 'admin' ? ' <span class="admin-tag">admin</span>' : ''}</span>
+      ${m.id !== currentUser.id
+        ? `<button class="btn-icon delete remove-member-btn" data-uid="${m.id}" title="Remove ${escHtml(m.display_name)}">${ICONS.trash}</button>`
         : '<span class="its-you-tag">you</span>'}
     </div>`).join('');
 
@@ -2180,104 +1860,55 @@ function renderAdminSection() {
   });
 }
 
-// ─── DELETE MEMBER MODAL ──────────────────────────────────────────────────────
-let pendingDeleteUid = null;
+document.getElementById('copyInviteBtn').addEventListener('click', async () => {
+  const code = document.getElementById('inviteCodeInput').value;
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('Invite code copied.');
+  } catch {
+    document.getElementById('inviteCodeInput').select();
+    showToast('Select and copy the code above.');
+  }
+});
 
+document.getElementById('regenerateInviteBtn').addEventListener('click', async () => {
+  if (!currentTeam || myMembership?.role !== 'admin') return;
+  const newCode = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const { error } = await supabase.from('teams').update({ invite_code: newCode }).eq('id', currentTeam.id);
+  if (error) { showToast('Could not regenerate invite code.'); return; }
+  currentTeam.invite_code = newCode;
+  const idx = myTeams.findIndex(t => t.id === currentTeam.id);
+  if (idx !== -1) myTeams[idx].invite_code = newCode;
+  renderAdminSection();
+  showToast('New invite code generated.');
+});
+
+// ─── REMOVE MEMBER MODAL ──────────────────────────────────────────────────────
 function openDeleteMemberModal(uid) {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  const u = users[uid];
-  if (!u || uid === currentUser.id) return;
-  pendingDeleteUid = uid;
+  if (!currentTeam || myMembership?.role !== 'admin') return;
+  const m = members[uid];
+  if (!m || uid === currentUser.id) return;
+  pendingDeleteMemberUid = uid;
   document.getElementById('deleteMemberMsg').textContent =
-    `You are about to remove "${u.name}" from this workspace. They will lose access immediately, but their tasks will remain. Enter your admin password to confirm.`;
-  document.getElementById('deleteMemberPassword').value = '';
-  document.getElementById('deleteMemberError').textContent = '';
+    `Remove "${m.display_name}" from this team? They will lose access immediately. Their tasks will remain on the board.`;
   document.getElementById('deleteMemberOverlay').classList.add('open');
-  document.getElementById('deleteMemberPassword').focus();
 }
-
 function closeDeleteMemberModal() {
-  pendingDeleteUid = null;
+  pendingDeleteMemberUid = null;
   document.getElementById('deleteMemberOverlay')?.classList.remove('open');
 }
-
-async function confirmDeleteMember() {
-  const errEl = document.getElementById('deleteMemberError');
-  const pwd   = document.getElementById('deleteMemberPassword').value;
-  errEl.textContent = '';
-  if (!pwd) { errEl.textContent = 'Please enter your password.'; return; }
-
-  const adminUser = users[currentUser.id];
-  const hash = await hashPassword(pwd);
-  if (hash !== adminUser.passwordHash) {
-    errEl.textContent = 'Incorrect password. Please try again.';
-    return;
-  }
-
-  const uid  = pendingDeleteUid;
-  const name = users[uid]?.name || 'Member';
+document.getElementById('deleteMemberConfirmBtn')?.addEventListener('click', async () => {
+  const uid = pendingDeleteMemberUid;
+  if (!uid || !currentTeam) return;
+  const name = members[uid]?.display_name || 'Member';
   closeDeleteMemberModal();
-  await remove(wsRef('users', uid));
-  await remove(wsRef('notifications', uid));
-  showToast(`${name} has been removed from the workspace.`);
-}
-
-document.getElementById('deleteMemberConfirmBtn')?.addEventListener('click', confirmDeleteMember);
+  await supabase.from('team_members').delete().eq('team_id', currentTeam.id).eq('user_id', uid);
+  showToast(`${name} has been removed from the team.`);
+});
 document.getElementById('deleteMemberCloseBtn')?.addEventListener('click', closeDeleteMemberModal);
 document.getElementById('deleteMemberCancelBtn')?.addEventListener('click', closeDeleteMemberModal);
 document.getElementById('deleteMemberOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteMemberModal(); });
-document.getElementById('deleteMemberPassword')?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmDeleteMember(); });
-
-function openAddMemberModal() {
-  document.getElementById('memberName').value          = '';
-  document.getElementById('memberEmail').value         = '';
-  document.getElementById('memberPassword').value      = '';
-  document.getElementById('addMemberError').textContent = '';
-  document.getElementById('addMemberOverlay').classList.add('open');
-  document.getElementById('memberName').focus();
-}
-
-function closeAddMemberModal() {
-  document.getElementById('addMemberOverlay').classList.remove('open');
-}
-
-async function submitAddMember() {
-  const name  = document.getElementById('memberName').value.trim();
-  const email = document.getElementById('memberEmail').value.trim().toLowerCase();
-  const pwd   = document.getElementById('memberPassword').value;
-  const errEl = document.getElementById('addMemberError');
-  errEl.textContent = '';
-
-  if (!name)          { errEl.textContent = 'Please enter a name.';                      return; }
-  if (!pwd)           { errEl.textContent = 'Please set a password.';                    return; }
-  if (pwd.length < 4) { errEl.textContent = 'Password must be at least 4 characters.';  return; }
-
-  if (Object.values(users).some(u => u.name.toLowerCase() === name.toLowerCase())) {
-    errEl.textContent = 'A member with this name already exists.';
-    return;
-  }
-
-  const maxUsers = currentWorkspaceMeta?.maxUsers || 0;
-  if (maxUsers > 0 && Object.keys(users).length >= maxUsers) {
-    closeAddMemberModal();
-    openUpgradeModal();
-    return;
-  }
-
-  const hash       = await hashPassword(pwd);
-  const memberData = { name, passwordHash: hash, role: 'member', createdAt: Date.now() };
-  if (email) memberData.email = email;
-
-  await push(wsRef('users'), memberData);
-  closeAddMemberModal();
-  showToast(`${name} has been added to the workspace.`);
-}
-
-document.getElementById('addMemberBtn')?.addEventListener('click', openAddMemberModal);
-document.getElementById('addMemberClose')?.addEventListener('click', closeAddMemberModal);
-document.getElementById('addMemberCancel')?.addEventListener('click', closeAddMemberModal);
-document.getElementById('addMemberSubmit')?.addEventListener('click', submitAddMember);
-document.getElementById('addMemberOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeAddMemberModal(); });
 
 // ─── GLOBAL UI EVENTS ─────────────────────────────────────────────────────────
 ['todo', 'inprogress', 'done', 'overdue'].forEach(col => {
@@ -2327,11 +1958,8 @@ document.getElementById('filterBarClear').addEventListener('click', () => {
 });
 
 document.getElementById('addTaskBtn').addEventListener('click', () => {
-  if (!currentUser) {
-    pendingAfterLogin = () => openNew();
-    showUserOverlay();
-    return;
-  }
+  if (!currentUser) { pendingAfterLogin = () => openNew(); showAuthOverlay(); return; }
+  if (!currentTeam) { showTeamSetupStep(); return; }
   openNew();
 });
 document.getElementById('closeModal').addEventListener('click', closeModal);
@@ -2348,96 +1976,72 @@ document.getElementById('filePreviewOverlay').addEventListener('click', e => { i
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal(); closeDetail(); closeProfile(); closeDeleteConfirm();
-    closeDeleteAccountOverlay(); closeFilePreview(); closeAddMemberModal(); closeAnnoModal();
+    closeLeaveTeamOverlay(); closeFilePreview(); closeDeleteMemberModal(); closeUpgradeModal();
   }
 });
 
-// ─── SIDEBAR TABS ─────────────────────────────────────────────────────────────
-document.querySelectorAll('.sidebar-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    activeSidebarTab = tab.dataset.tab;
-    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeSidebarTab));
-    const panelMap = { activity: 'panelActivity', announcements: 'panelAnnouncements' };
-    Object.entries(panelMap).forEach(([key, id]) => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = key === activeSidebarTab ? '' : 'none';
-    });
-    if (activeSidebarTab === 'announcements' && currentUser) {
-      annoLastReadAt[currentUser.workspaceId] = Date.now();
-      saveAnnoLastRead();
-      updateAnnoTabBadge();
-    }
-  });
-});
-
-// ─── DM WIDGET HANDLERS ───────────────────────────────────────────────────────
-document.getElementById('dmFab')?.addEventListener('click', () => {
-  const popup = document.getElementById('dmPopup');
-  if (!popup) return;
-  const opening = popup.style.display === 'none';
-  if (opening) {
-    if (!currentUser) {
-      pendingAfterLogin = () => { popup.style.display = ''; renderDmContacts(); };
-      showUserOverlay();
-      return;
-    }
-    popup.style.display = '';
-    renderDmContacts();
-  } else {
-    popup.style.display = 'none';
-    closeDmChat();
-  }
-});
-
-document.getElementById('dmPopupClose')?.addEventListener('click', () => {
+// ─── LOG OUT / RESET STATE ────────────────────────────────────────────────────
+function resetToSignedOutState() {
+  unsubscribeTeam();
+  currentUser = null; currentTeam = null; myMembership = null; myTeams = [];
+  members = {}; tasks = {}; commentCounts = {}; allNotifications = {}; knownNotifIds = null;
+  dmMessages = []; dmActivePeerId = null; dmActivePeerName = null;
+  document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
-  closeDmChat();
-});
-document.getElementById('dmBackBtn')?.addEventListener('click', closeDmChat);
-document.getElementById('dmSendBtn')?.addEventListener('click', sendDmMessage);
-document.getElementById('dmInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendDmMessage(); });
-
-// ─── ANNOUNCEMENT HANDLERS ────────────────────────────────────────────────────
-document.getElementById('annoNewBtn')?.addEventListener('click', () => openAnnoModal());
-document.getElementById('annoModalClose')?.addEventListener('click', closeAnnoModal);
-document.getElementById('annoModalCancel')?.addEventListener('click', closeAnnoModal);
-document.getElementById('annoModalOverlay')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeAnnoModal(); });
-document.getElementById('annoModalSave')?.addEventListener('click', saveAnnouncement);
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-let toastTimer = null;
-function showToast(msg) {
-  let el = document.getElementById('appToast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'appToast';
-    el.className = 'toast';
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.classList.add('visible');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('visible'), 3000);
-}
-
-// ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
-loadCurrentUser();
-loadAnnoLastRead();
-const _guestBanner  = document.getElementById('guestBanner');
-const _boardWrapper = document.querySelector('.board-wrapper');
-
-if (currentUser) {
-  if (_guestBanner)  _guestBanner.style.display  = 'none';
-  if (_boardWrapper) _boardWrapper.style.display = '';
+  updateDmFabBadge();
+  document.getElementById('notifBadge').classList.remove('visible');
+  document.getElementById('notifList').innerHTML = '';
+  document.getElementById('guestBanner').style.display   = '';
+  document.querySelector('.board-wrapper').style.display = 'none';
   updateHeaderUser();
-  currentUserFilter = currentUser.id;
-  startWorkspaceListeners();
-  setupNotifListener();
-} else {
-  if (_guestBanner)  _guestBanner.style.display  = '';
-  if (_boardWrapper) _boardWrapper.style.display = 'none';
-  handlePaymentReturn(); // handles ?payment_ok=1 and ?payment_cancelled=1 from Stripe
+  renderBoard();
+  renderNotifSidebar([]);
 }
+
+document.getElementById('changeUserBtn').addEventListener('click', async () => {
+  showToast('Logging out…', 1200);
+  await supabase.auth.signOut();
+});
+
+// ─── AUTH STATE / BOOTSTRAP ───────────────────────────────────────────────────
+async function loadTeamsAndEnter() {
+  await loadMyTeams();
+  if (!myTeams.length) { showTeamSetupStep(); return; }
+  const preferredId = localStorage.getItem('ab_last_team_id');
+  const team = myTeams.find(t => t.id === preferredId) || myTeams[0];
+  await enterTeam(team);
+  hideAuthOverlay();
+}
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN') {
+    if (currentUser?.id === session.user.id && (currentTeam || myTeams.length)) return; // already entered
+    currentUser = session.user;
+    unlockAudioContext();
+    const handled = await handlePaymentReturn();
+    if (!handled) await loadTeamsAndEnter();
+  } else if (event === 'SIGNED_OUT') {
+    resetToSignedOutState();
+  }
+});
+
+async function init() {
+  document.getElementById('guestBanner').style.display   = '';
+  document.querySelector('.board-wrapper').style.display = 'none';
+  renderBoard();
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    const handled = await handlePaymentReturn();
+    if (!handled) await loadTeamsAndEnter();
+  } else {
+    const handled = await handlePaymentReturn();
+    if (!handled) showAuthOverlay();
+  }
+}
+
+init();
 
 // ─── CUSTOM DATE PICKER ────────────────────────────────────────────────────────
 (function initCustomDatePickers() {
@@ -2538,4 +2142,3 @@ if (currentUser) {
 
   ['taskScheduled', 'taskDue'].forEach(id => { const el = document.getElementById(id); if (el) wire(el); });
 })();
-
