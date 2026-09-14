@@ -437,6 +437,7 @@ document.getElementById('guestSignInBtn')?.addEventListener('click', () => {
   else showTeamSetupStep();
 });
 document.getElementById('teamSetupLogoutBtn').addEventListener('click', async () => {
+  localStorage.removeItem('ab_pending_plan');
   await supabase.auth.signOut();
   showAuthOverlay();
 });
@@ -518,6 +519,7 @@ async function doCreateTeam({ teamName, displayName, teamSize }) {
     if (error) throw error;
     localStorage.removeItem('ab_pending_team');
     localStorage.removeItem('ab_pending_invite_code');
+    localStorage.removeItem('ab_pending_plan');
     localStorage.setItem('ab_last_team_id', team.id);
     await loadMyTeams();
     const entry = myTeams.find(t => t.id === team.id) || team;
@@ -660,7 +662,16 @@ document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
   // create-account form (no login tab, no invite-code option) and name the
   // plan they picked, since joining an existing team never needs a plan pick.
   const planCtx = (plan && plan !== '2') ? { size: plan, name: PLAN_NAMES[plan], price: PLAN_PRICES[plan] } : null;
-  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay('signup', { hideAlternatives: true, plan: planCtx }); }
+  if (!currentUser) {
+    pendingAfterLogin = open;
+    // Also persist the pick to localStorage: signup can require an email
+    // confirmation round trip (a full page reload/new tab), which wipes
+    // in-memory state like pendingAfterLogin. loadTeamsAndEnter() checks
+    // this so the user still lands on "Create Team" with their plan
+    // preselected after confirming, instead of the generic setup screen.
+    localStorage.setItem('ab_pending_plan', JSON.stringify({ size: plan || '2', savedAt: Date.now() }));
+    showAuthOverlay('signup', { hideAlternatives: true, plan: planCtx });
+  }
   else open();
 });
 
@@ -2373,6 +2384,17 @@ async function loadTeamsAndEnter() {
     document.getElementById('joinDisplayName').focus();
     return;
   }
+
+  const pendingPlan = JSON.parse(localStorage.getItem('ab_pending_plan') || 'null');
+  if (pendingPlan && !myTeams.length && (Date.now() - pendingPlan.savedAt) < 7_200_000) {
+    showTeamSetupStep({ hideJoin: true });
+    if (pendingPlan.size && pendingPlan.size !== '2') {
+      const sel = document.getElementById('teamSizeSelect');
+      if (sel) { sel.value = pendingPlan.size; updatePlanInfo(); }
+    }
+    return;
+  }
+  localStorage.removeItem('ab_pending_plan');
 
   if (!myTeams.length) { showTeamSetupStep(); return; }
   const preferredId = localStorage.getItem('ab_last_team_id');
