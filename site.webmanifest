@@ -1,7 +1,7 @@
 {
   "name": "Achiever Board",
   "short_name": "Achiever Board",
-  "description": "Free task management board — no sign-up required",
+  "description": "Free task management board for you and your team",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
