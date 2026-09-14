@@ -1,0 +1,9 @@
+{
+  "name": "achiever-board",
+  "private": true,
+  "description": "Static site with one Vercel serverless function (api/stripe-webhook.js) for Stripe payment verification. No build step for the site itself.",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "stripe": "^16.12.0"
+  }
+}

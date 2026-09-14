@@ -300,6 +300,7 @@ function showAuthOverlay(tab = 'login', { hideAlternatives = false, plan = null 
 // instead of this flag.
 let paidSignupPending = false;
 let paidSignupPlan    = null; // { size, name, price }
+let paidSignupUserId  = null; // the Supabase auth user id created for this flow
 
 function showPlanSignupStep(plan) {
   document.getElementById('userOverlay').classList.add('open');
@@ -341,22 +342,40 @@ async function handlePlanSignupSubmit() {
 
   if (!paidSignupPending) {
     btn.disabled = true; btn.textContent = 'Creating account…';
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { emailRedirectTo: window.location.origin + window.location.pathname },
     });
     btn.disabled = false; btn.textContent = 'Continue to Payment →';
     if (error) { errEl.textContent = error.message; return; }
     paidSignupPending = true;
+    paidSignupUserId  = data.user?.id || null;
     document.getElementById('planSignupEmail').disabled    = true;
     document.getElementById('planSignupPassword').disabled = true;
   }
 
+  // Stash the team details server-side, keyed by user id -- this is what
+  // the Stripe webhook reads (via service_role, bypassing RLS) once payment
+  // is verified. It has to be writable without a session because Supabase
+  // doesn't grant one until the email is confirmed; the actual seat count
+  // it unlocks is independently derived server-side from what Stripe
+  // reports was paid, never from this or anything else the client sends.
+  if (paidSignupUserId) {
+    const { error: stashErr } = await supabase.rpc('stash_pending_team_intent', {
+      _user_id: paidSignupUserId, _team_name: teamName, _display_name: displayName, _team_size: teamSize,
+    });
+    if (stashErr) {
+      errEl.textContent = 'Could not save your team info — please try again.';
+      console.error(stashErr);
+      return;
+    }
+  }
+
   localStorage.setItem('ab_pending_team', JSON.stringify({
-    teamName, displayName, teamSize, email, savedAt: Date.now(), paid: false,
+    teamName, displayName, teamSize, email, userId: paidSignupUserId, savedAt: Date.now(), paid: false,
   }));
   localStorage.removeItem('ab_pending_plan');
-  showPaymentStep(teamSize, email);
+  showPaymentStep(teamSize, email, paidSignupUserId);
 }
 document.getElementById('planSignupBtn').addEventListener('click', handlePlanSignupSubmit);
 ['planSignupEmail', 'planSignupPassword', 'planSignupTeamName', 'planSignupDisplayName'].forEach(id => {
@@ -583,8 +602,18 @@ async function handleCreateTeamSubmit() {
       errEl.textContent = 'Payments are not configured yet. Contact the site admin.';
       return;
     }
-    localStorage.setItem('ab_pending_team', JSON.stringify({ teamName, displayName, teamSize, savedAt: Date.now() }));
-    showPaymentStep(teamSize);
+    const { error: stashErr } = await supabase.rpc('stash_pending_team_intent', {
+      _user_id: currentUser.id, _team_name: teamName, _display_name: displayName, _team_size: teamSize,
+    });
+    if (stashErr) {
+      errEl.textContent = 'Could not save your team info — please try again.';
+      console.error(stashErr);
+      return;
+    }
+    localStorage.setItem('ab_pending_team', JSON.stringify({
+      teamName, displayName, teamSize, userId: currentUser.id, savedAt: Date.now(), paid: false,
+    }));
+    showPaymentStep(teamSize, currentUser.email, currentUser.id);
     return;
   }
 
@@ -605,6 +634,7 @@ async function doCreateTeam({ teamName, displayName, teamSize }) {
     localStorage.removeItem('ab_pending_plan');
     paidSignupPending = false;
     paidSignupPlan    = null;
+    paidSignupUserId  = null;
     localStorage.setItem('ab_last_team_id', team.id);
     await loadMyTeams();
     const entry = myTeams.find(t => t.id === team.id) || team;
@@ -650,7 +680,7 @@ document.getElementById('createTeamBtn').addEventListener('click', handleCreateT
 document.getElementById('joinTeamBtn').addEventListener('click', handleJoinTeamSubmit);
 
 // ─── PAYMENT STEP ─────────────────────────────────────────────────────────────
-function showPaymentStep(teamSize, prefillEmail = null) {
+function showPaymentStep(teamSize, prefillEmail = null, clientRefId = null) {
   const key   = String(teamSize);
   const name  = PLAN_NAMES[key]  || 'Paid Plan';
   const price = PLAN_PRICES[key] || '';
@@ -668,8 +698,13 @@ function showPaymentStep(teamSize, prefillEmail = null) {
   document.getElementById('payNowBtn').onclick = () => {
     const url   = STRIPE_LINKS[key];
     const email = prefillEmail || currentUser?.email;
+    // client_reference_id is how the Stripe webhook knows WHICH account
+    // just paid -- it's what it uses to look up (and only then act on) the
+    // matching pending_team_intents row once payment is verified.
+    const refId = clientRefId || currentUser?.id;
     const params = new URLSearchParams();
     if (email) params.set('prefilled_email', email);
+    if (refId) params.set('client_reference_id', refId);
     window.location.href = params.toString() ? `${url}?${params.toString()}` : url;
   };
 
@@ -689,6 +724,20 @@ document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
   }
 });
 
+// Team creation for a PAID plan happens only server-side, in
+// api/stripe-webhook.js, once it has independently verified with Stripe
+// that a payment actually happened -- the client is never trusted to
+// create a paid-size team itself. So after returning from checkout, the
+// client's job is just to wait for that team to show up.
+async function waitForTeamCreatedByWebhook(maxAttempts = 6, delayMs = 1500) {
+  for (let i = 0; i < maxAttempts; i++) {
+    await loadMyTeams();
+    if (myTeams.length) return true;
+    if (i < maxAttempts - 1) await new Promise(r => setTimeout(r, delayMs));
+  }
+  return false;
+}
+
 // Returns true if a Stripe redirect was handled (so callers can skip the
 // normal "load my teams" flow for this page load).
 async function handlePaymentReturn() {
@@ -703,8 +752,9 @@ async function handlePaymentReturn() {
     if (!currentUser) {
       // Confirming email can require a full page reload/new tab, which
       // wipes any in-memory state -- ab_pending_team (marked paid here) is
-      // what survives that and lets loadTeamsAndEnter() auto-create the
-      // team the moment they log back in, no re-entering anything.
+      // what survives that and lets loadTeamsAndEnter() pick up the team
+      // the webhook already created (or will shortly) the moment they log
+      // back in, no re-entering anything.
       if (pending) {
         localStorage.setItem('ab_pending_team', JSON.stringify({ ...pending, paid: true }));
         showPaymentThanksStep(pending.teamSize);
@@ -715,14 +765,18 @@ async function handlePaymentReturn() {
       }
       return true;
     }
-    if (pending) {
-      showTeamSetupStep({ hideJoin: true });
-      document.getElementById('createError').textContent = 'Payment confirmed — creating your team…';
-      await doCreateTeam(pending);
-    } else {
+    showTeamSetupStep({ hideJoin: true });
+    document.getElementById('createError').textContent = 'Payment confirmed — finishing your team setup…';
+    const found = await waitForTeamCreatedByWebhook();
+    if (found) {
       localStorage.removeItem('ab_pending_team');
-      showTeamSetupStep({ hideJoin: true });
-      showToast('Payment received but setup data expired — please create your team again.', 5000);
+      const team = myTeams[0];
+      localStorage.setItem('ab_last_team_id', team.id);
+      await enterTeam(team);
+      hideAuthOverlay();
+    } else {
+      document.getElementById('createError').textContent =
+        'Your payment is confirmed and your team is being set up — this can take a moment. Please refresh shortly.';
     }
     return true;
   }
@@ -736,7 +790,7 @@ async function handlePaymentReturn() {
     } else if (stillValid) {
       // Their account already exists from before the Stripe redirect --
       // skip straight back to the payment step, not a fresh signup form.
-      showPaymentStep(pending.teamSize, pending.email);
+      showPaymentStep(pending.teamSize, pending.email, pending.userId);
     } else {
       localStorage.removeItem('ab_pending_team');
       showAuthOverlay();
@@ -777,6 +831,7 @@ document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
     // the team in a single step, then goes straight to Stripe -- email
     // confirmation happens after payment, not as a blocking step in between.
     paidSignupPending = false;
+    paidSignupUserId  = null;
     showPlanSignupStep({ size: plan, name: PLAN_NAMES[plan], price: PLAN_PRICES[plan] });
     return;
   }
@@ -2476,7 +2531,7 @@ function resetToSignedOutState() {
   announcements = {}; editingAnnoId = null; announcementReactions = {};
   currentFilter = 'all'; currentUserFilter = 'all';
   customDateStart = null; customDateEnd = null;
-  paidSignupPending = false; paidSignupPlan = null;
+  paidSignupPending = false; paidSignupPlan = null; paidSignupUserId = null;
   document.getElementById('sidebarTabActivity').click();
   document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
@@ -2520,13 +2575,25 @@ async function loadTeamsAndEnter() {
   // A paid-plan signup whose payment already went through (confirmed by
   // handlePaymentReturn setting `paid: true`) but who wasn't logged in yet
   // at that moment -- their account existed but no session did until they
-  // confirmed their email. Now that they're logged in, finish the job
-  // automatically: no form, no "join or create a team" screen.
+  // confirmed their email. The team itself is created server-side by the
+  // Stripe webhook (see waitForTeamCreatedByWebhook), typically well before
+  // a human finishes confirming their email and logging back in -- so this
+  // is just picking up what should already be there, no form in the way.
   const pendingTeam = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
   if (pendingTeam && pendingTeam.paid && !myTeams.length && (Date.now() - pendingTeam.savedAt) < 7_200_000) {
     showTeamSetupStep({ hideJoin: true });
     document.getElementById('createError').textContent = 'Finishing your team setup…';
-    await doCreateTeam(pendingTeam);
+    const found = await waitForTeamCreatedByWebhook();
+    if (found) {
+      localStorage.removeItem('ab_pending_team');
+      const team = myTeams[0];
+      localStorage.setItem('ab_last_team_id', team.id);
+      await enterTeam(team);
+      hideAuthOverlay();
+    } else {
+      document.getElementById('createError').textContent =
+        'Your payment is confirmed and your team is being set up — this can take a moment. Please refresh shortly.';
+    }
     return;
   }
   // NOTE: an unpaid ab_pending_team is deliberately left alone here (not
