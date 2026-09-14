@@ -681,8 +681,7 @@ async function enterTeam(team) {
 
   document.getElementById('guestBanner').style.display  = 'none';
   document.querySelector('.board-wrapper').style.display = '';
-  document.getElementById('addTaskBtn').style.display    = '';
-  document.querySelector('.header-filters').style.display = '';
+  document.getElementById('userFilter').style.display    = '';
   populateTeamSwitcher();
   updateHeaderUser();
   await subscribeToTeam();
@@ -2325,8 +2324,7 @@ function resetToSignedOutState() {
   document.getElementById('notifList').innerHTML = '';
   document.getElementById('guestBanner').style.display   = '';
   document.querySelector('.board-wrapper').style.display = 'none';
-  document.getElementById('addTaskBtn').style.display     = 'none';
-  document.querySelector('.header-filters').style.display = 'none';
+  document.getElementById('userFilter').style.display     = 'none';
   populateUserFilter();
   updateHeaderUser();
   renderBoard();
@@ -2370,10 +2368,12 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 });
 
 async function init() {
-  document.getElementById('guestBanner').style.display   = '';
+  // Keep both the guest banner and the board hidden while we check for an
+  // existing session -- showing the guest banner here would flash the
+  // signed-out view for a moment even when the user is already logged in.
+  document.getElementById('guestBanner').style.display   = 'none';
   document.querySelector('.board-wrapper').style.display = 'none';
-  document.getElementById('addTaskBtn').style.display     = 'none';
-  document.querySelector('.header-filters').style.display = 'none';
+  document.getElementById('userFilter').style.display     = 'none';
   renderBoard();
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -2382,6 +2382,7 @@ async function init() {
     const handled = await handlePaymentReturn();
     if (!handled) await loadTeamsAndEnter();
   } else {
+    document.getElementById('guestBanner').style.display = '';
     const handled = await handlePaymentReturn();
     if (!handled) showAuthOverlay();
   }
