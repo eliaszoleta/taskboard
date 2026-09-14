@@ -681,6 +681,8 @@ async function enterTeam(team) {
 
   document.getElementById('guestBanner').style.display  = 'none';
   document.querySelector('.board-wrapper').style.display = '';
+  document.getElementById('addTaskBtn').style.display    = '';
+  document.querySelector('.header-filters').style.display = '';
   populateTeamSwitcher();
   updateHeaderUser();
   await subscribeToTeam();
@@ -2313,6 +2315,8 @@ function resetToSignedOutState() {
   members = {}; tasks = {}; commentCounts = {}; allNotifications = {}; knownNotifIds = null;
   dmMessages = []; dmActivePeerId = null; dmActivePeerName = null;
   announcements = {}; editingAnnoId = null; announcementReactions = {};
+  currentFilter = 'all'; currentUserFilter = 'all';
+  customDateStart = null; customDateEnd = null;
   document.getElementById('sidebarTabActivity').click();
   document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
@@ -2321,6 +2325,9 @@ function resetToSignedOutState() {
   document.getElementById('notifList').innerHTML = '';
   document.getElementById('guestBanner').style.display   = '';
   document.querySelector('.board-wrapper').style.display = 'none';
+  document.getElementById('addTaskBtn').style.display     = 'none';
+  document.querySelector('.header-filters').style.display = 'none';
+  populateUserFilter();
   updateHeaderUser();
   renderBoard();
   renderNotifSidebar([]);
@@ -2365,6 +2372,8 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 async function init() {
   document.getElementById('guestBanner').style.display   = '';
   document.querySelector('.board-wrapper').style.display = 'none';
+  document.getElementById('addTaskBtn').style.display     = 'none';
+  document.querySelector('.header-filters').style.display = 'none';
   renderBoard();
 
   const { data: { session } } = await supabase.auth.getSession();
