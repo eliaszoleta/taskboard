@@ -257,17 +257,36 @@ function setAuthTab(tab) {
 document.getElementById('authTabLogin').addEventListener('click', () => setAuthTab('login'));
 document.getElementById('authTabSignup').addEventListener('click', () => setAuthTab('signup'));
 
-function showAuthOverlay(tab = 'login') {
+// Set only when the auth overlay was opened from a specific pricing plan's
+// CTA, so the signup button/subtitle can name that plan instead of the
+// generic free-account copy.
+let authPlanContext = null;
+function signupCtaLabel() {
+  return authPlanContext ? `Create Account — ${authPlanContext.name} Plan` : 'Create Free Account';
+}
+
+function showAuthOverlay(tab = 'login', { hideAlternatives = false, plan = null } = {}) {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = '';
   setActiveStep('stepAuth');
-  setAuthTab(tab);
+  authPlanContext = plan;
+  // Picking a plan means "create an account to set it up" -- hide the
+  // login tab and the invite-code shortcut so that's the only path shown.
+  document.querySelector('.auth-tabs').style.display            = hideAlternatives ? 'none' : '';
+  document.getElementById('haveInviteCodeToggle').style.display = hideAlternatives ? 'none' : '';
+  document.getElementById('authStepSub').textContent = plan
+    ? `Create your account to set up the ${plan.name} plan (${plan.price})`
+    : 'Free for 2 users · Plans from $15/mo';
+  document.getElementById('signupBtn').textContent = signupCtaLabel();
+  setAuthTab(hideAlternatives ? 'signup' : tab);
   document.getElementById('loginErr').textContent  = '';
   document.getElementById('signupErr').textContent = '';
-  const pendingCode = localStorage.getItem('ab_pending_invite_code');
+  const pendingCode = !hideAlternatives && localStorage.getItem('ab_pending_invite_code');
   if (pendingCode) {
     document.getElementById('preInviteSection').style.display = '';
     document.getElementById('preInviteCode').value = pendingCode;
+  } else {
+    document.getElementById('preInviteSection').style.display = 'none';
   }
 }
 
@@ -354,7 +373,7 @@ async function handleSignup() {
     email, password,
     options: { emailRedirectTo: window.location.origin + window.location.pathname },
   });
-  btn.disabled = false; btn.textContent = 'Create Free Account';
+  btn.disabled = false; btn.textContent = signupCtaLabel();
   if (error) { errEl.textContent = error.message; return; }
 
   if (!data.session) {
@@ -637,10 +656,11 @@ document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
       if (sel) { sel.value = plan; updatePlanInfo(); }
     }
   };
-  // Picking a plan means "set up a new team on this plan" -- show the
-  // create-account form (not login) and skip the join-a-team option
-  // entirely, since joining an existing team never needs a plan pick.
-  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay('signup'); }
+  // Picking a plan means "set up a new team on this plan" -- show only the
+  // create-account form (no login tab, no invite-code option) and name the
+  // plan they picked, since joining an existing team never needs a plan pick.
+  const planCtx = (plan && plan !== '2') ? { size: plan, name: PLAN_NAMES[plan], price: PLAN_PRICES[plan] } : null;
+  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay('signup', { hideAlternatives: true, plan: planCtx }); }
   else open();
 });
 
