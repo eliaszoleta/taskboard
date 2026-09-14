@@ -240,7 +240,7 @@ const FILTER_LABELS = {
 
 // ─── AUTH OVERLAY ─────────────────────────────────────────────────────────────
 function setActiveStep(activeId) {
-  ['stepAuth','stepCheckEmail','stepTeamSetup','stepPayment'].forEach(id => {
+  ['stepAuth','stepPlanSignup','stepCheckEmail','stepTeamSetup','stepPayment','stepPaymentThanks'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = id === activeId ? '' : 'none';
   });
@@ -289,6 +289,89 @@ function showAuthOverlay(tab = 'login', { hideAlternatives = false, plan = null 
     document.getElementById('preInviteSection').style.display = 'none';
   }
 }
+
+// ─── PAID-PLAN SIGNUP (account + team collected in one step) ───────────────
+// True once signUp() has succeeded for the in-progress paid-plan flow --
+// this only matters within the current page load (e.g. clicking "back" from
+// the payment step before ever leaving for Stripe); it does NOT need to
+// survive a real navigation, because both places that resume this flow
+// after a full page reload (a cancelled Stripe checkout, or a completed one
+// while still unconfirmed) read straight from the persisted ab_pending_team
+// instead of this flag.
+let paidSignupPending = false;
+let paidSignupPlan    = null; // { size, name, price }
+
+function showPlanSignupStep(plan) {
+  document.getElementById('userOverlay').classList.add('open');
+  document.getElementById('userOverlayClose').style.display = '';
+  setActiveStep('stepPlanSignup');
+  paidSignupPlan = plan;
+  document.getElementById('planSignupSub').textContent =
+    `Set up your ${plan.name} plan (${plan.price}) — you'll pay right after this`;
+  document.getElementById('planSignupErr').textContent = '';
+  const emailInput = document.getElementById('planSignupEmail');
+  const passInput  = document.getElementById('planSignupPassword');
+  emailInput.disabled = passInput.disabled = paidSignupPending;
+  document.getElementById(paidSignupPending ? 'planSignupTeamName' : 'planSignupEmail').focus();
+}
+
+async function handlePlanSignupSubmit() {
+  const errEl       = document.getElementById('planSignupErr');
+  errEl.textContent = '';
+  const email       = document.getElementById('planSignupEmail').value.trim();
+  const password    = document.getElementById('planSignupPassword').value;
+  const teamName    = document.getElementById('planSignupTeamName').value.trim();
+  const displayName = document.getElementById('planSignupDisplayName').value.trim();
+
+  if (!paidSignupPending) {
+    if (!email || !password) { errEl.textContent = 'Please enter an email and password.'; return; }
+    if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  }
+  if (!teamName)    { errEl.textContent = 'Please enter a team name.';        return; }
+  if (!displayName) { errEl.textContent = 'Please enter your display name.'; return; }
+
+  const teamSize   = parseInt(paidSignupPlan.size, 10);
+  const stripeLink = STRIPE_LINKS[String(teamSize)];
+  if (!stripeLink || stripeLink.startsWith('PASTE_YOUR')) {
+    errEl.textContent = 'Payments are not configured yet. Contact the site admin.';
+    return;
+  }
+
+  const btn = document.getElementById('planSignupBtn');
+
+  if (!paidSignupPending) {
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+    });
+    btn.disabled = false; btn.textContent = 'Continue to Payment →';
+    if (error) { errEl.textContent = error.message; return; }
+    paidSignupPending = true;
+    document.getElementById('planSignupEmail').disabled    = true;
+    document.getElementById('planSignupPassword').disabled = true;
+  }
+
+  localStorage.setItem('ab_pending_team', JSON.stringify({
+    teamName, displayName, teamSize, email, savedAt: Date.now(), paid: false,
+  }));
+  localStorage.removeItem('ab_pending_plan');
+  showPaymentStep(teamSize, email);
+}
+document.getElementById('planSignupBtn').addEventListener('click', handlePlanSignupSubmit);
+['planSignupEmail', 'planSignupPassword', 'planSignupTeamName', 'planSignupDisplayName'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') handlePlanSignupSubmit(); });
+});
+
+function showPaymentThanksStep(teamSize) {
+  document.getElementById('userOverlay').classList.add('open');
+  document.getElementById('userOverlayClose').style.display = 'none';
+  setActiveStep('stepPaymentThanks');
+  const name = PLAN_NAMES[String(teamSize)] || 'paid';
+  document.getElementById('paymentThanksMsg').textContent =
+    `Thanks for purchasing the ${name} plan. Please confirm your email address, then come back and log in to finish setting up your team.`;
+}
+document.getElementById('paymentThanksBackBtn').addEventListener('click', () => showAuthOverlay('login'));
 
 function showCheckEmailStep(email) {
   document.getElementById('userOverlay').classList.add('open');
@@ -520,6 +603,8 @@ async function doCreateTeam({ teamName, displayName, teamSize }) {
     localStorage.removeItem('ab_pending_team');
     localStorage.removeItem('ab_pending_invite_code');
     localStorage.removeItem('ab_pending_plan');
+    paidSignupPending = false;
+    paidSignupPlan    = null;
     localStorage.setItem('ab_last_team_id', team.id);
     await loadMyTeams();
     const entry = myTeams.find(t => t.id === team.id) || team;
@@ -565,12 +650,14 @@ document.getElementById('createTeamBtn').addEventListener('click', handleCreateT
 document.getElementById('joinTeamBtn').addEventListener('click', handleJoinTeamSubmit);
 
 // ─── PAYMENT STEP ─────────────────────────────────────────────────────────────
-function showPaymentStep(teamSize) {
+function showPaymentStep(teamSize, prefillEmail = null) {
   const key   = String(teamSize);
   const name  = PLAN_NAMES[key]  || 'Paid Plan';
   const price = PLAN_PRICES[key] || '';
   const feats = PLAN_FEATURES[key] || [];
 
+  document.getElementById('userOverlay').classList.add('open');
+  document.getElementById('userOverlayClose').style.display = currentUser ? '' : 'none';
   document.getElementById('paymentPlanSub').textContent = `${name} Plan · ${price} · Up to ${teamSize} users`;
   document.getElementById('paymentSummary').innerHTML = `
     <ul class="payment-features-list">
@@ -579,9 +666,10 @@ function showPaymentStep(teamSize) {
   document.getElementById('paymentError').textContent = '';
 
   document.getElementById('payNowBtn').onclick = () => {
-    const url    = STRIPE_LINKS[key];
+    const url   = STRIPE_LINKS[key];
+    const email = prefillEmail || currentUser?.email;
     const params = new URLSearchParams();
-    if (currentUser?.email) params.set('prefilled_email', currentUser.email);
+    if (email) params.set('prefilled_email', email);
     window.location.href = params.toString() ? `${url}?${params.toString()}` : url;
   };
 
@@ -589,8 +677,16 @@ function showPaymentStep(teamSize) {
 }
 
 document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
-  localStorage.removeItem('ab_pending_team');
-  setActiveStep('stepTeamSetup');
+  if (currentUser) {
+    localStorage.removeItem('ab_pending_team');
+    setActiveStep('stepTeamSetup');
+  } else {
+    // The account for this paid-plan signup already exists (created before
+    // reaching the payment step) -- go back to editing team details, not a
+    // blank signup form, and don't discard ab_pending_team since the next
+    // submit just overwrites it.
+    showPlanSignupStep(paidSignupPlan);
+  }
 });
 
 // Returns true if a Stripe redirect was handled (so callers can skip the
@@ -598,16 +694,28 @@ document.getElementById('backFromPaymentBtn')?.addEventListener('click', () => {
 async function handlePaymentReturn() {
   const p = new URLSearchParams(window.location.search);
   if (p.get('payment_ok') === '1') {
-    const plan    = p.get('plan');
-    const pending = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
+    const plan = p.get('plan');
+    let pending = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
     history.replaceState({}, '', window.location.pathname);
+    const stillValid = pending && (!plan || String(pending.teamSize) === plan) && (Date.now() - pending.savedAt) < 7_200_000;
+    if (!stillValid) pending = null;
 
     if (!currentUser) {
-      showAuthOverlay();
-      showToast('Please log in, then finish creating your team.', 5000);
+      // Confirming email can require a full page reload/new tab, which
+      // wipes any in-memory state -- ab_pending_team (marked paid here) is
+      // what survives that and lets loadTeamsAndEnter() auto-create the
+      // team the moment they log back in, no re-entering anything.
+      if (pending) {
+        localStorage.setItem('ab_pending_team', JSON.stringify({ ...pending, paid: true }));
+        showPaymentThanksStep(pending.teamSize);
+      } else {
+        localStorage.removeItem('ab_pending_team');
+        showAuthOverlay();
+        showToast('Payment received but setup data expired — please log in and create your team again.', 5000);
+      }
       return true;
     }
-    if (pending && (!plan || String(pending.teamSize) === plan) && (Date.now() - pending.savedAt) < 7_200_000) {
+    if (pending) {
       showTeamSetupStep({ hideJoin: true });
       document.getElementById('createError').textContent = 'Payment confirmed — creating your team…';
       await doCreateTeam(pending);
@@ -620,8 +728,19 @@ async function handlePaymentReturn() {
   }
   if (p.get('payment_cancelled') === '1') {
     history.replaceState({}, '', window.location.pathname);
-    localStorage.removeItem('ab_pending_team');
-    if (currentUser) showTeamSetupStep({ hideJoin: true }); else showAuthOverlay();
+    const pending    = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
+    const stillValid = pending && !pending.paid && (Date.now() - pending.savedAt) < 7_200_000;
+
+    if (currentUser) {
+      showTeamSetupStep({ hideJoin: true });
+    } else if (stillValid) {
+      // Their account already exists from before the Stripe redirect --
+      // skip straight back to the payment step, not a fresh signup form.
+      showPaymentStep(pending.teamSize, pending.email);
+    } else {
+      localStorage.removeItem('ab_pending_team');
+      showAuthOverlay();
+    }
     showToast('Payment was cancelled. You can try again anytime.', 4000);
     return true;
   }
@@ -650,27 +769,31 @@ function updatePricingCard() {
 document.getElementById('pricingPlanSelect')?.addEventListener('change', updatePricingCard);
 
 document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
-  const plan = document.getElementById('pricingCtaBtn')?.dataset.plan;
+  const plan   = document.getElementById('pricingCtaBtn')?.dataset.plan;
+  const isPaid = !!plan && plan !== '2';
+
+  if (!currentUser && isPaid) {
+    // Paid plan, logged out: one combined form collects the account AND
+    // the team in a single step, then goes straight to Stripe -- email
+    // confirmation happens after payment, not as a blocking step in between.
+    paidSignupPending = false;
+    showPlanSignupStep({ size: plan, name: PLAN_NAMES[plan], price: PLAN_PRICES[plan] });
+    return;
+  }
+
   const open = () => {
     showTeamSetupStep({ hideJoin: true });
-    if (plan && plan !== '2') {
+    if (isPaid) {
       const sel = document.getElementById('teamSizeSelect');
       if (sel) { sel.value = plan; updatePlanInfo(); }
     }
   };
-  // Picking a plan means "set up a new team on this plan" -- show only the
-  // create-account form (no login tab, no invite-code option) and name the
-  // plan they picked, since joining an existing team never needs a plan pick.
-  const planCtx = (plan && plan !== '2') ? { size: plan, name: PLAN_NAMES[plan], price: PLAN_PRICES[plan] } : null;
   if (!currentUser) {
+    // Free plan, logged out: existing signup-only auth step, no payment
+    // involved so there's nothing to persist beyond the plan pick itself.
     pendingAfterLogin = open;
-    // Also persist the pick to localStorage: signup can require an email
-    // confirmation round trip (a full page reload/new tab), which wipes
-    // in-memory state like pendingAfterLogin. loadTeamsAndEnter() checks
-    // this so the user still lands on "Create Team" with their plan
-    // preselected after confirming, instead of the generic setup screen.
     localStorage.setItem('ab_pending_plan', JSON.stringify({ size: plan || '2', savedAt: Date.now() }));
-    showAuthOverlay('signup', { hideAlternatives: true, plan: planCtx });
+    showAuthOverlay('signup', { hideAlternatives: true, plan: null });
   }
   else open();
 });
@@ -2353,6 +2476,7 @@ function resetToSignedOutState() {
   announcements = {}; editingAnnoId = null; announcementReactions = {};
   currentFilter = 'all'; currentUserFilter = 'all';
   customDateStart = null; customDateEnd = null;
+  paidSignupPending = false; paidSignupPlan = null;
   document.getElementById('sidebarTabActivity').click();
   document.getElementById('teamSwitcher').style.display = 'none';
   document.getElementById('dmPopup').style.display = 'none';
@@ -2375,6 +2499,14 @@ document.getElementById('changeUserBtn').addEventListener('click', async () => {
 
 // ─── AUTH STATE / BOOTSTRAP ───────────────────────────────────────────────────
 async function loadTeamsAndEnter() {
+  // Mid a paid-plan signup that's still on this same page load (i.e. Supabase
+  // granted a session immediately on signUp(), before the user has even
+  // reached Stripe): handlePlanSignupSubmit() is already driving the modal
+  // toward the payment step, so don't race it by jumping to some other step.
+  // (This is always false after a real page reload, since it's in-memory --
+  // the ab_pending_team.paid path below is what handles that case instead.)
+  if (paidSignupPlan) return;
+
   await loadMyTeams();
 
   const pendingCode = localStorage.getItem('ab_pending_invite_code');
@@ -2384,6 +2516,25 @@ async function loadTeamsAndEnter() {
     document.getElementById('joinDisplayName').focus();
     return;
   }
+
+  // A paid-plan signup whose payment already went through (confirmed by
+  // handlePaymentReturn setting `paid: true`) but who wasn't logged in yet
+  // at that moment -- their account existed but no session did until they
+  // confirmed their email. Now that they're logged in, finish the job
+  // automatically: no form, no "join or create a team" screen.
+  const pendingTeam = JSON.parse(localStorage.getItem('ab_pending_team') || 'null');
+  if (pendingTeam && pendingTeam.paid && !myTeams.length && (Date.now() - pendingTeam.savedAt) < 7_200_000) {
+    showTeamSetupStep({ hideJoin: true });
+    document.getElementById('createError').textContent = 'Finishing your team setup…';
+    await doCreateTeam(pendingTeam);
+    return;
+  }
+  // NOTE: an unpaid ab_pending_team is deliberately left alone here (not
+  // cleared) -- if Supabase grants a session immediately on signUp(), this
+  // function can run concurrently with handlePlanSignupSubmit() saving that
+  // same key right before redirecting to Stripe, and clearing it here would
+  // race and wipe out the team info before the user ever reaches checkout.
+  // It just ages out naturally via the timestamp check above.
 
   const pendingPlan = JSON.parse(localStorage.getItem('ab_pending_plan') || 'null');
   if (pendingPlan && !myTeams.length && (Date.now() - pendingPlan.savedAt) < 7_200_000) {

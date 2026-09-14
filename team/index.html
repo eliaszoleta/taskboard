@@ -132,6 +132,32 @@
         </div>
       </div>
 
+      <!-- Step: Paid-plan signup -- one combined form (account + team) shown
+           when a paid plan is picked while signed out, so there's no
+           separate "join or create a team" screen after email confirmation. -->
+      <div id="stepPlanSignup" style="display:none">
+        <div class="user-card-logo">
+          <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="36" height="36" rx="9" fill="#4f6ef5"/>
+            <path d="M10 18.5L15.5 24L26 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="logo-wordmark">
+            <span class="logo-name">Achiever</span>
+            <span class="logo-sub">Board</span>
+          </span>
+        </div>
+        <p class="user-card-sub" id="planSignupSub">Set up your plan</p>
+
+        <div class="ws-section-form" id="planSignupSection">
+          <input type="email" id="planSignupEmail" placeholder="Email address" maxlength="120" autocomplete="email">
+          <input type="password" id="planSignupPassword" placeholder="Create a password (min. 6 characters)" maxlength="120" autocomplete="new-password">
+          <input type="text" id="planSignupTeamName" placeholder="Team name…" maxlength="60" autocomplete="off">
+          <input type="text" id="planSignupDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
+          <button class="btn-primary" id="planSignupBtn">Continue to Payment →</button>
+          <p class="ws-section-err" id="planSignupErr"></p>
+        </div>
+      </div>
+
       <!-- Step: Check your email (shown after signup when confirmation is required) -->
       <div id="stepCheckEmail" style="display:none">
         <div class="user-card-logo">
@@ -200,6 +226,16 @@
         <div style="text-align:center;margin-top:8px">
           <button class="btn-text" id="backFromPaymentBtn">← Back to setup</button>
         </div>
+      </div>
+
+      <!-- Step: Payment succeeded, account still needs email confirmation -->
+      <div id="stepPaymentThanks" style="display:none">
+        <div class="user-card-logo">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <p class="user-card-sub" style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px">Payment received!</p>
+        <p class="user-card-sub" id="paymentThanksMsg" style="margin-bottom:24px">Thanks for purchasing. Please confirm your email address, then come back and log in to finish setting up your team.</p>
+        <button type="button" class="btn-primary" id="paymentThanksBackBtn" style="width:100%">Back to Log In</button>
       </div>
 
     </div>
