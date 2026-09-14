@@ -787,7 +787,8 @@ async function subscribeToTeam() {
     .subscribe();
 
   // ── Announcement reactions ──
-  const { data: reactionRows } = await supabase.from('team_announcement_reactions').select('*').eq('team_id', teamId);
+  const { data: reactionRows, error: reactionsErr } = await supabase.from('team_announcement_reactions').select('*').eq('team_id', teamId);
+  if (reactionsErr) console.error('Could not load announcement reactions (run migration 0004?):', reactionsErr);
   announcementReactions = {};
   (reactionRows || []).forEach(r => {
     (announcementReactions[r.announcement_id] ??= {})[r.user_id] = r.emoji;
@@ -882,18 +883,27 @@ function annoReactionTitle(annoId, emoji) {
 
 async function toggleReaction(announcementId, emoji) {
   if (!currentUser || !currentTeam) return;
-  const current = annoMyReaction(announcementId);
-  if (current === emoji) {
+  const previous = annoMyReaction(announcementId);
+  let error;
+  if (previous === emoji) {
     if (announcementReactions[announcementId]) delete announcementReactions[announcementId][currentUser.id];
     renderAnnouncements();
-    await supabase.from('team_announcement_reactions').delete()
-      .eq('announcement_id', announcementId).eq('user_id', currentUser.id);
+    ({ error } = await supabase.from('team_announcement_reactions').delete()
+      .eq('announcement_id', announcementId).eq('user_id', currentUser.id));
   } else {
     (announcementReactions[announcementId] ??= {})[currentUser.id] = emoji;
     renderAnnouncements();
-    await supabase.from('team_announcement_reactions')
+    ({ error } = await supabase.from('team_announcement_reactions')
       .upsert({ announcement_id: announcementId, team_id: currentTeam.id, user_id: currentUser.id, emoji },
-              { onConflict: 'announcement_id,user_id' });
+              { onConflict: 'announcement_id,user_id' }));
+  }
+  if (error) {
+    console.error('Reaction save failed:', error);
+    // Roll back the optimistic update so the UI never shows a reaction that didn't actually save.
+    if (previous) (announcementReactions[announcementId] ??= {})[currentUser.id] = previous;
+    else if (announcementReactions[announcementId]) delete announcementReactions[announcementId][currentUser.id];
+    renderAnnouncements();
+    showToast('Could not save your reaction — please try again.');
   }
 }
 
