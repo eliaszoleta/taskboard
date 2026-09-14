@@ -148,15 +148,17 @@
         <div class="user-card-logo">Your Teams</div>
         <p class="user-card-sub" id="teamSetupSub">Create a new team or join one with an invite code</p>
 
-        <p class="ws-section-label">Join a Team</p>
-        <div class="ws-section-form" id="joinTeamSection">
-          <input type="text" id="joinInviteCode" placeholder="Invite code…" maxlength="40" autocomplete="off">
-          <input type="text" id="joinDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
-          <button class="btn-primary" id="joinTeamBtn">Join Team</button>
-          <p class="ws-section-err" id="joinError"></p>
-        </div>
+        <div id="joinTeamBlock">
+          <p class="ws-section-label">Join a Team</p>
+          <div class="ws-section-form" id="joinTeamSection">
+            <input type="text" id="joinInviteCode" placeholder="Invite code…" maxlength="40" autocomplete="off">
+            <input type="text" id="joinDisplayName" placeholder="Your display name…" maxlength="30" autocomplete="off">
+            <button class="btn-primary" id="joinTeamBtn">Join Team</button>
+            <p class="ws-section-err" id="joinError"></p>
+          </div>
 
-        <div class="ws-divider">or</div>
+          <div class="ws-divider">or</div>
+        </div>
 
         <p class="ws-section-label">Create a Team</p>
         <div class="ws-section-form" id="createTeamSection">

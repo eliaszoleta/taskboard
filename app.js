@@ -306,13 +306,16 @@ function hideAuthOverlay() {
   }
 }
 
-function showTeamSetupStep() {
+function showTeamSetupStep({ hideJoin = false } = {}) {
   document.getElementById('userOverlay').classList.add('open');
   document.getElementById('userOverlayClose').style.display = myTeams.length ? '' : 'none';
   setActiveStep('stepTeamSetup');
-  document.getElementById('teamSetupSub').textContent = currentUser
-    ? `Signed in as ${currentUser.email}`
-    : 'Create a new team or join one with an invite code';
+  document.getElementById('joinTeamBlock').style.display = hideJoin ? 'none' : '';
+  document.getElementById('teamSetupSub').textContent = hideJoin
+    ? 'Create your team to get started'
+    : currentUser
+      ? `Signed in as ${currentUser.email}`
+      : 'Create a new team or join one with an invite code';
   document.getElementById('createTeamName').value    = '';
   document.getElementById('createDisplayName').value = '';
   document.getElementById('teamSizeSelect').value     = '2';
@@ -584,12 +587,12 @@ async function handlePaymentReturn() {
       return true;
     }
     if (pending && (!plan || String(pending.teamSize) === plan) && (Date.now() - pending.savedAt) < 7_200_000) {
-      showTeamSetupStep();
+      showTeamSetupStep({ hideJoin: true });
       document.getElementById('createError').textContent = 'Payment confirmed — creating your team…';
       await doCreateTeam(pending);
     } else {
       localStorage.removeItem('ab_pending_team');
-      showTeamSetupStep();
+      showTeamSetupStep({ hideJoin: true });
       showToast('Payment received but setup data expired — please create your team again.', 5000);
     }
     return true;
@@ -597,7 +600,7 @@ async function handlePaymentReturn() {
   if (p.get('payment_cancelled') === '1') {
     history.replaceState({}, '', window.location.pathname);
     localStorage.removeItem('ab_pending_team');
-    if (currentUser) showTeamSetupStep(); else showAuthOverlay();
+    if (currentUser) showTeamSetupStep({ hideJoin: true }); else showAuthOverlay();
     showToast('Payment was cancelled. You can try again anytime.', 4000);
     return true;
   }
@@ -628,13 +631,16 @@ document.getElementById('pricingPlanSelect')?.addEventListener('change', updateP
 document.getElementById('pricingCtaBtn')?.addEventListener('click', () => {
   const plan = document.getElementById('pricingCtaBtn')?.dataset.plan;
   const open = () => {
-    showTeamSetupStep();
+    showTeamSetupStep({ hideJoin: true });
     if (plan && plan !== '2') {
       const sel = document.getElementById('teamSizeSelect');
       if (sel) { sel.value = plan; updatePlanInfo(); }
     }
   };
-  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay(); }
+  // Picking a plan means "set up a new team on this plan" -- show the
+  // create-account form (not login) and skip the join-a-team option
+  // entirely, since joining an existing team never needs a plan pick.
+  if (!currentUser) { pendingAfterLogin = open; showAuthOverlay('signup'); }
   else open();
 });
 
